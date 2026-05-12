@@ -129,12 +129,12 @@ interface HeaderKpi {
   spark?: Array<number | null>;
 }
 /**
- * Header KPIs are layer-wide aggregates — sum or avg across the topN
- * services per the operator's setup config. The Switch button below
- * carries the *selected service* context for the widget grid; the
- * header summary is the layer rollup.
+ * Layer-wide aggregate KPIs — sum or avg across the topN services per
+ * the column's `aggregation` field in the JSON template. Rendered
+ * top-right of the General header. Sparkline = the aggregated series
+ * for the same metric.
  */
-const headerKpis = computed<HeaderKpi[]>(() => {
+const layerKpis = computed<HeaderKpi[]>(() => {
   const L = layer.value;
   if (!L) return [];
   const c = cfg.value;
@@ -154,12 +154,40 @@ const headerKpis = computed<HeaderKpi[]>(() => {
   return out;
 });
 
+/**
+ * Selected-service KPIs — the per-row values for the currently picked
+ * service. Rendered on the Switch row beneath the layer aggregates.
+ * No sparkline here (the per-service spark series is the service-scope
+ * dashboard's job).
+ */
+const serviceKpis = computed<HeaderKpi[]>(() => {
+  const L = layer.value;
+  if (!L) return [];
+  const c = cfg.value;
+  if (!c) return [];
+  const row = selectedRow.value;
+  if (!row) return [];
+  const out: HeaderKpi[] = [];
+  for (const col of c.landing.columns.slice(0, 5)) {
+    const m = metricMeta(col.metric);
+    out.push({
+      label: col.label || m.label,
+      value: row.metrics[col.metric] ?? null,
+      unit: col.unit || m.unit,
+      color: colorForMetric(col.metric),
+    });
+  }
+  return out;
+});
+
 </script>
 
 <template>
   <div class="layer-shell">
     <header v-if="layer" class="sw-card layer-head">
-      <!-- Row 1: layer identity. -->
+      <!-- Row 1: layer identity (left) + LAYER aggregate KPI strip
+           (right). The aggregates use sum/avg per the JSON columns'
+           aggregation field — sum cpm across services, avg p99 etc. -->
       <div class="layer-id-row">
         <div class="icon-tile" :style="{ background: layer.color }">{{ initials }}</div>
         <div class="identity-text">
@@ -175,23 +203,8 @@ const headerKpis = computed<HeaderKpi[]>(() => {
             </span>
           </div>
         </div>
-      </div>
-
-      <!-- Row 2: Switch button + selected service name + KPI strip.
-           Merged into the same card as the layer header so there's no
-           duplicate "Selected service" zone elsewhere. -->
-      <div v-if="sampledServices.length > 0" class="service-row">
-        <button
-          class="sw-btn switch"
-          type="button"
-          :class="{ open: pickerOpen }"
-          @click="togglePicker"
-        >
-          <span class="caret">▾</span>
-          <span class="svc-name">{{ selectedName }}</span>
-        </button>
-        <div class="kpi-strip">
-          <div v-for="(k, i) in headerKpis" :key="i" class="kpi">
+        <div class="kpi-strip layer-kpis">
+          <div v-for="(k, i) in layerKpis" :key="i" class="kpi">
             <div class="kpi-label">{{ k.label }}</div>
             <div class="kpi-value" :style="{ color: k.color }">
               <span :class="{ muted: k.value == null }">{{ fmtMetric(k.value) }}</span>
@@ -207,6 +220,31 @@ const headerKpis = computed<HeaderKpi[]>(() => {
               :stroke="1.25"
             />
             <span v-else class="kpi-spark-empty">&nbsp;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Switch button + selected-service KPIs. Distinct from
+           the layer aggregates above — these are the picked service's
+           per-row metric values (no sparklines; the service-scope
+           dashboard below carries the trend charts). -->
+      <div v-if="sampledServices.length > 0" class="service-row">
+        <button
+          class="sw-btn switch"
+          type="button"
+          :class="{ open: pickerOpen }"
+          @click="togglePicker"
+        >
+          <span class="caret">▾</span>
+          <span class="svc-name">{{ selectedName }}</span>
+        </button>
+        <div class="kpi-strip service-kpis">
+          <div v-for="(k, i) in serviceKpis" :key="i" class="kpi compact">
+            <span class="kpi-label inline">{{ k.label }}</span>
+            <span class="kpi-value inline" :style="{ color: k.color }">
+              <span :class="{ muted: k.value == null }">{{ fmtMetric(k.value) }}</span>
+              <span v-if="k.unit" class="kpi-unit">{{ k.unit }}</span>
+            </span>
           </div>
         </div>
       </div>
@@ -266,12 +304,37 @@ const headerKpis = computed<HeaderKpi[]>(() => {
 }
 .service-row {
   display: flex;
-  align-items: flex-end;
-  gap: 18px;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px dashed var(--sw-line);
+}
+.service-kpis {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: baseline;
+}
+.kpi.compact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  text-align: left;
+  min-width: 0;
+}
+.kpi-label.inline {
+  font-size: 9.5px;
+  margin-bottom: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sw-fg-3);
+}
+.kpi-value.inline {
+  font-size: 13px;
+  font-weight: 600;
 }
 .switch {
   /* Merged Switch button — sits at the start of the service row, ahead
