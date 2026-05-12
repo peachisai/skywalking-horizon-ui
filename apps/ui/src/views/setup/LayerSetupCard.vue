@@ -55,7 +55,9 @@ const summary = computed<string>(() => {
   return base;
 });
 
-// Default cap labels with the "Topology" trio collapsed for compact display.
+// Cap rows the operator can toggle. The per-layer page always opens on
+// Services — there's no `overview` cap; the global Overview already
+// composes layers automatically.
 const capRows: Array<{ key: keyof typeof cfg.value.caps; label: string }> = [
   { key: 'serviceMap', label: 'Service map' },
   { key: 'endpointDependency', label: 'API dependency' },

@@ -29,14 +29,12 @@ function humanKey(k: string): string {
 // only needs the raw key + the feature label.
 function layerSubRoutes(): RouteRecordRaw[] {
   const sub: RouteRecordRaw[] = [];
+  // Bare /layer/:layerKey redirects to /layer/:layerKey/services — the
+  // default entry point per layer. There is no per-layer 'overview'
+  // (the global Overview at / handles that).
   sub.push({
     path: 'layer/:layerKey',
-    component: placeholder,
-    props: (r) => ({
-      title: `${humanKey(String(r.params.layerKey))} · Overview`,
-      phase: 'Phase 2',
-      note: 'Per-layer landing: KPIs, throughput, service constellation, services table.',
-    }),
+    redirect: (to) => ({ path: `/layer/${to.params.layerKey}/services` }),
   });
 
   const features: { path: string; label: string; phase: string }[] = [

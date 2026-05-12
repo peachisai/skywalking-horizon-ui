@@ -70,7 +70,6 @@ const layerConfigSchema = z
       .strict(),
     caps: z
       .object({
-        overview: z.boolean().optional(),
         serviceMap: z.boolean().optional(),
         endpointDependency: z.boolean().optional(),
         instanceTopology: z.boolean().optional(),

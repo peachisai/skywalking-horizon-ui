@@ -175,19 +175,10 @@ const sections: NavSection[] = [
         </div>
         <div v-if="expandedLayer === L.key" class="layer-children">
           <RouterLink
-            v-if="L.caps.overview"
-            :to="`/layer/${L.key}`"
-            class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}`) && route.path === `/layer/${L.key}` }"
-          >
-            <Icon name="dash" /><span>Overview</span>
-          </RouterLink>
-
-          <RouterLink
             v-if="L.slots.services"
             :to="`/layer/${L.key}/services`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/services`) }"
+            :class="{ 'is-active': isActive(`/layer/${L.key}/services`) || route.path === `/layer/${L.key}` }"
           >
             <Icon name="svc" /><span>{{ L.slots.services }}</span>
             <span class="sw-badge" style="margin-left: auto">{{ L.serviceCount }}</span>

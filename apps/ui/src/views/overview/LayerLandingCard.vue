@@ -26,7 +26,7 @@ const props = defineProps<{ layer: LayerDef }>();
 const store = useSetupStore();
 const cfg = computed(() => store.ensure(props.layer.key, { slots: props.layer.slots, caps: props.layer.caps }));
 const slotName = computed(() => cfg.value.slots.services ?? 'Services');
-const detailHref = computed(() => `/layer/${props.layer.key}`);
+const detailHref = computed(() => `/layer/${props.layer.key}/services`);
 </script>
 
 <template>
