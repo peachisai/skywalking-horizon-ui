@@ -20,7 +20,17 @@ import { forbidden, unauthorized } from '../errors.js';
 import type { Session } from '../auth/sessions.js';
 import type { SessionStore } from '../auth/sessions.js';
 import type { ConfigSource } from '../config/loader.js';
+import type { HorizonConfig } from '../config/schema.js';
 import { hasVerb, resolveVerbsForRoles, type Verb } from './verbs.js';
+
+export function sessionHasVerb(
+  config: HorizonConfig,
+  roles: readonly string[],
+  required: string,
+): boolean {
+  const verbs = resolveVerbsForRoles(config.rbac.roles, roles, config.rbac.enabled);
+  return hasVerb(verbs, required);
+}
 
 // Augment Fastify's request type so handlers can `req.session` without casts.
 declare module 'fastify' {

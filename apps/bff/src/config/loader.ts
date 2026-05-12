@@ -24,6 +24,8 @@ import { configSchema, type HorizonConfig } from './schema.js';
 export interface ConfigSource {
   readonly current: HorizonConfig;
   readonly path: string;
+  /** Function form for code paths that prefer a getter call. Returns the same as `.current`. */
+  current_(): HorizonConfig;
   onChange(fn: (cfg: HorizonConfig) => void): () => void;
   close(): Promise<void>;
 }
@@ -64,6 +66,7 @@ export function loadConfig(configPath: string): ConfigSource {
     get current() {
       return current;
     },
+    current_: () => current,
     path: absPath,
     onChange(fn) {
       listeners.add(fn);

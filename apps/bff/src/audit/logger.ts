@@ -22,11 +22,17 @@ import { logger } from '../logger.js';
 
 export interface AuditEvent {
   ts: string; // ISO-8601
-  actor: string;
+  actor: string | null;
   action: string; // e.g. "rule.addOrUpdate", "auth.login", "role.update"
+  /** Optional verb that authorized the action (e.g. "rule:write"). */
+  verb?: string;
   target?: string;
-  outcome: 'success' | 'failure';
+  /** Free-form outcome string; common values include "success", "failure",
+   *  the OAP `applyStatus` value, or `http_<code>`. */
+  outcome: string;
   details?: Record<string, unknown>;
+  fromIp?: string;
+  sessionId?: string;
 }
 
 export class AuditLogger {

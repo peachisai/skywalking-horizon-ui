@@ -21,6 +21,8 @@ import { AuditLogger } from './audit/logger.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { SessionStore } from './auth/sessions.js';
 import { loadConfig, type ConfigSource } from './config/loader.js';
+import { registerOapRoutes } from './oap/routes.js';
+import { registerPreflightRoutes } from './oap/preflight-routes.js';
 import { HttpError } from './errors.js';
 import { logger, loggerOptions } from './logger.js';
 
@@ -47,7 +49,12 @@ await audit.open();
 
 await app.register(cookie);
 
+// Text/plain body parser — the rule editor sends raw YAML to /api/rule.
+app.addContentTypeParser('text/plain', { parseAs: 'string' }, (_req, body, done) => done(null, body));
+
 registerAuthRoutes(app, source, sessions, audit);
+registerOapRoutes(app, { config: source, sessions, audit });
+registerPreflightRoutes(app, { config: source, sessions });
 
 app.get('/api/health', async () => ({
   status: 'ok',

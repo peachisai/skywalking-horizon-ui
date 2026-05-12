@@ -60,6 +60,19 @@ export class SessionStore {
     return session;
   }
 
+  // Read-without-touch — used by route handlers that just need identity
+  // and don't want to slide the TTL window. Returns `undefined` for
+  // expired sessions.
+  get(sid: string): Session | undefined {
+    const session = this.sessions.get(sid);
+    if (!session) return undefined;
+    if (Date.now() - session.lastSeenAt > this.ttlMs) {
+      this.sessions.delete(sid);
+      return undefined;
+    }
+    return session;
+  }
+
   destroy(sid: string): void {
     this.sessions.delete(sid);
   }
