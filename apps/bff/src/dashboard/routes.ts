@@ -78,7 +78,16 @@ const widgetSchema = z.object({
   w: z.number().int().positive().optional(),
   h: z.number().int().positive().optional(),
 });
-const scopeSchema = z.enum(['service', 'instance', 'endpoint', 'trace', 'profiling']);
+const scopeSchema = z.enum([
+  'service',
+  'instance',
+  'endpoint',
+  'dependency',
+  'topology',
+  'trace',
+  'logs',
+  'profiling',
+]);
 const bodySchema = z.object({
   service: z.string().optional(),
   widgets: z.array(widgetSchema).max(40).optional(),
@@ -558,7 +567,10 @@ export function registerDashboardRoute(app: FastifyInstance, deps: DashboardRout
         service: z.array(widgetSchema).max(40).optional(),
         instance: z.array(widgetSchema).max(40).optional(),
         endpoint: z.array(widgetSchema).max(40).optional(),
+        dependency: z.array(widgetSchema).max(40).optional(),
+        topology: z.array(widgetSchema).max(40).optional(),
         trace: z.array(widgetSchema).max(40).optional(),
+        logs: z.array(widgetSchema).max(40).optional(),
         profiling: z.array(widgetSchema).max(40).optional(),
       })
       .strict()

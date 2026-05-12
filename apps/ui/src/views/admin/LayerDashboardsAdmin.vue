@@ -32,7 +32,16 @@ import type { AdminLayerTemplate } from '@/api/client';
 import type { DashboardScope, DashboardWidget } from '@skywalking-horizon-ui/api-client';
 import { bffClient } from '@/api/client';
 
-const SCOPES: DashboardScope[] = ['service', 'instance', 'endpoint', 'trace', 'profiling'];
+const SCOPES: DashboardScope[] = [
+  'service',
+  'instance',
+  'endpoint',
+  'dependency',
+  'topology',
+  'trace',
+  'logs',
+  'profiling',
+];
 
 const templates = ref<AdminLayerTemplate[]>([]);
 const isLoading = ref(true);
@@ -71,6 +80,34 @@ function syncDraft(): void {
 
 watch(selectedKey, syncDraft);
 onMounted(loadAll);
+
+/**
+ * Map each DashboardScope to its corresponding `components.*` flag.
+ * Used to filter the scope tab strip so admin only surfaces tabs for
+ * components the operator has toggled on.
+ */
+const SCOPE_COMPONENT: Record<DashboardScope, ComponentKey> = {
+  service: 'service',
+  instance: 'instances',
+  endpoint: 'endpoints',
+  dependency: 'endpointDependency',
+  topology: 'topology',
+  trace: 'traces',
+  logs: 'logs',
+  profiling: 'profiling',
+};
+const visibleScopes = computed<DashboardScope[]>(() => {
+  const tpl = draft.template;
+  if (!tpl?.components) return SCOPES;
+  return SCOPES.filter((s) => tpl.components[SCOPE_COMPONENT[s]]);
+});
+watch(visibleScopes, (scopes) => {
+  // If the currently-active scope was just toggled off, snap to the
+  // first remaining visible scope so the editor stays on solid ground.
+  if (!scopes.includes(activeScope.value)) {
+    activeScope.value = scopes[0] ?? 'service';
+  }
+});
 
 const dirty = computed(() => {
   const original = templates.value.find((t) => t.key === selectedKey.value);
@@ -429,7 +466,7 @@ function toggleComponent(key: ComponentKey): void {
         <!-- Scope tabs -->
         <nav class="scope-tabs sw-card">
           <button
-            v-for="s in SCOPES"
+            v-for="s in visibleScopes"
             :key="s"
             class="scope-tab"
             :class="{ on: activeScope === s }"

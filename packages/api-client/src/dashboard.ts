@@ -42,7 +42,20 @@ export type DashboardWidgetType = 'card' | 'line' | 'top';
  *   `trace`     = trace explorer for the selected entity
  *   `profiling` = flame graphs / sampled stacks
  */
-export type DashboardScope = 'service' | 'instance' | 'endpoint' | 'trace' | 'profiling';
+/**
+ * One scope per component on a layer. Each scope owns its own widget
+ * grid (`dashboards.<scope>` array). The set mirrors the layer's
+ * component toggles 1:1 — every enabled component is configurable.
+ */
+export type DashboardScope =
+  | 'service'
+  | 'instance'
+  | 'endpoint'
+  | 'dependency'
+  | 'topology'
+  | 'trace'
+  | 'logs'
+  | 'profiling';
 
 export interface DashboardWidget {
   /** Stable id within the layer's dashboard. */

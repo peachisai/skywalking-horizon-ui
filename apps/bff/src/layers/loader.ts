@@ -95,7 +95,10 @@ export interface LayerDashboards {
   service?: DashboardWidget[];
   instance?: DashboardWidget[];
   endpoint?: DashboardWidget[];
+  dependency?: DashboardWidget[];
+  topology?: DashboardWidget[];
   trace?: DashboardWidget[];
+  logs?: DashboardWidget[];
   profiling?: DashboardWidget[];
 }
 
