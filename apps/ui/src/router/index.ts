@@ -28,9 +28,9 @@ function humanKey(k: string): string {
 // reads `:layerKey` from the URL and pulls layer config / live data.
 // Sub-route components fill the tab body via a nested router-view.
 function layerRoute(): RouteRecordRaw {
-  // Tabs that still render generic placeholders. Services drops out
-  // because it has a real component; service-detail is a nested child
-  // of services so the breadcrumb stays clean.
+  // Per-layer sub-routes that still render generic placeholders until
+  // their phases land. The canonical landing is `/service` — that's
+  // the widget-grid view operators see when they click a layer.
   const placeholderTabs: { path: string; label: string; phase: string }[] = [
     { path: 'instances', label: 'Instances', phase: 'Phase 2 / 3' },
     { path: 'endpoints', label: 'Endpoints', phase: 'Phase 2 / 3' },
@@ -44,25 +44,33 @@ function layerRoute(): RouteRecordRaw {
     path: 'layer/:layerKey',
     component: () => import('@/views/layer/LayerShell.vue'),
     children: [
-      // Bare /layer/:layerKey lands on Services — the default entry.
-      { path: '', redirect: (to) => ({ path: `/layer/${to.params.layerKey}/services` }) },
-      // Services list — live constellation + sortable table. Selected
-      // service rides on `?service=<id>` in the URL (single source of
-      // truth across all tabs); the selector zone in LayerShell pins it.
-      { path: 'services', component: () => import('@/views/layer/LayerServicesView.vue') },
-      // Legacy route — redirect to query-string form so old bookmarks
-      // keep working.
+      // Bare /layer/:layerKey lands on the Service view — the per-layer
+      // widget grid driven by the dashboard config.
+      { path: '', redirect: (to) => ({ path: `/layer/${to.params.layerKey}/service` }) },
+      // Canonical per-layer landing page.
+      { path: 'service', component: () => import('@/views/layer/LayerDashboardsView.vue') },
+      // Legacy routes — redirect to /service so old bookmarks keep working.
+      {
+        path: 'services',
+        redirect: (to) => ({
+          path: `/layer/${to.params.layerKey}/service`,
+          query: to.query,
+        }),
+      },
       {
         path: 'services/:serviceId',
         redirect: (to) => ({
-          path: `/layer/${to.params.layerKey}/services`,
+          path: `/layer/${to.params.layerKey}/service`,
           query: { service: String(to.params.serviceId) },
         }),
       },
-      // Real dashboards (Phase 3). Widget set comes from the BFF's
-      // defaults (lifted from booster-ui templates); MQE runs live via
-      // /api/layer/:key/dashboard.
-      { path: 'dashboards', component: () => import('@/views/layer/LayerDashboardsView.vue') },
+      {
+        path: 'dashboards',
+        redirect: (to) => ({
+          path: `/layer/${to.params.layerKey}/service`,
+          query: to.query,
+        }),
+      },
       ...placeholderTabs.map<RouteRecordRaw>((f) => ({
         path: f.path,
         component: () => import('@/views/layer/LayerTabPlaceholder.vue'),

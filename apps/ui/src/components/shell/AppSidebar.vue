@@ -175,11 +175,11 @@ const sections: NavSection[] = [
       </div>
       <template v-for="L in orderedLayers" :key="L.key">
         <!-- Single-feature layer (virtual_database, virtual_cache, etc.):
-             render as a direct link — no expander, no children. The
-             services page is the layer's effective dashboard. -->
+             render as a direct link to the layer's Service page — no
+             expander, no children. -->
         <RouterLink
           v-if="isSingleFeatureLayer(L)"
-          :to="`/layer/${L.key}/services`"
+          :to="`/layer/${L.key}/service`"
           class="layer-row direct"
           :class="{ 'is-active': isActive(`/layer/${L.key}`) }"
         >
@@ -209,13 +209,16 @@ const sections: NavSection[] = [
           </span>
         </div>
         <div v-if="!isSingleFeatureLayer(L) && expandedLayer === L.key" class="layer-children">
+          <!-- Service = the layer's primary landing page (widget grid).
+               This single entry replaces the old separate Services list
+               + Dashboards entries — they were the same page in concept. -->
           <RouterLink
-            v-if="L.slots.services"
-            :to="`/layer/${L.key}/services`"
+            v-if="L.slots.services || L.caps.dashboards"
+            :to="`/layer/${L.key}/service`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/services`) || route.path === `/layer/${L.key}` }"
+            :class="{ 'is-active': isActive(`/layer/${L.key}/service`) || route.path === `/layer/${L.key}` }"
           >
-            <Icon name="svc" /><span>{{ L.slots.services }}</span>
+            <Icon name="svc" /><span>Service</span>
             <span class="sw-badge" style="margin-left: auto">{{ L.serviceCount }}</span>
           </RouterLink>
           <RouterLink
@@ -250,14 +253,6 @@ const sections: NavSection[] = [
             :class="{ 'is-active': isActive(`/layer/${L.key}/dependency`) }"
           >
             <Icon name="ep" /><span>{{ L.slots.endpointDependency ?? `${L.slots.endpoints ?? 'Endpoint'} dependency` }}</span>
-          </RouterLink>
-          <RouterLink
-            v-if="L.caps.dashboards"
-            :to="`/layer/${L.key}/dashboards`"
-            class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/dashboards`) }"
-          >
-            <Icon name="metric" /><span>Dashboards</span>
           </RouterLink>
           <RouterLink
             v-if="L.caps.traces"

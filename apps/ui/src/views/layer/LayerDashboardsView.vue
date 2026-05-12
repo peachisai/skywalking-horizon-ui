@@ -57,11 +57,11 @@ const errorText = computed(() => data.value?.error ?? (error.value ? String(erro
   <div class="dash-tab">
     <header class="dash-head">
       <div>
-        <div class="kicker">Dashboards</div>
+        <div class="kicker">Service</div>
         <h2>{{ widgets.length }} widget{{ widgets.length === 1 ? '' : 's' }}</h2>
         <p class="sub">
           MQE scoped to <code>{{ serviceText }}</code>.
-          Refreshes every 60s. <RouterLink to="/setup">Customize columns + KPIs</RouterLink>.
+          Refreshes every 60s. <RouterLink to="/admin/layer-dashboards">Customize widgets</RouterLink>.
         </p>
       </div>
       <div class="state">
