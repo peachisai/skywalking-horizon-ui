@@ -112,12 +112,14 @@ function buildOption(): echarts.EChartsCoreOption {
       show: props.series.length > 1,
       top: 2,
       left: 4,
+      right: 4,
       padding: [0, 0, 0, 0],
       textStyle: { color: '#94a3b8', fontSize: 10, lineHeight: 12 },
       itemWidth: 10,
       itemHeight: 8,
-      itemGap: 10,
+      itemGap: 14,
       icon: 'roundRect',
+      type: 'scroll',
     },
     grid: {
       left: 36,
@@ -166,13 +168,17 @@ function buildOption(): echarts.EChartsCoreOption {
       return axes;
     })(),
     series: props.series.map((s, i) => {
-      // First series uses the widget's accent color (resolved from a
-      // CSS var); secondary lines cycle through SECONDARY. Single-series
-      // widgets get a soft area fill in the accent tone.
       const accentHex = cssVar(props.accent);
       const color = i === 0 ? accentHex : SECONDARY[(i - 1) % SECONDARY.length];
+      // For dual-axis widgets, append the per-series unit to the
+      // legend label so operators can tell which line is on which
+      // axis at a glance (e.g. "count (/min)" vs "latency (ms)").
+      // Single-axis widgets keep the bare label — unit lives on the
+      // single y-axis annotation already.
+      const hasDualAxis = props.series.some((x) => (x.yAxisIndex ?? 0) === 1);
+      const name = hasDualAxis && s.unit ? `${s.label} (${s.unit})` : s.label;
       return {
-        name: s.label,
+        name,
         type: 'line',
         smooth: true,
         symbol: 'none',
