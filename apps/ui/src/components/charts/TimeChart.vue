@@ -107,17 +107,19 @@ function buildOption(): echarts.EChartsCoreOption {
     },
     legend: {
       show: props.series.length > 1,
-      bottom: 0,
+      top: 0,
+      left: 0,
       textStyle: { color: '#94a3b8', fontSize: 10 },
       itemWidth: 10,
       itemHeight: 8,
+      itemGap: 12,
       icon: 'roundRect',
     },
     grid: {
       left: 36,
       right: 8,
-      top: 8,
-      bottom: props.series.length > 1 ? 24 : 8,
+      top: props.series.length > 1 ? 22 : 8,
+      bottom: 8,
       containLabel: false,
     },
     xAxis: {

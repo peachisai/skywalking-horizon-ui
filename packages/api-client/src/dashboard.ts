@@ -72,6 +72,13 @@ export interface DashboardWidget {
    * Future-compatible; the SPA evaluates this client-side.
    */
   visibleWhen?: string;
+  /**
+   * When true, the BFF runs this widget's MQE against the whole layer
+   * rather than scoping it to the currently-selected service. Used for
+   * cross-service rollups (e.g. "Top 20 endpoints by traffic across the
+   * layer"). MQE entity flips to `{ scope: All }`.
+   */
+  layerScope?: boolean;
   /** Legacy 24-col grid coordinates — kept for back-compat during the
    *  span-based flow-layout migration. New widgets should leave these
    *  unset and use `span` / `rowSpan` instead. */

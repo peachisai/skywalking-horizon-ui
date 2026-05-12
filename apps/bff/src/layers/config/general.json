@@ -35,10 +35,11 @@
       {
         "id": "top_endpoints",
         "title": "Top 20 endpoints by traffic",
-        "tip": "top_n(endpoint_cpm,20,des) — click an endpoint to drill in.",
+        "tip": "top_n(endpoint_cpm,20,des) — scoped to the whole layer (not the selected service).",
         "type": "top",
         "unit": "rpm",
         "expressions": ["top_n(endpoint_cpm,20,des)"],
+        "layerScope": true,
         "span": 3,
         "rowSpan": 4
       },
@@ -79,15 +80,6 @@
         "rowSpan": 2
       },
       {
-        "id": "p99_line",
-        "title": "p99",
-        "type": "line",
-        "unit": "ms",
-        "expressions": ["service_percentile{p='99'}"],
-        "span": 3,
-        "rowSpan": 2
-      },
-      {
         "id": "percentile_line",
         "title": "Response Time Percentile",
         "tip": "Single MQE: relabels(service_percentile{p='50,75,90,95,99'},...,percentile='50,...').",
@@ -96,6 +88,15 @@
         "expressions": [
           "relabels(service_percentile{p='50,75,90,95,99'},p='50,75,90,95,99',percentile='50,75,90,95,99')"
         ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "err_line",
+        "title": "Error Rate",
+        "type": "line",
+        "unit": "%",
+        "expressions": ["100 - service_sla/100"],
         "span": 3,
         "rowSpan": 2
       }

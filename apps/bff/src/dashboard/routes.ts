@@ -68,6 +68,7 @@ const widgetSchema = z.object({
   span: z.number().int().min(1).max(12).optional(),
   rowSpan: z.number().int().min(1).max(64).optional(),
   visibleWhen: z.string().optional(),
+  layerScope: z.boolean().optional(),
   // Legacy x/y/w/h kept optional for back-compat.
   x: z.number().int().min(0).optional(),
   y: z.number().int().min(0).optional(),
@@ -142,15 +143,23 @@ function buildFragment(
   serviceName: string,
   normal: boolean,
   w: Window,
+  opts: { layerScope?: boolean } = {},
 ): string {
   // We fetch metric.labels (for multi-series Line widgets — relabels()
   // returns one labeled result per percentile) and value.id /
   // owner.endpointName (for TopList widgets — top_n() returns a
   // sorted list of entities + values).
+  //
+  // layerScope=true skips the serviceName filter so the MQE runs
+  // across the whole layer — used for cross-service rollups like the
+  // "Top 20 endpoints" widget on the per-layer Service page.
+  const entity = opts.layerScope
+    ? '{ scope: All }'
+    : `{ scope: Service, serviceName: ${JSON.stringify(serviceName)}, normal: ${normal ? 'true' : 'false'} }`;
   return (
     `${alias}: execExpression(\n` +
     `      expression: ${JSON.stringify(expression)},\n` +
-    `      entity: { scope: Service, serviceName: ${JSON.stringify(serviceName)}, normal: ${normal ? 'true' : 'false'} },\n` +
+    `      entity: ${entity},\n` +
     `      duration: { start: ${JSON.stringify(w.start)}, end: ${JSON.stringify(w.end)}, step: MINUTE }\n` +
     `    ) {\n` +
     `      type error\n` +
@@ -312,7 +321,11 @@ export function registerDashboardRoute(app: FastifyInstance, deps: DashboardRout
         widget.expressions.forEach((expr, eIdx) => {
           const alias = `w${wIdx}_e${eIdx}`;
           aliasMap.set(alias, { wIdx, eIdx });
-          fragments.push(buildFragment(alias, expr, serviceName, normal, window));
+          fragments.push(
+            buildFragment(alias, expr, serviceName, normal, window, {
+              layerScope: widget.layerScope === true,
+            }),
+          );
         });
       });
       let data: Record<string, MqeResultShape> = {};
