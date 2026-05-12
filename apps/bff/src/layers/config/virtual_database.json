@@ -1,0 +1,56 @@
+{
+  "key": "VIRTUAL_DATABASE",
+  "alias": "Virtual Database",
+  "color": "var(--sw-warn)",
+  "slots": {
+    "services": "Databases"
+  },
+  "components": {
+    "service": true
+  },
+  "metrics": {
+    "throughput": "cpm",
+    "spark": "cpm",
+    "orderBy": "cpm",
+    "columns": [
+      { "metric": "cpm", "label": "Traffic", "unit": "rpm", "mqe": "service_cpm", "aggregation": "sum" },
+      { "metric": "resp", "label": "resp", "unit": "ms", "mqe": "service_resp_time", "aggregation": "avg" },
+      { "metric": "p99", "label": "p99", "unit": "ms", "mqe": "service_percentile{p='99'}", "aggregation": "avg" },
+      { "metric": "err", "label": "err", "unit": "%", "mqe": "100 - service_sla/100", "aggregation": "avg" }
+    ]
+  },
+  "widgets": [
+    {
+      "id": "traffic",
+      "title": "Traffic",
+      "type": "card",
+      "unit": "rpm",
+      "expressions": ["avg(service_cpm)"],
+      "x": 0, "y": 0, "w": 8, "h": 5
+    },
+    {
+      "id": "resp",
+      "title": "Avg Response Time",
+      "type": "card",
+      "unit": "ms",
+      "expressions": ["avg(service_resp_time)"],
+      "x": 8, "y": 0, "w": 8, "h": 5
+    },
+    {
+      "id": "sla",
+      "title": "Success Rate",
+      "type": "card",
+      "unit": "%",
+      "expressions": ["avg(service_sla)/100"],
+      "x": 16, "y": 0, "w": 8, "h": 5
+    },
+    {
+      "id": "traffic_line",
+      "title": "Traffic",
+      "type": "line",
+      "unit": "rpm",
+      "expressions": ["service_cpm"],
+      "x": 0, "y": 5, "w": 24, "h": 12
+    }
+  ]
+}

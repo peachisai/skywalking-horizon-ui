@@ -27,6 +27,7 @@
  */
 
 import type { DashboardWidget } from '@skywalking-horizon-ui/api-client';
+import { getLayerTemplate } from '../layers/loader.js';
 
 /** Service-scope service-shaped layers (general / mesh / k8s_service). */
 const SERVICE_WIDGETS: DashboardWidget[] = [
@@ -178,15 +179,17 @@ const GENERIC_WIDGETS: DashboardWidget[] = [
 ];
 
 /**
- * Resolve the default widget set for `(layerKey)`. The set is per
- * layer enum, but we also map alias keys (CACHE → VIRTUAL_CACHE etc.)
- * to the modern enum since older OAP builds still emit aliases.
+ * Resolve the default widget set for `(layerKey)`. First tries the
+ * JSON layer template (`src/layers/config/<key>.json`); falls back to
+ * the hardcoded TS sets above when no JSON exists for the layer. JSON
+ * wins because that's where operators will eventually edit widgets
+ * via the admin page.
  */
 export function defaultWidgetsFor(layerKey: string): DashboardWidget[] {
+  const tpl = getLayerTemplate(layerKey);
+  if (tpl && tpl.widgets && tpl.widgets.length > 0) return tpl.widgets;
   const k = layerKey.toUpperCase();
-  if (k === 'GENERAL' || k === 'MESH' || k === 'MESH_CP' || k === 'MESH_DP' || k === 'K8S_SERVICE') {
-    return SERVICE_WIDGETS;
-  }
+  if (k === 'MESH_CP' || k === 'MESH_DP') return SERVICE_WIDGETS;
   if (k === 'BROWSER') return BROWSER_WIDGETS;
   return GENERIC_WIDGETS;
 }

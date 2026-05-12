@@ -1,0 +1,65 @@
+{
+  "key": "K8S_SERVICE",
+  "alias": "K8s Service",
+  "color": "var(--sw-purple)",
+  "slots": {
+    "services": "K8s services",
+    "instances": "Pods"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "topology": true,
+    "traces": true,
+    "logs": true
+  },
+  "metrics": {
+    "throughput": "cpm",
+    "spark": "cpm",
+    "orderBy": "cpm",
+    "columns": [
+      { "metric": "cpm", "label": "Traffic", "unit": "rpm", "mqe": "service_cpm", "aggregation": "sum" },
+      { "metric": "p99", "label": "p99", "unit": "ms", "mqe": "service_percentile{p='99'}", "aggregation": "avg" },
+      { "metric": "sla", "label": "SLA", "unit": "%", "mqe": "service_sla/100", "aggregation": "avg" },
+      { "metric": "err", "label": "err", "unit": "%", "mqe": "100 - service_sla/100", "aggregation": "avg" }
+    ]
+  },
+  "widgets": [
+    {
+      "id": "traffic",
+      "title": "Traffic",
+      "type": "card",
+      "unit": "rpm",
+      "expressions": ["avg(service_cpm)"],
+      "x": 0, "y": 0, "w": 12, "h": 5
+    },
+    {
+      "id": "sla",
+      "title": "Success Rate",
+      "type": "card",
+      "unit": "%",
+      "expressions": ["avg(service_sla)/100"],
+      "x": 12, "y": 0, "w": 12, "h": 5
+    },
+    {
+      "id": "traffic_line",
+      "title": "Traffic",
+      "type": "line",
+      "unit": "rpm",
+      "expressions": ["service_cpm"],
+      "x": 0, "y": 5, "w": 12, "h": 12
+    },
+    {
+      "id": "percentile",
+      "title": "Response Time Percentile",
+      "type": "line",
+      "unit": "ms",
+      "expressions": [
+        "service_percentile{p='50'}",
+        "service_percentile{p='95'}",
+        "service_percentile{p='99'}"
+      ],
+      "x": 12, "y": 5, "w": 12, "h": 12
+    }
+  ]
+}

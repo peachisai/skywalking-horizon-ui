@@ -1,0 +1,44 @@
+{
+  "key": "VIRTUAL_CACHE",
+  "alias": "Virtual Cache",
+  "color": "var(--sw-warn)",
+  "slots": {
+    "services": "Caches"
+  },
+  "components": { "service": true },
+  "metrics": {
+    "throughput": "cpm",
+    "spark": "cpm",
+    "orderBy": "cpm",
+    "columns": [
+      { "metric": "cpm", "label": "Traffic", "unit": "rpm", "mqe": "service_cpm", "aggregation": "sum" },
+      { "metric": "resp", "label": "resp", "unit": "ms", "mqe": "service_resp_time", "aggregation": "avg" }
+    ]
+  },
+  "widgets": [
+    {
+      "id": "traffic",
+      "title": "Traffic",
+      "type": "card",
+      "unit": "rpm",
+      "expressions": ["avg(service_cpm)"],
+      "x": 0, "y": 0, "w": 12, "h": 5
+    },
+    {
+      "id": "resp",
+      "title": "Avg Response Time",
+      "type": "card",
+      "unit": "ms",
+      "expressions": ["avg(service_resp_time)"],
+      "x": 12, "y": 0, "w": 12, "h": 5
+    },
+    {
+      "id": "traffic_line",
+      "title": "Traffic",
+      "type": "line",
+      "unit": "rpm",
+      "expressions": ["service_cpm"],
+      "x": 0, "y": 5, "w": 24, "h": 12
+    }
+  ]
+}

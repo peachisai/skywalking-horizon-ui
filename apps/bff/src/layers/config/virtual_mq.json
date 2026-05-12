@@ -1,0 +1,44 @@
+{
+  "key": "VIRTUAL_MQ",
+  "alias": "Virtual MQ",
+  "color": "var(--sw-ok)",
+  "slots": {
+    "services": "Queues"
+  },
+  "components": { "service": true },
+  "metrics": {
+    "throughput": "cpm",
+    "spark": "cpm",
+    "orderBy": "cpm",
+    "columns": [
+      { "metric": "cpm", "label": "msg/s", "mqe": "service_cpm", "aggregation": "sum" },
+      { "metric": "resp", "label": "consume", "unit": "ms", "mqe": "service_resp_time", "aggregation": "avg" }
+    ]
+  },
+  "widgets": [
+    {
+      "id": "traffic",
+      "title": "Message rate",
+      "type": "card",
+      "unit": "msg / min",
+      "expressions": ["avg(service_cpm)"],
+      "x": 0, "y": 0, "w": 12, "h": 5
+    },
+    {
+      "id": "resp",
+      "title": "Avg Consume Latency",
+      "type": "card",
+      "unit": "ms",
+      "expressions": ["avg(service_resp_time)"],
+      "x": 12, "y": 0, "w": 12, "h": 5
+    },
+    {
+      "id": "traffic_line",
+      "title": "Message rate",
+      "type": "line",
+      "unit": "msg / min",
+      "expressions": ["service_cpm"],
+      "x": 0, "y": 5, "w": 24, "h": 12
+    }
+  ]
+}

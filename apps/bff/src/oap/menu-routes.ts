@@ -27,6 +27,27 @@ import type { ConfigSource } from '../config/loader.js';
 import type { SessionStore } from '../auth/sessions.js';
 import { requireAuth } from '../auth/middleware.js';
 import { graphqlPost } from './graphql-client.js';
+import { getLayerTemplate, type LayerComponentFlags } from '../layers/loader.js';
+
+/**
+ * Map the JSON config's `components.*` flags onto the wire `caps`
+ * shape — caps are the cap-driven feature toggles each per-layer page
+ * consults. We expand a few aliases (service ⇒ no separate cap; the
+ * components flag is the source of truth for whether the page exists).
+ */
+function componentsToCaps(components: LayerComponentFlags): LayerCaps {
+  return {
+    dashboards: components.service !== false,
+    endpointDependency: !!components.endpointDependency,
+    serviceMap: !!components.topology,
+    instanceTopology: !!components.topology,
+    processTopology: !!components.topology,
+    traces: !!components.traces,
+    logs: !!components.logs,
+    profiling: !!components.profiling,
+    events: false,
+  };
+}
 
 export interface MenuRouteDeps {
   config: ConfigSource;
@@ -143,6 +164,23 @@ function deriveLayer(
   items: MenuRaw['items'],
 ): LayerDef {
   const item = items.find((i) => canonical(i.layer) === rawKey);
+  // JSON template wins when present — alias / color / slots / caps all
+  // come from there. Hardcoded LAYER_DEFAULTS stays as the fallback for
+  // layers without a template (older OAP layers, custom layers).
+  const tpl = getLayerTemplate(rawKey);
+  if (tpl) {
+    return {
+      key: rawKey.toLowerCase(),
+      name: tpl.alias || item?.title?.trim() || rawKey,
+      color: tpl.color || 'var(--sw-fg-2)',
+      serviceCount,
+      active,
+      level,
+      documentLink: tpl.documentLink ?? item?.documentLink ?? undefined,
+      slots: tpl.slots,
+      caps: componentsToCaps(tpl.components),
+    };
+  }
   const def = LAYER_DEFAULTS[rawKey] ?? DEFAULT_FOR_UNKNOWN_LAYER;
   return {
     key: rawKey.toLowerCase(),
