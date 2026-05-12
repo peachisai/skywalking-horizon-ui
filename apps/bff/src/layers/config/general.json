@@ -33,8 +33,8 @@
   "dashboards": {
     "service": [
       {
-        "id": "top_endpoints",
-        "title": "Top 20 endpoints by traffic",
+        "id": "top_apis",
+        "title": "Top 20 APIs by traffic",
         "tip": "top_n(endpoint_cpm,20,des) — scoped to the whole layer (not the selected service).",
         "type": "top",
         "unit": "rpm",
@@ -99,6 +99,57 @@
         "expressions": ["100 - service_sla/100"],
         "span": 3,
         "rowSpan": 2
+      },
+      {
+        "id": "mq_consume_count",
+        "title": "MQ Consuming Count",
+        "tip": "service_mq_consume_count — only shown when the service emits MQ metrics.",
+        "type": "line",
+        "expressions": ["service_mq_consume_count"],
+        "visibleWhen": "service_mq_consume_count has value",
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "mq_consume_latency",
+        "title": "MQ Avg Consuming Latency",
+        "tip": "service_mq_consume_latency — only shown when the service emits MQ metrics.",
+        "type": "line",
+        "unit": "ms",
+        "expressions": ["service_mq_consume_latency"],
+        "visibleWhen": "service_mq_consume_latency has value",
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "top_instance_load",
+        "title": "Top 10 instances by load",
+        "tip": "top_n(service_instance_cpm,10,des) — for the selected service.",
+        "type": "top",
+        "unit": "rpm",
+        "expressions": ["top_n(service_instance_cpm,10,des)"],
+        "span": 4,
+        "rowSpan": 3
+      },
+      {
+        "id": "top_instance_slow",
+        "title": "Top 10 slowest instances",
+        "tip": "top_n(service_instance_resp_time,10,des) — for the selected service.",
+        "type": "top",
+        "unit": "ms",
+        "expressions": ["top_n(service_instance_resp_time,10,des)"],
+        "span": 4,
+        "rowSpan": 3
+      },
+      {
+        "id": "top_instance_sla",
+        "title": "Top 10 instances by success rate",
+        "tip": "top_n(service_instance_sla,10,asc)/100 — worst-first ranking.",
+        "type": "top",
+        "unit": "%",
+        "expressions": ["top_n(service_instance_sla,10,asc)/100"],
+        "span": 4,
+        "rowSpan": 3
       }
     ],
     "instance": [
