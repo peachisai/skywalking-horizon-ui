@@ -1,6 +1,7 @@
 {
   "key": "VIRTUAL_CACHE",
   "alias": "Virtual Cache",
+  "group": "Virtual targets",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/service-agent/virtual-cache/",
   "aliases": {
@@ -18,10 +19,34 @@
   "layer-header": {
     "orderBy": "cpm",
     "columns": [
-      { "metric": "cpm", "label": "Access RPM", "unit": "rpm", "mqe": "cache_access_cpm", "aggregation": "sum" },
-      { "metric": "respTime", "label": "Latency", "unit": "ms", "mqe": "cache_access_resp_time", "aggregation": "avg" },
-      { "metric": "p95", "label": "p95", "unit": "ms", "mqe": "cache_access_percentile{p='95'}", "aggregation": "avg" },
-      { "metric": "err", "label": "Error Rate", "unit": "%", "mqe": "100 - cache_access_sla/100", "aggregation": "avg" }
+      {
+        "metric": "cpm",
+        "label": "Access RPM",
+        "unit": "rpm",
+        "mqe": "cache_access_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "respTime",
+        "label": "Latency",
+        "unit": "ms",
+        "mqe": "cache_access_resp_time",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "p95",
+        "label": "p95",
+        "unit": "ms",
+        "mqe": "cache_access_percentile{p='95'}",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "err",
+        "label": "Error Rate",
+        "unit": "%",
+        "mqe": "100 - cache_access_sla/100",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
@@ -30,15 +55,36 @@
         "title": "Latency & errors",
         "size": "auto",
         "metrics": [
-          { "id": "p95", "label": "P95", "tip": "95th-percentile cache access latency.", "mqe": "cache_access_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
-          { "id": "err", "label": "Error Rate", "tip": "100 − cache access success rate. Cache exceptions captured by the calling service's agent.", "mqe": "100 - cache_access_sla/100", "unit": "%", "aggregation": "avg" }
+          {
+            "id": "p95",
+            "label": "P95",
+            "tip": "95th-percentile cache access latency.",
+            "mqe": "cache_access_percentile{p='95'}",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "err",
+            "label": "Error Rate",
+            "tip": "100 \u2212 cache access success rate. Cache exceptions captured by the calling service's agent.",
+            "mqe": "100 - cache_access_sla/100",
+            "unit": "%",
+            "aggregation": "avg"
+          }
         ]
       },
       {
         "title": "Throughput",
         "size": "square",
         "metrics": [
-          { "id": "cpm", "label": "Access RPM", "tip": "Cache operations per minute (read + write).", "mqe": "cache_access_cpm", "unit": "rpm", "aggregation": "sum" }
+          {
+            "id": "cpm",
+            "label": "Access RPM",
+            "tip": "Cache operations per minute (read + write).",
+            "mqe": "cache_access_cpm",
+            "unit": "rpm",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
@@ -50,7 +96,9 @@
         "title": "Access Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["cache_access_cpm"],
+        "expressions": [
+          "cache_access_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -59,7 +107,9 @@
         "title": "Avg Access Latency",
         "type": "line",
         "unit": "ms",
-        "expressions": ["cache_access_resp_time"],
+        "expressions": [
+          "cache_access_resp_time"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -68,7 +118,9 @@
         "title": "Access Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["cache_access_sla/100"],
+        "expressions": [
+          "cache_access_sla/100"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -88,7 +140,9 @@
         "title": "Read Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["cache_read_cpm"],
+        "expressions": [
+          "cache_read_cpm"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -97,7 +151,9 @@
         "title": "Read Avg Latency",
         "type": "line",
         "unit": "ms",
-        "expressions": ["cache_read_resp_time"],
+        "expressions": [
+          "cache_read_resp_time"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -106,7 +162,9 @@
         "title": "Write Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["cache_write_cpm"],
+        "expressions": [
+          "cache_write_cpm"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -115,7 +173,9 @@
         "title": "Write Avg Latency",
         "type": "line",
         "unit": "ms",
-        "expressions": ["cache_write_resp_time"],
+        "expressions": [
+          "cache_write_resp_time"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -124,7 +184,9 @@
         "title": "Read Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["cache_read_sla/100"],
+        "expressions": [
+          "cache_read_sla/100"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -133,7 +195,9 @@
         "title": "Write Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["cache_write_sla/100"],
+        "expressions": [
+          "cache_write_sla/100"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -162,20 +226,24 @@
       {
         "id": "slow_read",
         "title": "Slow Read Commands",
-        "tip": "Top 10 slowest captured read commands. Each row is a single execution — click to drill into the originating trace.",
+        "tip": "Top 10 slowest captured read commands. Each row is a single execution \u2014 click to drill into the originating trace.",
         "type": "record",
         "unit": "ms",
-        "expressions": ["top_n(top_n_cache_read_command, 10, des)"],
+        "expressions": [
+          "top_n(top_n_cache_read_command, 10, des)"
+        ],
         "span": 6,
         "rowSpan": 4
       },
       {
         "id": "slow_write",
         "title": "Slow Write Commands",
-        "tip": "Top 10 slowest captured write commands. Each row is a single execution — click to drill into the originating trace.",
+        "tip": "Top 10 slowest captured write commands. Each row is a single execution \u2014 click to drill into the originating trace.",
         "type": "record",
         "unit": "ms",
-        "expressions": ["top_n(top_n_cache_write_command, 10, des)"],
+        "expressions": [
+          "top_n(top_n_cache_write_command, 10, des)"
+        ],
         "span": 6,
         "rowSpan": 4
       }

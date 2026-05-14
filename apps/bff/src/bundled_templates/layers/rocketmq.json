@@ -1,54 +1,352 @@
 {
   "key": "ROCKETMQ",
   "alias": "RocketMQ",
+  "group": "MQ",
   "color": "var(--sw-purple)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-rocketmq-monitoring/",
-  "aliases": { "services": "RocketMQ clusters", "instances": "Brokers", "endpoints": "Topics" },
-  "components": { "service": true, "instances": true, "endpoints": true, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "RocketMQ clusters",
+    "instances": "Brokers",
+    "endpoints": "Topics"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": true,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "produceTps",
     "columns": [
-      { "metric": "produceTps", "label": "Produce TPS", "mqe": "meter_rocketmq_cluster_total_producer_tps", "aggregation": "avg" },
-      { "metric": "consumeTps", "label": "Consume TPS", "mqe": "meter_rocketmq_cluster_total_consumer_tps", "aggregation": "avg" },
-      { "metric": "topics", "label": "Topics", "mqe": "latest(meter_rocketmq_cluster_topic_count)", "aggregation": "sum" },
-      { "metric": "brokers", "label": "Brokers", "mqe": "latest(meter_rocketmq_cluster_broker_count)", "aggregation": "sum" }
+      {
+        "metric": "produceTps",
+        "label": "Produce TPS",
+        "mqe": "meter_rocketmq_cluster_total_producer_tps",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "consumeTps",
+        "label": "Consume TPS",
+        "mqe": "meter_rocketmq_cluster_total_consumer_tps",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "topics",
+        "label": "Topics",
+        "mqe": "latest(meter_rocketmq_cluster_topic_count)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "brokers",
+        "label": "Brokers",
+        "mqe": "latest(meter_rocketmq_cluster_broker_count)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Throughput", "size": "auto", "metrics": [
-        { "id": "produceTps", "label": "Produce TPS", "tip": "Messages produced per second across the cluster.", "mqe": "meter_rocketmq_cluster_total_producer_tps", "aggregation": "avg" },
-        { "id": "consumeTps", "label": "Consume TPS", "tip": "Messages consumed per second.", "mqe": "meter_rocketmq_cluster_total_consumer_tps", "aggregation": "avg" },
-        { "id": "maxLag", "label": "Max Consumer Latency", "tip": "Worst consumer latency across the cluster.", "mqe": "latest(meter_rocketmq_cluster_max_consumer_latency)", "aggregation": "max" }
-      ]}
+      {
+        "title": "Throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "produceTps",
+            "label": "Produce TPS",
+            "tip": "Messages produced per second across the cluster.",
+            "mqe": "meter_rocketmq_cluster_total_producer_tps",
+            "aggregation": "avg"
+          },
+          {
+            "id": "consumeTps",
+            "label": "Consume TPS",
+            "tip": "Messages consumed per second.",
+            "mqe": "meter_rocketmq_cluster_total_consumer_tps",
+            "aggregation": "avg"
+          },
+          {
+            "id": "maxLag",
+            "label": "Max Consumer Latency",
+            "tip": "Worst consumer latency across the cluster.",
+            "mqe": "latest(meter_rocketmq_cluster_max_consumer_latency)",
+            "aggregation": "max"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "today_msgs", "title": "Messages Today", "type": "line", "expressions": ["latest(meter_rocketmq_cluster_messages_produced_today)", "latest(meter_rocketmq_cluster_messages_consumed_today)"], "expressionLabels": ["produced", "consumed"], "span": 6, "rowSpan": 2 },
-      { "id": "yesterday_msgs", "title": "Messages Yesterday", "type": "line", "expressions": ["latest(meter_rocketmq_cluster_messages_produced_until_yesterday)", "latest(meter_rocketmq_cluster_messages_consumed_until_yesterday)"], "expressionLabels": ["produced", "consumed"], "span": 6, "rowSpan": 2 },
-      { "id": "tps", "title": "Producer / Consumer TPS", "type": "line", "expressions": ["meter_rocketmq_cluster_total_producer_tps", "meter_rocketmq_cluster_total_consumer_tps"], "expressionLabels": ["producer", "consumer"], "span": 6, "rowSpan": 2 },
-      { "id": "msg_size", "title": "Producer / Consumer Message Size (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rocketmq_cluster_producer_message_size/1024/1024", "meter_rocketmq_cluster_consumer_message_size/1024/1024"], "expressionLabels": ["produced", "consumed"], "span": 6, "rowSpan": 2 },
-      { "id": "consumer_lag", "title": "Max Consumer Latency", "type": "line", "expressions": ["latest(meter_rocketmq_cluster_max_consumer_latency)"], "span": 4, "rowSpan": 2 },
-      { "id": "commitlog_ratio", "title": "CommitLog Disk Ratio (%)", "type": "line", "unit": "%", "expressions": ["meter_rocketmq_cluster_commitLog_disk_ratio", "latest(meter_rocketmq_cluster_max_commitLog_disk_ratio)"], "expressionLabels": ["current", "max"], "span": 4, "rowSpan": 2 },
-      { "id": "queue_wait", "title": "ThreadPool Queue Head Wait (ms)", "type": "line", "unit": "ms", "expressions": ["meter_rocketmq_cluster_pull_threadPool_queue_head_wait_time", "meter_rocketmq_cluster_send_threadPool_queue_head_wait_time"], "expressionLabels": ["pull", "send"], "span": 4, "rowSpan": 2 },
-      { "id": "topics_brokers", "title": "Topics / Brokers", "type": "line", "expressions": ["latest(meter_rocketmq_cluster_topic_count)", "latest(meter_rocketmq_cluster_broker_count)"], "expressionLabels": ["topics", "brokers"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "today_msgs",
+        "title": "Messages Today",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rocketmq_cluster_messages_produced_today)",
+          "latest(meter_rocketmq_cluster_messages_consumed_today)"
+        ],
+        "expressionLabels": [
+          "produced",
+          "consumed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "yesterday_msgs",
+        "title": "Messages Yesterday",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rocketmq_cluster_messages_produced_until_yesterday)",
+          "latest(meter_rocketmq_cluster_messages_consumed_until_yesterday)"
+        ],
+        "expressionLabels": [
+          "produced",
+          "consumed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "tps",
+        "title": "Producer / Consumer TPS",
+        "type": "line",
+        "expressions": [
+          "meter_rocketmq_cluster_total_producer_tps",
+          "meter_rocketmq_cluster_total_consumer_tps"
+        ],
+        "expressionLabels": [
+          "producer",
+          "consumer"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "msg_size",
+        "title": "Producer / Consumer Message Size (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rocketmq_cluster_producer_message_size/1024/1024",
+          "meter_rocketmq_cluster_consumer_message_size/1024/1024"
+        ],
+        "expressionLabels": [
+          "produced",
+          "consumed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "consumer_lag",
+        "title": "Max Consumer Latency",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rocketmq_cluster_max_consumer_latency)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "commitlog_ratio",
+        "title": "CommitLog Disk Ratio (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_rocketmq_cluster_commitLog_disk_ratio",
+          "latest(meter_rocketmq_cluster_max_commitLog_disk_ratio)"
+        ],
+        "expressionLabels": [
+          "current",
+          "max"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "queue_wait",
+        "title": "ThreadPool Queue Head Wait (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_rocketmq_cluster_pull_threadPool_queue_head_wait_time",
+          "meter_rocketmq_cluster_send_threadPool_queue_head_wait_time"
+        ],
+        "expressionLabels": [
+          "pull",
+          "send"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "topics_brokers",
+        "title": "Topics / Brokers",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rocketmq_cluster_topic_count)",
+          "latest(meter_rocketmq_cluster_broker_count)"
+        ],
+        "expressionLabels": [
+          "topics",
+          "brokers"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "produce_tps", "title": "Produce TPS", "type": "line", "expressions": ["meter_rocketmq_broker_produce_tps"], "span": 3, "rowSpan": 2 },
-      { "id": "consume_qps", "title": "Consume QPS", "type": "line", "expressions": ["meter_rocketmq_broker_consume_qps"], "span": 3, "rowSpan": 2 },
-      { "id": "producer_size", "title": "Producer Msg Size (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rocketmq_broker_producer_message_size/1024/1024"], "span": 3, "rowSpan": 2 },
-      { "id": "consumer_size", "title": "Consumer Msg Size (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rocketmq_broker_consumer_message_size/1024/1024"], "span": 3, "rowSpan": 2 }
+      {
+        "id": "produce_tps",
+        "title": "Produce TPS",
+        "type": "line",
+        "expressions": [
+          "meter_rocketmq_broker_produce_tps"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "consume_qps",
+        "title": "Consume QPS",
+        "type": "line",
+        "expressions": [
+          "meter_rocketmq_broker_consume_qps"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "producer_size",
+        "title": "Producer Msg Size (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rocketmq_broker_producer_message_size/1024/1024"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "consumer_size",
+        "title": "Consumer Msg Size (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rocketmq_broker_consumer_message_size/1024/1024"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "tps", "title": "Producer / Consumer Group TPS", "type": "line", "expressions": ["meter_rocketmq_topic_producer_tps", "meter_rocketmq_topic_consumer_group_tps"], "expressionLabels": ["producer", "consumer group"], "span": 6, "rowSpan": 2 },
-      { "id": "msg_size", "title": "Message Size (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rocketmq_topic_producer_message_size/1024/1024", "meter_rocketmq_topic_consumer_message_size/1024/1024"], "expressionLabels": ["produced", "consumed"], "span": 6, "rowSpan": 2 },
-      { "id": "max_msg", "title": "Max Message Size (MB)", "type": "line", "unit": "MB", "expressions": ["latest(meter_rocketmq_topic_max_producer_message_size)/1024/1024", "latest(meter_rocketmq_topic_max_consumer_message_size)/1024/1024"], "expressionLabels": ["producer", "consumer"], "span": 6, "rowSpan": 2 },
-      { "id": "consumer_latency", "title": "Consumer Latency (s)", "type": "line", "unit": "s", "expressions": ["meter_rocketmq_topic_consumer_latency/1000"], "span": 6, "rowSpan": 2 },
-      { "id": "offsets", "title": "Producer / Consumer Offsets", "type": "line", "expressions": ["meter_rocketmq_topic_producer_offset", "meter_rocketmq_topic_consumer_group_offset"], "expressionLabels": ["producer", "consumer group"], "span": 6, "rowSpan": 2 },
-      { "id": "backlog", "title": "Backlogged Messages", "tip": "Producer offset minus consumer-group offset — the topic lag.", "type": "line", "expressions": ["meter_rocketmq_topic_producer_offset-meter_rocketmq_topic_consumer_group_offset"], "span": 6, "rowSpan": 2 },
-      { "id": "consumer_groups", "title": "Consumer Group Count", "type": "line", "expressions": ["latest(meter_rocketmq_topic_consumer_group_count)"], "span": 6, "rowSpan": 2 },
-      { "id": "brokers", "title": "Broker Count", "type": "line", "expressions": ["latest(meter_rocketmq_topic_broker_count)"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "tps",
+        "title": "Producer / Consumer Group TPS",
+        "type": "line",
+        "expressions": [
+          "meter_rocketmq_topic_producer_tps",
+          "meter_rocketmq_topic_consumer_group_tps"
+        ],
+        "expressionLabels": [
+          "producer",
+          "consumer group"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "msg_size",
+        "title": "Message Size (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rocketmq_topic_producer_message_size/1024/1024",
+          "meter_rocketmq_topic_consumer_message_size/1024/1024"
+        ],
+        "expressionLabels": [
+          "produced",
+          "consumed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "max_msg",
+        "title": "Max Message Size (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "latest(meter_rocketmq_topic_max_producer_message_size)/1024/1024",
+          "latest(meter_rocketmq_topic_max_consumer_message_size)/1024/1024"
+        ],
+        "expressionLabels": [
+          "producer",
+          "consumer"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "consumer_latency",
+        "title": "Consumer Latency (s)",
+        "type": "line",
+        "unit": "s",
+        "expressions": [
+          "meter_rocketmq_topic_consumer_latency/1000"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "offsets",
+        "title": "Producer / Consumer Offsets",
+        "type": "line",
+        "expressions": [
+          "meter_rocketmq_topic_producer_offset",
+          "meter_rocketmq_topic_consumer_group_offset"
+        ],
+        "expressionLabels": [
+          "producer",
+          "consumer group"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "backlog",
+        "title": "Backlogged Messages",
+        "tip": "Producer offset minus consumer-group offset \u2014 the topic lag.",
+        "type": "line",
+        "expressions": [
+          "meter_rocketmq_topic_producer_offset-meter_rocketmq_topic_consumer_group_offset"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "consumer_groups",
+        "title": "Consumer Group Count",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rocketmq_topic_consumer_group_count)"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "brokers",
+        "title": "Broker Count",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rocketmq_topic_broker_count)"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

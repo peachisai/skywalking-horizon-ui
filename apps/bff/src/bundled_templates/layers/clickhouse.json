@@ -1,60 +1,468 @@
 {
   "key": "CLICKHOUSE",
   "alias": "ClickHouse",
+  "group": "Databases",
   "color": "var(--sw-cyan)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-clickhouse-monitoring/",
-  "aliases": { "services": "ClickHouse clusters", "instances": "Nodes" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "ClickHouse clusters",
+    "instances": "Nodes"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "selRate",
     "columns": [
-      { "metric": "selRate", "label": "Select / s", "mqe": "aggregate_labels(meter_clickhouse_query_select_rate,sum)", "aggregation": "sum" },
-      { "metric": "insRate", "label": "Insert / s", "mqe": "aggregate_labels(meter_clickhouse_query_insert_rate,sum)", "aggregation": "sum" },
-      { "metric": "slowQ", "label": "Slow Reads", "mqe": "aggregate_labels(meter_clickhouse_query_slow,sum)", "aggregation": "sum" },
-      { "metric": "fileOpen", "label": "Open Files", "mqe": "latest(aggregate_labels(meter_clickhouse_file_open,sum))", "aggregation": "sum" }
+      {
+        "metric": "selRate",
+        "label": "Select / s",
+        "mqe": "aggregate_labels(meter_clickhouse_query_select_rate,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "insRate",
+        "label": "Insert / s",
+        "mqe": "aggregate_labels(meter_clickhouse_query_insert_rate,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "slowQ",
+        "label": "Slow Reads",
+        "mqe": "aggregate_labels(meter_clickhouse_query_slow,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "fileOpen",
+        "label": "Open Files",
+        "mqe": "latest(aggregate_labels(meter_clickhouse_file_open,sum))",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Throughput", "size": "auto", "metrics": [
-        { "id": "selRate", "label": "Select QPS", "tip": "Selects per second across the cluster.", "mqe": "aggregate_labels(meter_clickhouse_query_select_rate,sum)", "aggregation": "sum" },
-        { "id": "insRate", "label": "Insert QPS", "tip": "Inserts per second.", "mqe": "aggregate_labels(meter_clickhouse_query_insert_rate,sum)", "aggregation": "sum" },
-        { "id": "slowQ", "label": "Slow Reads", "tip": "Slow file-reads counter.", "mqe": "aggregate_labels(meter_clickhouse_query_slow,sum)", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "selRate",
+            "label": "Select QPS",
+            "tip": "Selects per second across the cluster.",
+            "mqe": "aggregate_labels(meter_clickhouse_query_select_rate,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "insRate",
+            "label": "Insert QPS",
+            "tip": "Inserts per second.",
+            "mqe": "aggregate_labels(meter_clickhouse_query_insert_rate,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "slowQ",
+            "label": "Slow Reads",
+            "tip": "Slow file-reads counter.",
+            "mqe": "aggregate_labels(meter_clickhouse_query_slow,sum)",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "files_open", "title": "Files Open", "type": "line", "expressions": ["latest(aggregate_labels(meter_clickhouse_file_open,sum))"], "span": 3, "rowSpan": 2 },
-      { "id": "qps", "title": "QPS", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_query_select_rate,sum)", "aggregate_labels(meter_clickhouse_query_insert_rate,sum)"], "expressionLabels": ["select", "insert"], "span": 3, "rowSpan": 2 },
-      { "id": "queries", "title": "Queries", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_query,sum)", "aggregate_labels(meter_clickhouse_query_select,sum)", "aggregate_labels(meter_clickhouse_query_insert,sum)"], "expressionLabels": ["total", "select", "insert"], "span": 3, "rowSpan": 2 },
-      { "id": "query_time", "title": "Query Time (ms)", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_clickhouse_querytime_microseconds,sum)/aggregate_labels(meter_clickhouse_query,sum)/1000", "aggregate_labels(meter_clickhouse_querytime_select_microseconds,sum)/aggregate_labels(meter_clickhouse_query_select,sum)/1000", "aggregate_labels(meter_clickhouse_querytime_insert_microseconds,sum)/aggregate_labels(meter_clickhouse_query_insert,sum)/1000"], "expressionLabels": ["avg", "select", "insert"], "span": 3, "rowSpan": 2 },
-      { "id": "conns", "title": "Connections", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_tcp_connections,sum)", "aggregate_labels(meter_clickhouse_http_connections,sum)"], "expressionLabels": ["TCP", "HTTP"], "span": 4, "rowSpan": 2 },
-      { "id": "slow", "title": "Slow Reads", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_query_slow,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "merge_mut", "title": "Merge / Mutations", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_background_merge,sum)", "aggregate_labels(meter_clickhouse_mutations,sum)"], "expressionLabels": ["merge", "mutations"], "span": 4, "rowSpan": 2 },
-      { "id": "insert_io", "title": "Insert Throughput", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_inserted_bytes,sum)", "aggregate_labels(meter_clickhouse_inserted_rows,sum)"], "expressionLabels": ["bytes/s", "rows/s"], "expressionAxes": [0, 1], "span": 4, "rowSpan": 2 },
-      { "id": "delayed", "title": "Delayed Inserts (s)", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_delayed_inserts,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "parts_active", "title": "Active Data Parts", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_parts_active,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "replicated", "title": "Replicated Fetch / Send", "type": "line", "expressions": ["aggregate_labels(meter_clickhouse_replicated_fetch,sum)", "aggregate_labels(meter_clickhouse_replicated_send,sum)"], "expressionLabels": ["fetch", "send"], "span": 6, "rowSpan": 2 },
-      { "id": "zk", "title": "Zookeeper Activity", "type": "line", "expressions": ["latest(aggregate_labels(meter_clickhouse_zookeeper_session,sum))", "latest(aggregate_labels(meter_clickhouse_zookeeper_watch,sum))", "aggregate_labels(meter_clickhouse_zookeeper_bytes_sent,sum)", "aggregate_labels(meter_clickhouse_zookeeper_bytes_received,sum)"], "expressionLabels": ["sessions", "watches", "bytes sent", "bytes recv"], "span": 6, "rowSpan": 2 },
-      { "id": "keeper", "title": "Keeper", "type": "line", "expressions": ["latest(aggregate_labels(meter_clickhouse_keeper_connections_alive,sum))", "latest(aggregate_labels(meter_clickhouse_keeper_outstanding_requests,sum))"], "expressionLabels": ["alive conns", "outstanding"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "files_open",
+        "title": "Files Open",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_clickhouse_file_open,sum))"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "qps",
+        "title": "QPS",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_query_select_rate,sum)",
+          "aggregate_labels(meter_clickhouse_query_insert_rate,sum)"
+        ],
+        "expressionLabels": [
+          "select",
+          "insert"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "queries",
+        "title": "Queries",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_query,sum)",
+          "aggregate_labels(meter_clickhouse_query_select,sum)",
+          "aggregate_labels(meter_clickhouse_query_insert,sum)"
+        ],
+        "expressionLabels": [
+          "total",
+          "select",
+          "insert"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "query_time",
+        "title": "Query Time (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_querytime_microseconds,sum)/aggregate_labels(meter_clickhouse_query,sum)/1000",
+          "aggregate_labels(meter_clickhouse_querytime_select_microseconds,sum)/aggregate_labels(meter_clickhouse_query_select,sum)/1000",
+          "aggregate_labels(meter_clickhouse_querytime_insert_microseconds,sum)/aggregate_labels(meter_clickhouse_query_insert,sum)/1000"
+        ],
+        "expressionLabels": [
+          "avg",
+          "select",
+          "insert"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Connections",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_tcp_connections,sum)",
+          "aggregate_labels(meter_clickhouse_http_connections,sum)"
+        ],
+        "expressionLabels": [
+          "TCP",
+          "HTTP"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "slow",
+        "title": "Slow Reads",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_query_slow,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "merge_mut",
+        "title": "Merge / Mutations",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_background_merge,sum)",
+          "aggregate_labels(meter_clickhouse_mutations,sum)"
+        ],
+        "expressionLabels": [
+          "merge",
+          "mutations"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "insert_io",
+        "title": "Insert Throughput",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_inserted_bytes,sum)",
+          "aggregate_labels(meter_clickhouse_inserted_rows,sum)"
+        ],
+        "expressionLabels": [
+          "bytes/s",
+          "rows/s"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "delayed",
+        "title": "Delayed Inserts (s)",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_delayed_inserts,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "parts_active",
+        "title": "Active Data Parts",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_parts_active,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "replicated",
+        "title": "Replicated Fetch / Send",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_clickhouse_replicated_fetch,sum)",
+          "aggregate_labels(meter_clickhouse_replicated_send,sum)"
+        ],
+        "expressionLabels": [
+          "fetch",
+          "send"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "zk",
+        "title": "Zookeeper Activity",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_clickhouse_zookeeper_session,sum))",
+          "latest(aggregate_labels(meter_clickhouse_zookeeper_watch,sum))",
+          "aggregate_labels(meter_clickhouse_zookeeper_bytes_sent,sum)",
+          "aggregate_labels(meter_clickhouse_zookeeper_bytes_received,sum)"
+        ],
+        "expressionLabels": [
+          "sessions",
+          "watches",
+          "bytes sent",
+          "bytes recv"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "keeper",
+        "title": "Keeper",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_clickhouse_keeper_connections_alive,sum))",
+          "latest(aggregate_labels(meter_clickhouse_keeper_outstanding_requests,sum))"
+        ],
+        "expressionLabels": [
+          "alive conns",
+          "outstanding"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "uptime", "title": "Uptime (days)", "type": "line", "expressions": ["latest(meter_clickhouse_instance_uptime)/3600/24"], "span": 3, "rowSpan": 2 },
-      { "id": "version", "title": "Version", "type": "line", "expressions": ["latest(meter_clickhouse_instance_version)"], "span": 3, "rowSpan": 2 },
-      { "id": "cpu", "title": "CPU (cores)", "type": "line", "expressions": ["meter_clickhouse_instance_cpu_usage/1000000"], "span": 3, "rowSpan": 2 },
-      { "id": "mem", "title": "Memory (%)", "type": "line", "unit": "%", "expressions": ["meter_clickhouse_instance_memory_usage", "meter_clickhouse_instance_memory_available"], "expressionLabels": ["used", "available"], "span": 3, "rowSpan": 2 },
-      { "id": "network", "title": "Network (B)", "type": "line", "expressions": ["meter_clickhouse_instance_network_receive_bytes", "meter_clickhouse_instance_network_send_bytes"], "expressionLabels": ["receive", "send"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "Connections", "type": "line", "expressions": ["meter_clickhouse_instance_tcp_connections", "meter_clickhouse_instance_http_connections"], "expressionLabels": ["TCP", "HTTP"], "span": 4, "rowSpan": 2 },
-      { "id": "queries", "title": "Queries", "type": "line", "expressions": ["meter_clickhouse_instance_query", "meter_clickhouse_instance_query_select", "meter_clickhouse_instance_query_insert"], "expressionLabels": ["total", "select", "insert"], "span": 4, "rowSpan": 2 },
-      { "id": "qps", "title": "QPS", "type": "line", "expressions": ["meter_clickhouse_instance_query_select_rate", "meter_clickhouse_instance_query_insert_rate"], "expressionLabels": ["select", "insert"], "span": 6, "rowSpan": 2 },
-      { "id": "query_time", "title": "Query Time (ms)", "type": "line", "unit": "ms", "expressions": ["meter_clickhouse_instance_querytime_microseconds/meter_clickhouse_instance_query/1000", "meter_clickhouse_instance_querytime_select_microseconds/meter_clickhouse_instance_query_select/1000", "meter_clickhouse_instance_querytime_insert_microseconds/meter_clickhouse_instance_query_insert/1000"], "expressionLabels": ["avg", "select", "insert"], "span": 6, "rowSpan": 2 },
-      { "id": "slow", "title": "File Slow Read", "type": "line", "expressions": ["meter_clickhouse_instance_query_slow"], "span": 4, "rowSpan": 2 },
-      { "id": "merge", "title": "Background Merge", "type": "line", "expressions": ["meter_clickhouse_instance_background_merge"], "span": 4, "rowSpan": 2 },
-      { "id": "mutations", "title": "Mutations", "type": "line", "expressions": ["meter_clickhouse_instance_mutations"], "span": 4, "rowSpan": 2 },
-      { "id": "files", "title": "Files Open", "type": "line", "expressions": ["latest(meter_clickhouse_instance_file_open)"], "span": 4, "rowSpan": 2 },
-      { "id": "insert_io", "title": "Insert Throughput", "type": "line", "expressions": ["meter_clickhouse_instance_inserted_bytes", "meter_clickhouse_instance_inserted_rows"], "expressionLabels": ["bytes/s", "rows/s"], "expressionAxes": [0, 1], "span": 4, "rowSpan": 2 },
-      { "id": "delayed", "title": "Delayed Inserts (s)", "type": "line", "expressions": ["meter_clickhouse_instance_delayed_inserts"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "uptime",
+        "title": "Uptime (days)",
+        "type": "line",
+        "expressions": [
+          "latest(meter_clickhouse_instance_uptime)/3600/24"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "version",
+        "title": "Version",
+        "type": "line",
+        "expressions": [
+          "latest(meter_clickhouse_instance_version)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu",
+        "title": "CPU (cores)",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_cpu_usage/1000000"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "mem",
+        "title": "Memory (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_clickhouse_instance_memory_usage",
+          "meter_clickhouse_instance_memory_available"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "network",
+        "title": "Network (B)",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_network_receive_bytes",
+          "meter_clickhouse_instance_network_send_bytes"
+        ],
+        "expressionLabels": [
+          "receive",
+          "send"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Connections",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_tcp_connections",
+          "meter_clickhouse_instance_http_connections"
+        ],
+        "expressionLabels": [
+          "TCP",
+          "HTTP"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "queries",
+        "title": "Queries",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_query",
+          "meter_clickhouse_instance_query_select",
+          "meter_clickhouse_instance_query_insert"
+        ],
+        "expressionLabels": [
+          "total",
+          "select",
+          "insert"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "qps",
+        "title": "QPS",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_query_select_rate",
+          "meter_clickhouse_instance_query_insert_rate"
+        ],
+        "expressionLabels": [
+          "select",
+          "insert"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "query_time",
+        "title": "Query Time (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_clickhouse_instance_querytime_microseconds/meter_clickhouse_instance_query/1000",
+          "meter_clickhouse_instance_querytime_select_microseconds/meter_clickhouse_instance_query_select/1000",
+          "meter_clickhouse_instance_querytime_insert_microseconds/meter_clickhouse_instance_query_insert/1000"
+        ],
+        "expressionLabels": [
+          "avg",
+          "select",
+          "insert"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "slow",
+        "title": "File Slow Read",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_query_slow"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "merge",
+        "title": "Background Merge",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_background_merge"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mutations",
+        "title": "Mutations",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_mutations"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "files",
+        "title": "Files Open",
+        "type": "line",
+        "expressions": [
+          "latest(meter_clickhouse_instance_file_open)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "insert_io",
+        "title": "Insert Throughput",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_inserted_bytes",
+          "meter_clickhouse_instance_inserted_rows"
+        ],
+        "expressionLabels": [
+          "bytes/s",
+          "rows/s"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "delayed",
+        "title": "Delayed Inserts (s)",
+        "type": "line",
+        "expressions": [
+          "meter_clickhouse_instance_delayed_inserts"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ]
   }
 }

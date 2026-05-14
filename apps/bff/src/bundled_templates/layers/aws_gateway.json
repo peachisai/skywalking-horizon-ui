@@ -1,6 +1,7 @@
 {
   "key": "AWS_GATEWAY",
   "alias": "AWS API Gateway",
+  "group": "AWS",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-aws-api-gateway-monitoring/",
   "aliases": {
@@ -18,10 +19,31 @@
   "layer-header": {
     "orderBy": "count",
     "columns": [
-      { "metric": "count", "label": "Requests", "mqe": "aws_gateway_service_count", "aggregation": "sum" },
-      { "metric": "latency", "label": "Latency", "unit": "ms", "mqe": "aws_gateway_service_latency", "aggregation": "avg" },
-      { "metric": "err4xx", "label": "4xx", "mqe": "aws_gateway_service_4xx", "aggregation": "sum" },
-      { "metric": "err5xx", "label": "5xx", "mqe": "aws_gateway_service_5xx", "aggregation": "sum" }
+      {
+        "metric": "count",
+        "label": "Requests",
+        "mqe": "aws_gateway_service_count",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "latency",
+        "label": "Latency",
+        "unit": "ms",
+        "mqe": "aws_gateway_service_latency",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "err4xx",
+        "label": "4xx",
+        "mqe": "aws_gateway_service_4xx",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "err5xx",
+        "label": "5xx",
+        "mqe": "aws_gateway_service_5xx",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -30,40 +52,220 @@
         "title": "Errors",
         "size": "auto",
         "metrics": [
-          { "id": "err4xx", "label": "4xx", "tip": "Client-error count from CloudWatch.", "mqe": "aws_gateway_service_4xx", "aggregation": "sum" },
-          { "id": "err5xx", "label": "5xx", "tip": "Server-error count from CloudWatch.", "mqe": "aws_gateway_service_5xx", "aggregation": "sum" },
-          { "id": "latency", "label": "Avg Latency", "tip": "Average end-to-end latency.", "mqe": "aws_gateway_service_latency", "unit": "ms", "aggregation": "avg" }
+          {
+            "id": "err4xx",
+            "label": "4xx",
+            "tip": "Client-error count from CloudWatch.",
+            "mqe": "aws_gateway_service_4xx",
+            "aggregation": "sum"
+          },
+          {
+            "id": "err5xx",
+            "label": "5xx",
+            "tip": "Server-error count from CloudWatch.",
+            "mqe": "aws_gateway_service_5xx",
+            "aggregation": "sum"
+          },
+          {
+            "id": "latency",
+            "label": "Avg Latency",
+            "tip": "Average end-to-end latency.",
+            "mqe": "aws_gateway_service_latency",
+            "unit": "ms",
+            "aggregation": "avg"
+          }
         ]
       },
       {
         "title": "Throughput",
         "size": "square",
         "metrics": [
-          { "id": "count", "label": "Requests", "tip": "Total request count in the window.", "mqe": "aws_gateway_service_count", "aggregation": "sum" }
+          {
+            "id": "count",
+            "label": "Requests",
+            "tip": "Total request count in the window.",
+            "mqe": "aws_gateway_service_count",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "count", "title": "Request Count", "type": "line", "expressions": ["aws_gateway_service_count"], "span": 4, "rowSpan": 2 },
-      { "id": "err4xx", "title": "4xx Count", "type": "line", "expressions": ["aws_gateway_service_4xx"], "span": 4, "rowSpan": 2 },
-      { "id": "err5xx", "title": "5xx Count", "type": "line", "expressions": ["aws_gateway_service_5xx"], "span": 4, "rowSpan": 2 },
-      { "id": "latency", "title": "Request Avg Latency", "type": "line", "unit": "ms", "expressions": ["aws_gateway_service_latency"], "span": 6, "rowSpan": 2 },
-      { "id": "integration_latency", "title": "Integration Avg Latency", "tip": "Latency between the gateway and the backend integration.", "type": "line", "unit": "ms", "expressions": ["aws_gateway_service_integration_latency"], "span": 6, "rowSpan": 2 },
-      { "id": "data", "title": "Data Processed (HTTP API only)", "type": "line", "unit": "KB", "expressions": ["aws_gateway_service_data_processed/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "cache_hit", "title": "Cache Hit Rate (REST API only)", "type": "line", "unit": "%", "expressions": ["aws_gateway_service_cache_hit_rate"], "span": 4, "rowSpan": 2 },
-      { "id": "cache_miss", "title": "Cache Miss Rate (REST API only)", "type": "line", "unit": "%", "expressions": ["aws_gateway_service_cache_miss_rate"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "count",
+        "title": "Request Count",
+        "type": "line",
+        "expressions": [
+          "aws_gateway_service_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err4xx",
+        "title": "4xx Count",
+        "type": "line",
+        "expressions": [
+          "aws_gateway_service_4xx"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err5xx",
+        "title": "5xx Count",
+        "type": "line",
+        "expressions": [
+          "aws_gateway_service_5xx"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "Request Avg Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aws_gateway_service_latency"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "integration_latency",
+        "title": "Integration Avg Latency",
+        "tip": "Latency between the gateway and the backend integration.",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aws_gateway_service_integration_latency"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "data",
+        "title": "Data Processed (HTTP API only)",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "aws_gateway_service_data_processed/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cache_hit",
+        "title": "Cache Hit Rate (REST API only)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "aws_gateway_service_cache_hit_rate"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cache_miss",
+        "title": "Cache Miss Rate (REST API only)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "aws_gateway_service_cache_miss_rate"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "count", "title": "Request Count", "type": "line", "expressions": ["aws_gateway_endpoint_count"], "span": 4, "rowSpan": 2 },
-      { "id": "err4xx", "title": "4xx Count", "type": "line", "expressions": ["aws_gateway_endpoint_4xx"], "span": 4, "rowSpan": 2 },
-      { "id": "err5xx", "title": "5xx Count", "type": "line", "expressions": ["aws_gateway_endpoint_5xx"], "span": 4, "rowSpan": 2 },
-      { "id": "latency", "title": "Request Avg Latency", "type": "line", "unit": "ms", "expressions": ["aws_gateway_endpoint_latency"], "span": 6, "rowSpan": 2 },
-      { "id": "integration_latency", "title": "Integration Avg Latency", "type": "line", "unit": "ms", "expressions": ["aws_gateway_endpoint_integration_latency"], "span": 6, "rowSpan": 2 },
-      { "id": "data", "title": "Data Processed", "type": "line", "unit": "KB", "expressions": ["aws_gateway_endpoint_data_processed/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "cache_hit", "title": "Cache Hit Rate", "type": "line", "unit": "%", "expressions": ["aws_gateway_endpoint_cache_hit_rate"], "span": 4, "rowSpan": 2 },
-      { "id": "cache_miss", "title": "Cache Miss Rate", "type": "line", "unit": "%", "expressions": ["aws_gateway_endpoint_cache_miss_rate"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "count",
+        "title": "Request Count",
+        "type": "line",
+        "expressions": [
+          "aws_gateway_endpoint_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err4xx",
+        "title": "4xx Count",
+        "type": "line",
+        "expressions": [
+          "aws_gateway_endpoint_4xx"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err5xx",
+        "title": "5xx Count",
+        "type": "line",
+        "expressions": [
+          "aws_gateway_endpoint_5xx"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "Request Avg Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aws_gateway_endpoint_latency"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "integration_latency",
+        "title": "Integration Avg Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aws_gateway_endpoint_integration_latency"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "data",
+        "title": "Data Processed",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "aws_gateway_endpoint_data_processed/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cache_hit",
+        "title": "Cache Hit Rate",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "aws_gateway_endpoint_cache_hit_rate"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cache_miss",
+        "title": "Cache Miss Rate",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "aws_gateway_endpoint_cache_miss_rate"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ]
   }
 }

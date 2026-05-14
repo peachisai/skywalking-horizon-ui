@@ -130,8 +130,8 @@ const showTabs = computed(() => effectiveGroups.value.length > 1);
   margin-bottom: 4px;
 }
 .tab {
-  padding: 3px 8px;
-  font-size: 10px;
+  padding: 4px 10px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--sw-fg-2);
   background: transparent;
@@ -162,29 +162,29 @@ const showTabs = computed(() => effectiveGroups.value.length > 1);
 }
 .row {
   display: grid;
-  grid-template-columns: 18px 1fr 48px 56px;
+  grid-template-columns: 22px 1fr 56px 72px;
   align-items: center;
-  gap: 6px;
-  font-size: 10.5px;
+  gap: 8px;
+  font-size: 14px;
   padding: 0;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 .rank {
   font-family: var(--sw-mono);
-  font-size: 9.5px;
+  font-size: 12px;
   color: var(--sw-fg-3);
   text-align: right;
 }
 .name {
   font-family: var(--sw-mono);
-  font-size: 11px;
+  font-size: 14px;
   color: var(--sw-fg-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .bar {
-  height: 5px;
+  height: 6px;
   background: var(--sw-bg-3);
   border-radius: 2px;
   overflow: hidden;
@@ -196,20 +196,22 @@ const showTabs = computed(() => effectiveGroups.value.length > 1);
 }
 .value {
   font-family: var(--sw-mono);
-  font-size: 10.5px;
+  font-size: 13.5px;
   color: var(--sw-fg-1);
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 .value .unit {
   margin-left: 2px;
   color: var(--sw-fg-3);
-  font-size: 9.5px;
+  font-size: 12px;
+  font-weight: 500;
 }
 .empty {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--sw-fg-3);
   text-align: center;
-  margin: 12px 0;
+  margin: 14px 0;
 }
 </style>

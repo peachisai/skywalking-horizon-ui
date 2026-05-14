@@ -1,50 +1,314 @@
 {
   "key": "PULSAR",
   "alias": "Pulsar",
+  "group": "MQ",
   "color": "var(--sw-purple)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-pulsar-monitoring/",
-  "aliases": { "services": "Pulsar clusters", "instances": "Brokers" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Pulsar clusters",
+    "instances": "Brokers"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "topics",
     "columns": [
-      { "metric": "topics", "label": "Topics", "mqe": "aggregate_labels(meter_pulsar_total_topics,sum)", "aggregation": "sum" },
-      { "metric": "subs", "label": "Subscriptions", "mqe": "aggregate_labels(meter_pulsar_total_subscriptions,sum)", "aggregation": "sum" },
-      { "metric": "rateIn", "label": "Msg In", "mqe": "aggregate_labels(meter_pulsar_message_rate_in,sum)", "aggregation": "sum" },
-      { "metric": "rateOut", "label": "Msg Out", "mqe": "aggregate_labels(meter_pulsar_message_rate_out,sum)", "aggregation": "sum" }
+      {
+        "metric": "topics",
+        "label": "Topics",
+        "mqe": "aggregate_labels(meter_pulsar_total_topics,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "subs",
+        "label": "Subscriptions",
+        "mqe": "aggregate_labels(meter_pulsar_total_subscriptions,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "rateIn",
+        "label": "Msg In",
+        "mqe": "aggregate_labels(meter_pulsar_message_rate_in,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "rateOut",
+        "label": "Msg Out",
+        "mqe": "aggregate_labels(meter_pulsar_message_rate_out,sum)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Throughput", "size": "auto", "metrics": [
-        { "id": "rateIn", "label": "Msg In/s", "tip": "Messages produced per second.", "mqe": "aggregate_labels(meter_pulsar_message_rate_in,sum)", "aggregation": "sum" },
-        { "id": "rateOut", "label": "Msg Out/s", "tip": "Messages consumed per second.", "mqe": "aggregate_labels(meter_pulsar_message_rate_out,sum)", "aggregation": "sum" },
-        { "id": "storage", "label": "Storage MB", "tip": "Total managed-ledger storage size.", "mqe": "aggregate_labels(meter_pulsar_storage_size,sum)/1024/1024", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "rateIn",
+            "label": "Msg In/s",
+            "tip": "Messages produced per second.",
+            "mqe": "aggregate_labels(meter_pulsar_message_rate_in,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "rateOut",
+            "label": "Msg Out/s",
+            "tip": "Messages consumed per second.",
+            "mqe": "aggregate_labels(meter_pulsar_message_rate_out,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "storage",
+            "label": "Storage MB",
+            "tip": "Total managed-ledger storage size.",
+            "mqe": "aggregate_labels(meter_pulsar_storage_size,sum)/1024/1024",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "topics", "title": "Total Topics", "type": "line", "expressions": ["aggregate_labels(meter_pulsar_total_topics,sum)"], "span": 3, "rowSpan": 2 },
-      { "id": "subs", "title": "Subscriptions", "type": "line", "expressions": ["aggregate_labels(meter_pulsar_total_subscriptions,sum)"], "span": 3, "rowSpan": 2 },
-      { "id": "producers", "title": "Producers", "type": "line", "expressions": ["aggregate_labels(meter_pulsar_total_producers,sum)"], "span": 3, "rowSpan": 2 },
-      { "id": "consumers", "title": "Consumers", "type": "line", "expressions": ["aggregate_labels(meter_pulsar_total_consumers,sum)"], "span": 3, "rowSpan": 2 },
-      { "id": "msg_rate", "title": "Message Rate", "type": "line", "expressions": ["aggregate_labels(meter_pulsar_message_rate_in,sum)", "aggregate_labels(meter_pulsar_message_rate_out,sum)"], "expressionLabels": ["in", "out"], "span": 6, "rowSpan": 2 },
-      { "id": "throughput", "title": "Throughput", "type": "line", "expressions": ["aggregate_labels(meter_pulsar_throughput_in,sum)", "aggregate_labels(meter_pulsar_throughput_out,sum)"], "expressionLabels": ["in", "out"], "span": 6, "rowSpan": 2 },
-      { "id": "storage_rw", "title": "Storage Read/Write Rate", "type": "line", "expressions": ["aggregate_labels(meter_pulsar_storage_read_rate,sum)", "aggregate_labels(meter_pulsar_storage_write_rate,sum)"], "expressionLabels": ["read", "write"], "span": 6, "rowSpan": 2 },
-      { "id": "storage_size", "title": "Storage Size (MB)", "type": "line", "unit": "MB", "expressions": ["aggregate_labels(meter_pulsar_storage_size,sum)/1024/1024", "aggregate_labels(meter_pulsar_storage_logical_size,sum)/1024/1024"], "expressionLabels": ["physical", "logical"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "topics",
+        "title": "Total Topics",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_total_topics,sum)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "subs",
+        "title": "Subscriptions",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_total_subscriptions,sum)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "producers",
+        "title": "Producers",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_total_producers,sum)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "consumers",
+        "title": "Consumers",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_total_consumers,sum)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "msg_rate",
+        "title": "Message Rate",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_message_rate_in,sum)",
+          "aggregate_labels(meter_pulsar_message_rate_out,sum)"
+        ],
+        "expressionLabels": [
+          "in",
+          "out"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "throughput",
+        "title": "Throughput",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_throughput_in,sum)",
+          "aggregate_labels(meter_pulsar_throughput_out,sum)"
+        ],
+        "expressionLabels": [
+          "in",
+          "out"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "storage_rw",
+        "title": "Storage Read/Write Rate",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_storage_read_rate,sum)",
+          "aggregate_labels(meter_pulsar_storage_write_rate,sum)"
+        ],
+        "expressionLabels": [
+          "read",
+          "write"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "storage_size",
+        "title": "Storage Size (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "aggregate_labels(meter_pulsar_storage_size,sum)/1024/1024",
+          "aggregate_labels(meter_pulsar_storage_logical_size,sum)/1024/1024"
+        ],
+        "expressionLabels": [
+          "physical",
+          "logical"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "active_conns", "title": "Active Connections", "type": "line", "expressions": ["meter_pulsar_broker_active_connections"], "span": 3, "rowSpan": 2 },
-      { "id": "total_conns", "title": "Total Connections", "type": "line", "expressions": ["meter_pulsar_broker_total_connections"], "span": 3, "rowSpan": 2 },
-      { "id": "conn_fail", "title": "Conn Create Fail", "type": "line", "expressions": ["meter_pulsar_broker_connection_create_fail_count"], "span": 3, "rowSpan": 2 },
-      { "id": "conn_success", "title": "Conn Create Success", "type": "line", "expressions": ["meter_pulsar_broker_connection_create_success_count"], "span": 3, "rowSpan": 2 },
-      { "id": "conn_closed", "title": "Connection Closed", "type": "line", "expressions": ["meter_pulsar_broker_connection_closed_total_count"], "span": 4, "rowSpan": 2 },
-      { "id": "jvm_buffer", "title": "JVM Buffer Pool (MB)", "type": "line", "unit": "MB", "expressions": ["meter_pulsar_broker_jvm_buffer_pool_used_bytes/1024/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "jvm_pool", "title": "JVM Memory Pool Used (MB)", "type": "line", "unit": "MB", "expressions": ["meter_pulsar_broker_jvm_memory_pool_used/1024/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "jvm_mem", "title": "JVM Memory (MB)", "type": "line", "unit": "MB", "expressions": ["meter_pulsar_broker_jvm_memory_used/1024/1024", "meter_pulsar_broker_jvm_memory_committed/1024/1024", "meter_pulsar_broker_jvm_memory_init/1024/1024"], "expressionLabels": ["used", "committed", "init"], "span": 6, "rowSpan": 2 },
-      { "id": "jvm_threads", "title": "JVM Threads", "type": "line", "expressions": ["meter_pulsar_broker_jvm_threads_current", "meter_pulsar_broker_jvm_threads_daemon", "meter_pulsar_broker_jvm_threads_peak", "meter_pulsar_broker_jvm_threads_deadlocked"], "expressionLabels": ["current", "daemon", "peak", "deadlocked"], "span": 6, "rowSpan": 2 },
-      { "id": "gc", "title": "GC", "type": "line", "expressions": ["meter_pulsar_broker_jvm_gc_collection_seconds_sum", "meter_pulsar_broker_jvm_gc_collection_seconds_count"], "expressionLabels": ["seconds", "count"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 }
+      {
+        "id": "active_conns",
+        "title": "Active Connections",
+        "type": "line",
+        "expressions": [
+          "meter_pulsar_broker_active_connections"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "total_conns",
+        "title": "Total Connections",
+        "type": "line",
+        "expressions": [
+          "meter_pulsar_broker_total_connections"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "conn_fail",
+        "title": "Conn Create Fail",
+        "type": "line",
+        "expressions": [
+          "meter_pulsar_broker_connection_create_fail_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "conn_success",
+        "title": "Conn Create Success",
+        "type": "line",
+        "expressions": [
+          "meter_pulsar_broker_connection_create_success_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "conn_closed",
+        "title": "Connection Closed",
+        "type": "line",
+        "expressions": [
+          "meter_pulsar_broker_connection_closed_total_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "jvm_buffer",
+        "title": "JVM Buffer Pool (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_pulsar_broker_jvm_buffer_pool_used_bytes/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "jvm_pool",
+        "title": "JVM Memory Pool Used (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_pulsar_broker_jvm_memory_pool_used/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "jvm_mem",
+        "title": "JVM Memory (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_pulsar_broker_jvm_memory_used/1024/1024",
+          "meter_pulsar_broker_jvm_memory_committed/1024/1024",
+          "meter_pulsar_broker_jvm_memory_init/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "committed",
+          "init"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "jvm_threads",
+        "title": "JVM Threads",
+        "type": "line",
+        "expressions": [
+          "meter_pulsar_broker_jvm_threads_current",
+          "meter_pulsar_broker_jvm_threads_daemon",
+          "meter_pulsar_broker_jvm_threads_peak",
+          "meter_pulsar_broker_jvm_threads_deadlocked"
+        ],
+        "expressionLabels": [
+          "current",
+          "daemon",
+          "peak",
+          "deadlocked"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "gc",
+        "title": "GC",
+        "type": "line",
+        "expressions": [
+          "meter_pulsar_broker_jvm_gc_collection_seconds_sum",
+          "meter_pulsar_broker_jvm_gc_collection_seconds_count"
+        ],
+        "expressionLabels": [
+          "seconds",
+          "count"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

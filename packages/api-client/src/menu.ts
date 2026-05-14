@@ -173,6 +173,11 @@ export interface LayerDef {
   serviceCount: number;
   /** True iff OAP returned this layer in `listLayers` (services reporting). */
   active: boolean;
+  /** Sidebar grouping label from the layer template's `group` field.
+   *  Layers sharing the same value collapse into one section in the
+   *  sidebar (e.g. `Istio` aggregates mesh / mesh_cp / mesh_dp). When
+   *  absent the layer renders at the top level on its own. */
+  group?: string;
   /** OAP's per-service `normal` flag, sampled from the first service in
    *  the layer. In practice every service within a layer shares the
    *  same value (VIRTUAL_*, AWS_* are all `false`; GENERAL/MESH/etc are

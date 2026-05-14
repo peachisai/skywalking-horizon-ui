@@ -1,35 +1,143 @@
 {
   "key": "SO11Y_SATELLITE",
   "alias": "Satellite (self-obs)",
+  "group": "Self-Observability",
   "color": "var(--sw-fg-2)",
   "documentLink": "https://skywalking.apache.org/docs/skywalking-satellite/next/readme/",
-  "aliases": { "services": "Satellite services" },
-  "components": { "service": true, "instances": false, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Satellite services"
+  },
+  "components": {
+    "service": true,
+    "instances": false,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "conns",
     "columns": [
-      { "metric": "conns", "label": "gRPC Conns", "mqe": "satellite_service_grpc_connect_count", "aggregation": "sum" },
-      { "metric": "cpu", "label": "CPU %", "unit": "%", "mqe": "satellite_service_server_cpu_utilization", "aggregation": "avg" },
-      { "metric": "queueUsed", "label": "Queue Used", "mqe": "satellite_service_queue_used_count", "aggregation": "sum" },
-      { "metric": "recvEvents", "label": "Recv Events", "mqe": "satellite_service_receive_event_count", "aggregation": "sum" }
+      {
+        "metric": "conns",
+        "label": "gRPC Conns",
+        "mqe": "satellite_service_grpc_connect_count",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "cpu",
+        "label": "CPU %",
+        "unit": "%",
+        "mqe": "satellite_service_server_cpu_utilization",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "queueUsed",
+        "label": "Queue Used",
+        "mqe": "satellite_service_queue_used_count",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "recvEvents",
+        "label": "Recv Events",
+        "mqe": "satellite_service_receive_event_count",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Satellite health", "size": "auto", "metrics": [
-        { "id": "cpu", "label": "CPU %", "tip": "Satellite process CPU.", "mqe": "satellite_service_server_cpu_utilization", "unit": "%", "aggregation": "avg" },
-        { "id": "queueUsed", "label": "Queue Used", "tip": "Outstanding queue items — backlog indicator.", "mqe": "satellite_service_queue_used_count", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Satellite health",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "cpu",
+            "label": "CPU %",
+            "tip": "Satellite process CPU.",
+            "mqe": "satellite_service_server_cpu_utilization",
+            "unit": "%",
+            "aggregation": "avg"
+          },
+          {
+            "id": "queueUsed",
+            "label": "Queue Used",
+            "tip": "Outstanding queue items \u2014 backlog indicator.",
+            "mqe": "satellite_service_queue_used_count",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "conns", "title": "Connection Count", "type": "line", "expressions": ["satellite_service_grpc_connect_count"], "span": 4, "rowSpan": 2 },
-      { "id": "cpu", "title": "CPU (%)", "type": "line", "unit": "%", "expressions": ["satellite_service_server_cpu_utilization"], "span": 4, "rowSpan": 2 },
-      { "id": "queue_used", "title": "Queue Used", "type": "line", "expressions": ["satellite_service_queue_used_count"], "span": 4, "rowSpan": 2 },
-      { "id": "receive", "title": "Receive Events", "type": "line", "expressions": ["satellite_service_receive_event_count"], "span": 4, "rowSpan": 2 },
-      { "id": "fetch", "title": "Fetch Events", "type": "line", "expressions": ["satellite_service_fetch_event_count"], "span": 4, "rowSpan": 2 },
-      { "id": "queue_io", "title": "Queue Input / Output", "type": "line", "expressions": ["satellite_service_queue_input_count", "satellite_service_send_event_count"], "expressionLabels": ["input", "output"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "conns",
+        "title": "Connection Count",
+        "type": "line",
+        "expressions": [
+          "satellite_service_grpc_connect_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu",
+        "title": "CPU (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "satellite_service_server_cpu_utilization"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "queue_used",
+        "title": "Queue Used",
+        "type": "line",
+        "expressions": [
+          "satellite_service_queue_used_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "receive",
+        "title": "Receive Events",
+        "type": "line",
+        "expressions": [
+          "satellite_service_receive_event_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "fetch",
+        "title": "Fetch Events",
+        "type": "line",
+        "expressions": [
+          "satellite_service_fetch_event_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "queue_io",
+        "title": "Queue Input / Output",
+        "type": "line",
+        "expressions": [
+          "satellite_service_queue_input_count",
+          "satellite_service_send_event_count"
+        ],
+        "expressionLabels": [
+          "input",
+          "output"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ]
   }
 }

@@ -1,6 +1,7 @@
 {
   "key": "IOS",
   "alias": "iOS",
+  "group": "Mobile",
   "color": "var(--sw-cyan)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-ios-monitoring/",
   "aliases": {
@@ -19,10 +20,33 @@
   "layer-header": {
     "orderBy": "launch",
     "columns": [
-      { "metric": "launch", "label": "Launch (P95)", "unit": "ms", "mqe": "meter_ios_app_launch_time_percentile{p='95'}", "aggregation": "avg" },
-      { "metric": "hangSum", "label": "Hang Time", "unit": "ms", "mqe": "meter_ios_hang_time_sum", "aggregation": "sum" },
-      { "metric": "abnormalExit", "label": "Crashes", "mqe": "meter_ios_foreground_abnormal_exit_count + meter_ios_background_abnormal_exit_count", "aggregation": "sum" },
-      { "metric": "outboundCpm", "label": "Outbound RPM", "unit": "rpm", "mqe": "service_cpm", "aggregation": "sum" }
+      {
+        "metric": "launch",
+        "label": "Launch (P95)",
+        "unit": "ms",
+        "mqe": "meter_ios_app_launch_time_percentile{p='95'}",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "hangSum",
+        "label": "Hang Time",
+        "unit": "ms",
+        "mqe": "meter_ios_hang_time_sum",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "abnormalExit",
+        "label": "Crashes",
+        "mqe": "meter_ios_foreground_abnormal_exit_count + meter_ios_background_abnormal_exit_count",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "outboundCpm",
+        "label": "Outbound RPM",
+        "unit": "rpm",
+        "mqe": "service_cpm",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -31,9 +55,29 @@
         "title": "App health",
         "size": "auto",
         "metrics": [
-          { "id": "launch_p95", "label": "Launch P95", "tip": "95th-percentile cold-launch time as measured by MetricKit.", "mqe": "meter_ios_app_launch_time_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
-          { "id": "hang_p95", "label": "Hang P95", "tip": "95th-percentile UI hang duration.", "mqe": "meter_ios_hang_time_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
-          { "id": "crashes", "label": "Crashes", "tip": "Foreground + background abnormal exits.", "mqe": "meter_ios_foreground_abnormal_exit_count + meter_ios_background_abnormal_exit_count", "aggregation": "sum" }
+          {
+            "id": "launch_p95",
+            "label": "Launch P95",
+            "tip": "95th-percentile cold-launch time as measured by MetricKit.",
+            "mqe": "meter_ios_app_launch_time_percentile{p='95'}",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "hang_p95",
+            "label": "Hang P95",
+            "tip": "95th-percentile UI hang duration.",
+            "mqe": "meter_ios_hang_time_percentile{p='95'}",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "crashes",
+            "label": "Crashes",
+            "tip": "Foreground + background abnormal exits.",
+            "mqe": "meter_ios_foreground_abnormal_exit_count + meter_ios_background_abnormal_exit_count",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
@@ -67,7 +111,9 @@
         "title": "Hang Time (sum)",
         "type": "line",
         "unit": "ms",
-        "expressions": ["meter_ios_hang_time_sum"],
+        "expressions": [
+          "meter_ios_hang_time_sum"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -80,16 +126,21 @@
           "meter_ios_foreground_abnormal_exit_count",
           "meter_ios_background_abnormal_exit_count"
         ],
-        "expressionLabels": ["foreground", "background"],
+        "expressionLabels": [
+          "foreground",
+          "background"
+        ],
         "span": 4,
         "rowSpan": 2
       },
       {
         "id": "oom_kills",
         "title": "OOM Kill Count",
-        "tip": "Background OOM kills — the iOS system reaping the app due to memory pressure.",
+        "tip": "Background OOM kills \u2014 the iOS system reaping the app due to memory pressure.",
         "type": "line",
-        "expressions": ["meter_ios_background_oom_kill_count"],
+        "expressions": [
+          "meter_ios_background_oom_kill_count"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -98,16 +149,20 @@
         "title": "Peak Memory",
         "type": "line",
         "unit": "bytes",
-        "expressions": ["meter_ios_peak_memory"],
+        "expressions": [
+          "meter_ios_peak_memory"
+        ],
         "span": 6,
         "rowSpan": 2
       },
       {
         "id": "scroll_hitch",
         "title": "Scroll Hitch Ratio",
-        "tip": "Percentage of scroll frames classified as hitched — higher = laggier UI.",
+        "tip": "Percentage of scroll frames classified as hitched \u2014 higher = laggier UI.",
         "type": "line",
-        "expressions": ["meter_ios_scroll_hitch_ratio"],
+        "expressions": [
+          "meter_ios_scroll_hitch_ratio"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -123,22 +178,35 @@
           "meter_ios_cellular_download",
           "meter_ios_cellular_upload"
         ],
-        "expressionLabels": ["wifi ↓", "wifi ↑", "cellular ↓", "cellular ↑"],
+        "expressionLabels": [
+          "wifi \u2193",
+          "wifi \u2191",
+          "cellular \u2193",
+          "cellular \u2191"
+        ],
         "span": 6,
         "rowSpan": 2
       },
       {
         "id": "outbound_http",
         "title": "Outbound HTTP",
-        "tip": "Calls the app makes to backends — load, latency, success rate.",
+        "tip": "Calls the app makes to backends \u2014 load, latency, success rate.",
         "type": "line",
         "expressions": [
           "service_cpm",
           "service_resp_time",
           "service_sla/100"
         ],
-        "expressionLabels": ["RPM", "Avg latency (ms)", "Success Rate (%)"],
-        "expressionAxes": [0, 0, 1],
+        "expressionLabels": [
+          "RPM",
+          "Avg latency (ms)",
+          "Success Rate (%)"
+        ],
+        "expressionAxes": [
+          0,
+          0,
+          1
+        ],
         "span": 6,
         "rowSpan": 2
       }
@@ -174,7 +242,10 @@
           "meter_ios_instance_foreground_abnormal_exit_count",
           "meter_ios_instance_background_abnormal_exit_count"
         ],
-        "expressionLabels": ["foreground", "background"],
+        "expressionLabels": [
+          "foreground",
+          "background"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -182,7 +253,9 @@
         "id": "instance_oom",
         "title": "OOM Kill Count",
         "type": "line",
-        "expressions": ["meter_ios_instance_background_oom_kill_count"],
+        "expressions": [
+          "meter_ios_instance_background_oom_kill_count"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -191,7 +264,9 @@
         "title": "Peak Memory",
         "type": "line",
         "unit": "bytes",
-        "expressions": ["meter_ios_instance_peak_memory"],
+        "expressions": [
+          "meter_ios_instance_peak_memory"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -204,8 +279,16 @@
           "service_instance_resp_time",
           "service_instance_sla/100"
         ],
-        "expressionLabels": ["RPM", "Avg latency (ms)", "Success Rate (%)"],
-        "expressionAxes": [0, 0, 1],
+        "expressionLabels": [
+          "RPM",
+          "Avg latency (ms)",
+          "Success Rate (%)"
+        ],
+        "expressionAxes": [
+          0,
+          0,
+          1
+        ],
         "span": 12,
         "rowSpan": 2
       }
@@ -216,7 +299,9 @@
         "title": "Outbound Load",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["endpoint_cpm"],
+        "expressions": [
+          "endpoint_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -225,7 +310,9 @@
         "title": "Outbound Avg Latency",
         "type": "line",
         "unit": "ms",
-        "expressions": ["endpoint_resp_time"],
+        "expressions": [
+          "endpoint_resp_time"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -234,7 +321,9 @@
         "title": "Outbound Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["endpoint_sla/100"],
+        "expressions": [
+          "endpoint_sla/100"
+        ],
         "span": 4,
         "rowSpan": 2
       },

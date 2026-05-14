@@ -1,54 +1,349 @@
 {
   "key": "KAFKA",
   "alias": "Kafka",
+  "group": "MQ",
   "color": "var(--sw-purple)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-kafka-monitoring/",
-  "aliases": { "services": "Kafka clusters", "instances": "Brokers" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Kafka clusters",
+    "instances": "Brokers"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "partitions",
     "columns": [
-      { "metric": "partitions", "label": "Partitions", "mqe": "meter_kafka_partition_count", "aggregation": "avg" },
-      { "metric": "offline", "label": "Offline Partitions", "mqe": "meter_kafka_offline_partitions_count", "aggregation": "sum" },
-      { "metric": "maxLag", "label": "Max Lag", "mqe": "meter_kafka_max_lag", "aggregation": "max" },
-      { "metric": "leaders", "label": "Leaders", "mqe": "meter_kafka_leader_count", "aggregation": "sum" }
+      {
+        "metric": "partitions",
+        "label": "Partitions",
+        "mqe": "meter_kafka_partition_count",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "offline",
+        "label": "Offline Partitions",
+        "mqe": "meter_kafka_offline_partitions_count",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "maxLag",
+        "label": "Max Lag",
+        "mqe": "meter_kafka_max_lag",
+        "aggregation": "max"
+      },
+      {
+        "metric": "leaders",
+        "label": "Leaders",
+        "mqe": "meter_kafka_leader_count",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Cluster", "size": "auto", "metrics": [
-        { "id": "offline", "label": "Offline Partitions", "tip": "Partitions without an active leader.", "mqe": "meter_kafka_offline_partitions_count", "aggregation": "sum" },
-        { "id": "underReplicated", "label": "Under-Replicated", "tip": "Partitions whose ISR set is below replication factor.", "mqe": "meter_kafka_under_replicated_partitions", "aggregation": "sum" },
-        { "id": "maxLag", "label": "Max Lag", "tip": "Largest consumer lag observed.", "mqe": "meter_kafka_max_lag", "aggregation": "max" }
-      ]}
+      {
+        "title": "Cluster",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "offline",
+            "label": "Offline Partitions",
+            "tip": "Partitions without an active leader.",
+            "mqe": "meter_kafka_offline_partitions_count",
+            "aggregation": "sum"
+          },
+          {
+            "id": "underReplicated",
+            "label": "Under-Replicated",
+            "tip": "Partitions whose ISR set is below replication factor.",
+            "mqe": "meter_kafka_under_replicated_partitions",
+            "aggregation": "sum"
+          },
+          {
+            "id": "maxLag",
+            "label": "Max Lag",
+            "tip": "Largest consumer lag observed.",
+            "mqe": "meter_kafka_max_lag",
+            "aggregation": "max"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "partitions", "title": "Partition Count", "type": "line", "expressions": ["meter_kafka_partition_count"], "span": 3, "rowSpan": 2 },
-      { "id": "leaders", "title": "Leader Count", "type": "line", "expressions": ["meter_kafka_leader_count"], "span": 3, "rowSpan": 2 },
-      { "id": "active_ctrl", "title": "Active Controllers", "type": "line", "expressions": ["meter_kafka_active_controller_count"], "span": 3, "rowSpan": 2 },
-      { "id": "max_lag", "title": "Max Lag", "type": "line", "expressions": ["meter_kafka_max_lag"], "span": 3, "rowSpan": 2 },
-      { "id": "under_replicated", "title": "Under-Replicated Partitions", "type": "line", "expressions": ["meter_kafka_under_replicated_partitions"], "span": 4, "rowSpan": 2 },
-      { "id": "offline", "title": "Offline Partitions", "type": "line", "expressions": ["meter_kafka_offline_partitions_count"], "span": 4, "rowSpan": 2 },
-      { "id": "leader_election", "title": "Leader Election Rate", "type": "line", "expressions": ["meter_kafka_leader_election_rate", "meter_kafka_unclean_leader_elections_per_second"], "expressionLabels": ["elections", "unclean"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "partitions",
+        "title": "Partition Count",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_partition_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "leaders",
+        "title": "Leader Count",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_leader_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "active_ctrl",
+        "title": "Active Controllers",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_active_controller_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "max_lag",
+        "title": "Max Lag",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_max_lag"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "under_replicated",
+        "title": "Under-Replicated Partitions",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_under_replicated_partitions"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "offline",
+        "title": "Offline Partitions",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_offline_partitions_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "leader_election",
+        "title": "Leader Election Rate",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_leader_election_rate",
+          "meter_kafka_unclean_leader_elections_per_second"
+        ],
+        "expressionLabels": [
+          "elections",
+          "unclean"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "cpu", "title": "CPU Usage", "type": "line", "unit": "%", "expressions": ["meter_kafka_broker_cpu_time_total"], "span": 3, "rowSpan": 2 },
-      { "id": "msg_rate", "title": "Incoming Messages / s", "type": "line", "expressions": ["meter_kafka_broker_messages_per_second"], "span": 3, "rowSpan": 2 },
-      { "id": "bytes_in", "title": "Bytes In / s", "type": "line", "expressions": ["meter_kafka_broker_bytes_in_per_second"], "span": 3, "rowSpan": 2 },
-      { "id": "bytes_out", "title": "Bytes Out / s", "type": "line", "expressions": ["meter_kafka_broker_bytes_out_per_second"], "span": 3, "rowSpan": 2 },
-      { "id": "req_rate", "title": "Requests / s", "type": "line", "expressions": ["meter_kafka_broker_requests_per_second"], "span": 3, "rowSpan": 2 },
-      { "id": "purgatory", "title": "Purgatory Size", "type": "line", "expressions": ["meter_kafka_broker_purgatory_size"], "span": 3, "rowSpan": 2 },
-      { "id": "isr", "title": "ISR Shrinks / Expands", "type": "line", "expressions": ["latest(meter_kafka_broker_isr_shrinks_per_second)", "latest(meter_kafka_broker_isr_expands_per_second)"], "expressionLabels": ["shrinks", "expands"], "span": 3, "rowSpan": 2 },
-      { "id": "mem_pct", "title": "Memory Usage (%)", "type": "line", "unit": "%", "expressions": ["meter_kafka_broker_memory_usage_percentage"], "span": 3, "rowSpan": 2 },
-      { "id": "under_replicated", "title": "Under-Replicated", "type": "line", "expressions": ["latest(meter_kafka_broker_under_replicated_partitions)", "latest(meter_kafka_broker_under_min_isr_partition_count)"], "expressionLabels": ["under-replicated", "under-min-isr"], "span": 6, "rowSpan": 2 },
-      { "id": "partitions_leaders", "title": "Partitions + Leaders", "type": "line", "expressions": ["meter_kafka_broker_partition_count", "meter_kafka_broker_leader_count"], "expressionLabels": ["partitions", "leaders"], "span": 6, "rowSpan": 2 },
-      { "id": "queue_times", "title": "Queue / Send Times", "type": "line", "unit": "ms", "expressions": ["meter_kafka_broker_request_queue_time_ms", "meter_kafka_broker_response_queue_time_ms", "meter_kafka_broker_response_send_time_ms", "meter_kafka_broker_remote_time_ms"], "expressionLabels": ["request q", "response q", "response send", "remote"], "span": 6, "rowSpan": 2 },
-      { "id": "topic_rates", "title": "Topic Rates", "type": "line", "expressions": ["meter_kafka_broker_topic_produce_requests_per_second", "meter_kafka_broker_topic_fetch_requests_per_second", "meter_kafka_broker_topic_bytesin_per_second"], "expressionLabels": ["produce req/s", "fetch req/s", "bytes-in/s"], "span": 6, "rowSpan": 2 },
-      { "id": "replication", "title": "Replication", "type": "line", "expressions": ["meter_kafka_broker_replication_bytes_in_per_second", "meter_kafka_broker_replication_bytes_out_per_second"], "expressionLabels": ["bytes in", "bytes out"], "span": 6, "rowSpan": 2 },
-      { "id": "gc", "title": "GC Count", "type": "line", "expressions": ["meter_kafka_broker_garbage_collector_count"], "span": 6, "rowSpan": 2 },
-      { "id": "max_lag", "title": "Max Lag (broker)", "type": "line", "expressions": ["sum(meter_kafka_broker_max_lag)"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "cpu",
+        "title": "CPU Usage",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_kafka_broker_cpu_time_total"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "msg_rate",
+        "title": "Incoming Messages / s",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_messages_per_second"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "bytes_in",
+        "title": "Bytes In / s",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_bytes_in_per_second"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "bytes_out",
+        "title": "Bytes Out / s",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_bytes_out_per_second"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "req_rate",
+        "title": "Requests / s",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_requests_per_second"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "purgatory",
+        "title": "Purgatory Size",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_purgatory_size"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "isr",
+        "title": "ISR Shrinks / Expands",
+        "type": "line",
+        "expressions": [
+          "latest(meter_kafka_broker_isr_shrinks_per_second)",
+          "latest(meter_kafka_broker_isr_expands_per_second)"
+        ],
+        "expressionLabels": [
+          "shrinks",
+          "expands"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "mem_pct",
+        "title": "Memory Usage (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_kafka_broker_memory_usage_percentage"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "under_replicated",
+        "title": "Under-Replicated",
+        "type": "line",
+        "expressions": [
+          "latest(meter_kafka_broker_under_replicated_partitions)",
+          "latest(meter_kafka_broker_under_min_isr_partition_count)"
+        ],
+        "expressionLabels": [
+          "under-replicated",
+          "under-min-isr"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "partitions_leaders",
+        "title": "Partitions + Leaders",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_partition_count",
+          "meter_kafka_broker_leader_count"
+        ],
+        "expressionLabels": [
+          "partitions",
+          "leaders"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "queue_times",
+        "title": "Queue / Send Times",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_kafka_broker_request_queue_time_ms",
+          "meter_kafka_broker_response_queue_time_ms",
+          "meter_kafka_broker_response_send_time_ms",
+          "meter_kafka_broker_remote_time_ms"
+        ],
+        "expressionLabels": [
+          "request q",
+          "response q",
+          "response send",
+          "remote"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "topic_rates",
+        "title": "Topic Rates",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_topic_produce_requests_per_second",
+          "meter_kafka_broker_topic_fetch_requests_per_second",
+          "meter_kafka_broker_topic_bytesin_per_second"
+        ],
+        "expressionLabels": [
+          "produce req/s",
+          "fetch req/s",
+          "bytes-in/s"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "replication",
+        "title": "Replication",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_replication_bytes_in_per_second",
+          "meter_kafka_broker_replication_bytes_out_per_second"
+        ],
+        "expressionLabels": [
+          "bytes in",
+          "bytes out"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "gc",
+        "title": "GC Count",
+        "type": "line",
+        "expressions": [
+          "meter_kafka_broker_garbage_collector_count"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "max_lag",
+        "title": "Max Lag (broker)",
+        "type": "line",
+        "expressions": [
+          "sum(meter_kafka_broker_max_lag)"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

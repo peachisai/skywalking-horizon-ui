@@ -1,6 +1,7 @@
 {
   "key": "NGINX",
   "alias": "Nginx",
+  "group": "Gateways",
   "color": "var(--sw-ok)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-nginx-monitoring/",
   "aliases": {
@@ -19,9 +20,26 @@
   "layer-header": {
     "orderBy": "rps",
     "columns": [
-      { "metric": "rps", "label": "RPS", "mqe": "aggregate_labels(meter_nginx_service_http_requests, sum)", "aggregation": "sum" },
-      { "metric": "err5xx", "label": "5xx %", "unit": "%", "mqe": "aggregate_labels(meter_nginx_service_http_5xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100", "aggregation": "avg" },
-      { "metric": "err4xx", "label": "4xx %", "unit": "%", "mqe": "aggregate_labels(meter_nginx_service_http_4xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100", "aggregation": "avg" }
+      {
+        "metric": "rps",
+        "label": "RPS",
+        "mqe": "aggregate_labels(meter_nginx_service_http_requests, sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "err5xx",
+        "label": "5xx %",
+        "unit": "%",
+        "mqe": "aggregate_labels(meter_nginx_service_http_5xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "err4xx",
+        "label": "4xx %",
+        "unit": "%",
+        "mqe": "aggregate_labels(meter_nginx_service_http_4xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
@@ -30,47 +48,277 @@
         "title": "Errors",
         "size": "auto",
         "metrics": [
-          { "id": "err5xx", "label": "5xx Rate", "tip": "Percentage of requests returning 5xx per minute.", "mqe": "aggregate_labels(meter_nginx_service_http_5xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100", "unit": "%", "aggregation": "avg" },
-          { "id": "err4xx", "label": "4xx Rate", "tip": "Percentage of requests returning 4xx per minute.", "mqe": "aggregate_labels(meter_nginx_service_http_4xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100", "unit": "%", "aggregation": "avg" }
+          {
+            "id": "err5xx",
+            "label": "5xx Rate",
+            "tip": "Percentage of requests returning 5xx per minute.",
+            "mqe": "aggregate_labels(meter_nginx_service_http_5xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100",
+            "unit": "%",
+            "aggregation": "avg"
+          },
+          {
+            "id": "err4xx",
+            "label": "4xx Rate",
+            "tip": "Percentage of requests returning 4xx per minute.",
+            "mqe": "aggregate_labels(meter_nginx_service_http_4xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100",
+            "unit": "%",
+            "aggregation": "avg"
+          }
         ]
       },
       {
         "title": "Throughput",
         "size": "square",
         "metrics": [
-          { "id": "rps", "label": "RPS", "tip": "Requests per second across the Nginx service.", "mqe": "aggregate_labels(meter_nginx_service_http_requests, sum)", "aggregation": "sum" }
+          {
+            "id": "rps",
+            "label": "RPS",
+            "tip": "Requests per second across the Nginx service.",
+            "mqe": "aggregate_labels(meter_nginx_service_http_requests, sum)",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "rps", "title": "HTTP Request Trend", "type": "line", "expressions": ["aggregate_labels(meter_nginx_service_http_requests, sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "latency", "title": "HTTP Latency", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_nginx_service_http_latency, avg(p))"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB/s", "expressions": ["aggregate_labels(meter_nginx_service_http_bandwidth, sum(type))/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "HTTP Connections", "type": "line", "expressions": ["aggregate_labels(meter_nginx_service_http_connections, sum(state))"], "span": 6, "rowSpan": 2 },
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["aggregate_labels(meter_nginx_service_http_status, sum(status))"], "span": 6, "rowSpan": 2 },
-      { "id": "err4xx", "title": "4xx % / min", "type": "line", "unit": "%", "expressions": ["aggregate_labels(meter_nginx_service_http_4xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100"], "span": 4, "rowSpan": 2 },
-      { "id": "err5xx", "title": "5xx % / min", "type": "line", "unit": "%", "expressions": ["aggregate_labels(meter_nginx_service_http_5xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100"], "span": 4, "rowSpan": 2 },
-      { "id": "errlog", "title": "Error Log Count", "type": "line", "expressions": ["aggregate_labels(meter_nginx_service_error_log_count, sum(level))"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "rps",
+        "title": "HTTP Request Trend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_http_requests, sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "HTTP Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_http_latency, avg(p))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_http_bandwidth, sum(type))/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "HTTP Connections",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_http_connections, sum(state))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_http_status, sum(status))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "err4xx",
+        "title": "4xx % / min",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_http_4xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err5xx",
+        "title": "5xx % / min",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_http_5xx_requests_increment, sum)/aggregate_labels(meter_nginx_service_http_requests_increment, sum)*100"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "errlog",
+        "title": "Error Log Count",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_nginx_service_error_log_count, sum(level))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "rps", "title": "HTTP Request Trend", "type": "line", "expressions": ["meter_nginx_instance_http_requests"], "span": 4, "rowSpan": 2 },
-      { "id": "latency", "title": "HTTP Latency", "type": "line", "unit": "ms", "expressions": ["meter_nginx_instance_http_latency"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB/s", "expressions": ["meter_nginx_instance_http_bandwidth/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "HTTP Connections", "type": "line", "expressions": ["meter_nginx_instance_http_connections"], "span": 6, "rowSpan": 2 },
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["meter_nginx_instance_http_status"], "span": 6, "rowSpan": 2 },
-      { "id": "err4xx", "title": "4xx % / min", "type": "line", "unit": "%", "expressions": ["(meter_nginx_instance_http_4xx_requests_increment/meter_nginx_instance_http_requests_increment)*100"], "span": 4, "rowSpan": 2 },
-      { "id": "err5xx", "title": "5xx % / min", "type": "line", "unit": "%", "expressions": ["(meter_nginx_instance_http_5xx_requests_increment/meter_nginx_instance_http_requests_increment)*100"], "span": 4, "rowSpan": 2 },
-      { "id": "errlog", "title": "Error Log Count", "type": "line", "expressions": ["meter_nginx_instance_error_log_count"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "rps",
+        "title": "HTTP Request Trend",
+        "type": "line",
+        "expressions": [
+          "meter_nginx_instance_http_requests"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "HTTP Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_nginx_instance_http_latency"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_nginx_instance_http_bandwidth/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "HTTP Connections",
+        "type": "line",
+        "expressions": [
+          "meter_nginx_instance_http_connections"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "meter_nginx_instance_http_status"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "err4xx",
+        "title": "4xx % / min",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "(meter_nginx_instance_http_4xx_requests_increment/meter_nginx_instance_http_requests_increment)*100"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err5xx",
+        "title": "5xx % / min",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "(meter_nginx_instance_http_5xx_requests_increment/meter_nginx_instance_http_requests_increment)*100"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "errlog",
+        "title": "Error Log Count",
+        "type": "line",
+        "expressions": [
+          "meter_nginx_instance_error_log_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "rps", "title": "HTTP Request Trend", "type": "line", "expressions": ["meter_nginx_endpoint_http_requests"], "span": 4, "rowSpan": 2 },
-      { "id": "latency", "title": "HTTP Latency", "type": "line", "unit": "ms", "expressions": ["meter_nginx_endpoint_http_latency"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB", "expressions": ["meter_nginx_endpoint_http_bandwidth/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["meter_nginx_endpoint_http_status"], "span": 6, "rowSpan": 2 },
-      { "id": "err4xx", "title": "4xx % / min", "type": "line", "unit": "%", "expressions": ["(meter_nginx_endpoint_http_4xx_requests_increment/meter_nginx_endpoint_http_requests_increment)*100"], "span": 3, "rowSpan": 2 },
-      { "id": "err5xx", "title": "5xx % / min", "type": "line", "unit": "%", "expressions": ["(meter_nginx_endpoint_http_5xx_requests_increment/meter_nginx_endpoint_http_requests_increment)*100"], "span": 3, "rowSpan": 2 }
+      {
+        "id": "rps",
+        "title": "HTTP Request Trend",
+        "type": "line",
+        "expressions": [
+          "meter_nginx_endpoint_http_requests"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "HTTP Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_nginx_endpoint_http_latency"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "meter_nginx_endpoint_http_bandwidth/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "meter_nginx_endpoint_http_status"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "err4xx",
+        "title": "4xx % / min",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "(meter_nginx_endpoint_http_4xx_requests_increment/meter_nginx_endpoint_http_requests_increment)*100"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "err5xx",
+        "title": "5xx % / min",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "(meter_nginx_endpoint_http_5xx_requests_increment/meter_nginx_endpoint_http_requests_increment)*100"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      }
     ]
   }
 }

@@ -1,6 +1,7 @@
 {
   "key": "ALIPAY_MINI_PROGRAM",
   "alias": "Alipay Mini Program",
+  "group": "Mobile",
   "color": "var(--sw-cyan)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-alipay-mini-program-monitoring/",
   "aliases": {
@@ -19,10 +20,33 @@
   "layer-header": {
     "orderBy": "cpm",
     "columns": [
-      { "metric": "cpm", "label": "Request RPM", "unit": "rpm", "mqe": "meter_alipay_mp_request_cpm", "aggregation": "sum" },
-      { "metric": "launch", "label": "Launch", "unit": "ms", "mqe": "meter_alipay_mp_app_launch_duration", "aggregation": "avg" },
-      { "metric": "firstRender", "label": "First Render", "unit": "ms", "mqe": "meter_alipay_mp_first_render_duration", "aggregation": "avg" },
-      { "metric": "errors", "label": "Errors", "mqe": "meter_alipay_mp_error_count", "aggregation": "sum" }
+      {
+        "metric": "cpm",
+        "label": "Request RPM",
+        "unit": "rpm",
+        "mqe": "meter_alipay_mp_request_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "launch",
+        "label": "Launch",
+        "unit": "ms",
+        "mqe": "meter_alipay_mp_app_launch_duration",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "firstRender",
+        "label": "First Render",
+        "unit": "ms",
+        "mqe": "meter_alipay_mp_first_render_duration",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "errors",
+        "label": "Errors",
+        "mqe": "meter_alipay_mp_error_count",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -31,16 +55,43 @@
         "title": "Latency & errors",
         "size": "auto",
         "metrics": [
-          { "id": "request_p95", "label": "Request P95", "tip": "95th-percentile request duration from the mini-program network bridge.", "mqe": "meter_alipay_mp_request_duration_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
-          { "id": "launch", "label": "Launch", "tip": "Approximate mini-program launch duration.", "mqe": "meter_alipay_mp_app_launch_duration", "unit": "ms", "aggregation": "avg" },
-          { "id": "errors", "label": "Errors", "tip": "Reported error count.", "mqe": "meter_alipay_mp_error_count", "aggregation": "sum" }
+          {
+            "id": "request_p95",
+            "label": "Request P95",
+            "tip": "95th-percentile request duration from the mini-program network bridge.",
+            "mqe": "meter_alipay_mp_request_duration_percentile{p='95'}",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "launch",
+            "label": "Launch",
+            "tip": "Approximate mini-program launch duration.",
+            "mqe": "meter_alipay_mp_app_launch_duration",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "errors",
+            "label": "Errors",
+            "tip": "Reported error count.",
+            "mqe": "meter_alipay_mp_error_count",
+            "aggregation": "sum"
+          }
         ]
       },
       {
         "title": "Throughput",
         "size": "square",
         "metrics": [
-          { "id": "cpm", "label": "Request RPM", "tip": "Bridge requests per minute.", "mqe": "meter_alipay_mp_request_cpm", "unit": "rpm", "aggregation": "sum" }
+          {
+            "id": "cpm",
+            "label": "Request RPM",
+            "tip": "Bridge requests per minute.",
+            "mqe": "meter_alipay_mp_request_cpm",
+            "unit": "rpm",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
@@ -53,7 +104,9 @@
         "tip": "Approximate cold-launch duration from the Alipay container.",
         "type": "line",
         "unit": "ms",
-        "expressions": ["meter_alipay_mp_app_launch_duration"],
+        "expressions": [
+          "meter_alipay_mp_app_launch_duration"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -62,7 +115,9 @@
         "title": "First Render Duration",
         "type": "line",
         "unit": "ms",
-        "expressions": ["meter_alipay_mp_first_render_duration"],
+        "expressions": [
+          "meter_alipay_mp_first_render_duration"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -70,7 +125,9 @@
         "id": "error_count",
         "title": "Error Count",
         "type": "line",
-        "expressions": ["meter_alipay_mp_error_count"],
+        "expressions": [
+          "meter_alipay_mp_error_count"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -79,7 +136,9 @@
         "title": "Request Load",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["meter_alipay_mp_request_cpm"],
+        "expressions": [
+          "meter_alipay_mp_request_cpm"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -101,7 +160,9 @@
         "title": "Launch Duration",
         "type": "line",
         "unit": "ms",
-        "expressions": ["meter_alipay_mp_instance_app_launch_duration"],
+        "expressions": [
+          "meter_alipay_mp_instance_app_launch_duration"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -110,7 +171,9 @@
         "title": "First Render Duration",
         "type": "line",
         "unit": "ms",
-        "expressions": ["meter_alipay_mp_instance_first_render_duration"],
+        "expressions": [
+          "meter_alipay_mp_instance_first_render_duration"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -119,7 +182,9 @@
         "title": "Request Load",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["meter_alipay_mp_instance_request_cpm"],
+        "expressions": [
+          "meter_alipay_mp_instance_request_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -141,7 +206,9 @@
         "title": "Launch Duration on Page",
         "type": "line",
         "unit": "ms",
-        "expressions": ["meter_alipay_mp_endpoint_app_launch_duration"],
+        "expressions": [
+          "meter_alipay_mp_endpoint_app_launch_duration"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -150,7 +217,9 @@
         "title": "First Render Duration",
         "type": "line",
         "unit": "ms",
-        "expressions": ["meter_alipay_mp_endpoint_first_render_duration"],
+        "expressions": [
+          "meter_alipay_mp_endpoint_first_render_duration"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -159,7 +228,9 @@
         "title": "Request Load",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["meter_alipay_mp_endpoint_request_cpm"],
+        "expressions": [
+          "meter_alipay_mp_endpoint_request_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },

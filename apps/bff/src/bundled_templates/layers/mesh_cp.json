@@ -1,40 +1,230 @@
 {
   "key": "MESH_CP",
   "alias": "Istio Control Plane",
+  "group": "Istio",
   "color": "var(--sw-info)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/istio/readme/",
-  "aliases": { "services": "Control Planes" },
-  "components": { "service": true, "instances": false, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Control Planes"
+  },
+  "components": {
+    "service": true,
+    "instances": false,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "cpu",
     "columns": [
-      { "metric": "cpu", "label": "CPU", "mqe": "meter_istio_cpu", "aggregation": "avg" },
-      { "metric": "goroutines", "label": "Goroutines", "mqe": "meter_istio_go_goroutines", "aggregation": "sum" },
-      { "metric": "xds", "label": "Pilot xDS", "mqe": "meter_istio_pilot_xds", "aggregation": "sum" },
-      { "metric": "services", "label": "Services", "mqe": "meter_istio_pilot_services", "aggregation": "sum" }
+      {
+        "metric": "cpu",
+        "label": "CPU",
+        "mqe": "meter_istio_cpu",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "goroutines",
+        "label": "Goroutines",
+        "mqe": "meter_istio_go_goroutines",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "xds",
+        "label": "Pilot xDS",
+        "mqe": "meter_istio_pilot_xds",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "services",
+        "label": "Services",
+        "mqe": "meter_istio_pilot_services",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Istio health", "size": "auto", "metrics": [
-        { "id": "cpu", "label": "CPU", "tip": "Istio control-plane process CPU.", "mqe": "meter_istio_cpu", "aggregation": "avg" },
-        { "id": "goroutines", "label": "Goroutines", "tip": "Live Go goroutines.", "mqe": "meter_istio_go_goroutines", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Istio health",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "cpu",
+            "label": "CPU",
+            "tip": "Istio control-plane process CPU.",
+            "mqe": "meter_istio_cpu",
+            "aggregation": "avg"
+          },
+          {
+            "id": "goroutines",
+            "label": "Goroutines",
+            "tip": "Live Go goroutines.",
+            "mqe": "meter_istio_go_goroutines",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "cpu", "title": "CPU", "type": "line", "expressions": ["meter_istio_cpu"], "span": 4, "rowSpan": 2 },
-      { "id": "goroutines", "title": "Goroutines", "type": "line", "expressions": ["meter_istio_go_goroutines"], "span": 4, "rowSpan": 2 },
-      { "id": "version", "title": "Istio Versions", "type": "line", "expressions": ["meter_istio_pilot_version"], "span": 4, "rowSpan": 2 },
-      { "id": "memory", "title": "Memory (MB)", "type": "line", "unit": "MB", "expressions": ["meter_istio_go_alloc/1024/1024", "meter_istio_go_heap_inuse/1024/1024", "meter_istio_go_stack_inuse/1024/1024", "meter_istio_virtual_memory/1024/1024", "meter_istio_resident_memory/1024/1024"], "expressionLabels": ["alloc", "heap inuse", "stack inuse", "virtual", "resident"], "span": 12, "rowSpan": 2 },
-      { "id": "pilot_errors", "title": "Pilot Errors", "type": "line", "expressions": ["meter_istio_pilot_xds_cds_reject", "meter_istio_pilot_xds_eds_reject", "meter_istio_pilot_xds_rds_reject", "meter_istio_pilot_xds_lds_reject", "meter_istio_pilot_xds_write_timeout"], "expressionLabels": ["cds reject", "eds reject", "rds reject", "lds reject", "write timeout"], "span": 6, "rowSpan": 2 },
-      { "id": "proxy_push_time", "title": "Proxy Push Time (percentile)", "type": "line", "unit": "ms", "expressions": ["meter_istio_pilot_proxy_push_percentile"], "span": 6, "rowSpan": 2 },
-      { "id": "pilot_pushes", "title": "Pilot Pushes", "type": "line", "expressions": ["meter_istio_pilot_xds_pushes"], "span": 4, "rowSpan": 2 },
-      { "id": "sidecar_inj", "title": "Sidecar Injection Success", "type": "line", "expressions": ["meter_istio_sidecar_injection_success_total"], "span": 4, "rowSpan": 2 },
-      { "id": "ads", "title": "ADS Monitoring", "type": "line", "expressions": ["meter_istio_pilot_xds", "meter_istio_pilot_services", "meter_istio_pilot_virt_services"], "expressionLabels": ["xds", "services", "virt services"], "span": 4, "rowSpan": 2 },
-      { "id": "validation", "title": "Configuration Validation", "type": "line", "expressions": ["meter_istio_galley_validation_passed", "meter_istio_galley_validation_failed"], "expressionLabels": ["passed", "failed"], "span": 6, "rowSpan": 2 },
-      { "id": "conflicts", "title": "Pilot Conflicts", "type": "line", "expressions": ["meter_istio_pilot_conflict_ol_tcp_tcp", "meter_istio_pilot_conflict_il", "meter_istio_pilot_conflict_ol_tcp_http", "meter_istio_pilot_conflict_ol_http_tcp"], "expressionLabels": ["ol tcp/tcp", "il", "ol tcp/http", "ol http/tcp"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "cpu",
+        "title": "CPU",
+        "type": "line",
+        "expressions": [
+          "meter_istio_cpu"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "goroutines",
+        "title": "Goroutines",
+        "type": "line",
+        "expressions": [
+          "meter_istio_go_goroutines"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "version",
+        "title": "Istio Versions",
+        "type": "line",
+        "expressions": [
+          "meter_istio_pilot_version"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory",
+        "title": "Memory (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_istio_go_alloc/1024/1024",
+          "meter_istio_go_heap_inuse/1024/1024",
+          "meter_istio_go_stack_inuse/1024/1024",
+          "meter_istio_virtual_memory/1024/1024",
+          "meter_istio_resident_memory/1024/1024"
+        ],
+        "expressionLabels": [
+          "alloc",
+          "heap inuse",
+          "stack inuse",
+          "virtual",
+          "resident"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      },
+      {
+        "id": "pilot_errors",
+        "title": "Pilot Errors",
+        "type": "line",
+        "expressions": [
+          "meter_istio_pilot_xds_cds_reject",
+          "meter_istio_pilot_xds_eds_reject",
+          "meter_istio_pilot_xds_rds_reject",
+          "meter_istio_pilot_xds_lds_reject",
+          "meter_istio_pilot_xds_write_timeout"
+        ],
+        "expressionLabels": [
+          "cds reject",
+          "eds reject",
+          "rds reject",
+          "lds reject",
+          "write timeout"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "proxy_push_time",
+        "title": "Proxy Push Time (percentile)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_istio_pilot_proxy_push_percentile"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "pilot_pushes",
+        "title": "Pilot Pushes",
+        "type": "line",
+        "expressions": [
+          "meter_istio_pilot_xds_pushes"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "sidecar_inj",
+        "title": "Sidecar Injection Success",
+        "type": "line",
+        "expressions": [
+          "meter_istio_sidecar_injection_success_total"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "ads",
+        "title": "ADS Monitoring",
+        "type": "line",
+        "expressions": [
+          "meter_istio_pilot_xds",
+          "meter_istio_pilot_services",
+          "meter_istio_pilot_virt_services"
+        ],
+        "expressionLabels": [
+          "xds",
+          "services",
+          "virt services"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "validation",
+        "title": "Configuration Validation",
+        "type": "line",
+        "expressions": [
+          "meter_istio_galley_validation_passed",
+          "meter_istio_galley_validation_failed"
+        ],
+        "expressionLabels": [
+          "passed",
+          "failed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "conflicts",
+        "title": "Pilot Conflicts",
+        "type": "line",
+        "expressions": [
+          "meter_istio_pilot_conflict_ol_tcp_tcp",
+          "meter_istio_pilot_conflict_il",
+          "meter_istio_pilot_conflict_ol_tcp_http",
+          "meter_istio_pilot_conflict_ol_http_tcp"
+        ],
+        "expressionLabels": [
+          "ol tcp/tcp",
+          "il",
+          "ol tcp/http",
+          "ol http/tcp"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

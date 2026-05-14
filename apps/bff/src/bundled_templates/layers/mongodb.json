@@ -1,62 +1,403 @@
 {
   "key": "MONGODB",
   "alias": "MongoDB",
+  "group": "Databases",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-mongodb-monitoring/",
-  "aliases": { "services": "MongoDB clusters", "instances": "Nodes" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "MongoDB clusters",
+    "instances": "Nodes"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "docQps",
     "columns": [
-      { "metric": "docQps", "label": "Doc QPS", "mqe": "aggregate_labels(meter_mongodb_cluster_document_avg_qps, sum(doc_op_type))", "aggregation": "sum" },
-      { "metric": "opQps", "label": "Op QPS", "mqe": "aggregate_labels(meter_mongodb_cluster_operation_avg_qps, sum(legacy_op_type))", "aggregation": "sum" },
-      { "metric": "conns", "label": "Conns", "mqe": "aggregate_labels(meter_mongodb_cluster_connections,sum)", "aggregation": "sum" },
-      { "metric": "replLag", "label": "Repl Lag", "unit": "ms", "mqe": "meter_mongodb_cluster_repl_lag", "aggregation": "avg" }
+      {
+        "metric": "docQps",
+        "label": "Doc QPS",
+        "mqe": "aggregate_labels(meter_mongodb_cluster_document_avg_qps, sum(doc_op_type))",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "opQps",
+        "label": "Op QPS",
+        "mqe": "aggregate_labels(meter_mongodb_cluster_operation_avg_qps, sum(legacy_op_type))",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "conns",
+        "label": "Conns",
+        "mqe": "aggregate_labels(meter_mongodb_cluster_connections,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "replLag",
+        "label": "Repl Lag",
+        "unit": "ms",
+        "mqe": "meter_mongodb_cluster_repl_lag",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Capacity", "size": "auto", "metrics": [
-        { "id": "dataSize", "label": "Data Size (GB)", "tip": "Total data size across the cluster.", "mqe": "latest(aggregate_labels(meter_mongodb_cluster_data_size,sum))/1024/1024/1024", "aggregation": "sum" },
-        { "id": "collCount", "label": "Collections", "tip": "Collection count across the cluster.", "mqe": "latest(aggregate_labels(meter_mongodb_cluster_collection_count,sum))", "aggregation": "sum" },
-        { "id": "objCount", "label": "Objects", "tip": "Document object count.", "mqe": "latest(aggregate_labels(meter_mongodb_cluster_object_count,sum))", "aggregation": "sum" }
-      ]},
-      { "title": "Throughput", "size": "square", "metrics": [
-        { "id": "docQps", "label": "Doc QPS", "tip": "Document operations / second.", "mqe": "aggregate_labels(meter_mongodb_cluster_document_avg_qps, sum(doc_op_type))", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Capacity",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "dataSize",
+            "label": "Data Size (GB)",
+            "tip": "Total data size across the cluster.",
+            "mqe": "latest(aggregate_labels(meter_mongodb_cluster_data_size,sum))/1024/1024/1024",
+            "aggregation": "sum"
+          },
+          {
+            "id": "collCount",
+            "label": "Collections",
+            "tip": "Collection count across the cluster.",
+            "mqe": "latest(aggregate_labels(meter_mongodb_cluster_collection_count,sum))",
+            "aggregation": "sum"
+          },
+          {
+            "id": "objCount",
+            "label": "Objects",
+            "tip": "Document object count.",
+            "mqe": "latest(aggregate_labels(meter_mongodb_cluster_object_count,sum))",
+            "aggregation": "sum"
+          }
+        ]
+      },
+      {
+        "title": "Throughput",
+        "size": "square",
+        "metrics": [
+          {
+            "id": "docQps",
+            "label": "Doc QPS",
+            "tip": "Document operations / second.",
+            "mqe": "aggregate_labels(meter_mongodb_cluster_document_avg_qps, sum(doc_op_type))",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "uptime", "title": "Cluster Uptime (days)", "type": "line", "expressions": ["latest(aggregate_labels(meter_mongodb_cluster_uptime,max))/3600/24"], "span": 3, "rowSpan": 2 },
-      { "id": "data_size", "title": "Data Size (GB)", "type": "line", "expressions": ["latest(aggregate_labels(meter_mongodb_cluster_data_size,sum))/1024/1024/1024"], "span": 3, "rowSpan": 2 },
-      { "id": "coll_count", "title": "Collection Count", "type": "line", "expressions": ["latest(aggregate_labels(meter_mongodb_cluster_collection_count,sum))"], "span": 3, "rowSpan": 2 },
-      { "id": "obj_count", "title": "Object Count", "type": "line", "expressions": ["latest(aggregate_labels(meter_mongodb_cluster_object_count,sum))"], "span": 3, "rowSpan": 2 },
-      { "id": "doc_qps", "title": "Document QPS", "type": "line", "expressions": ["aggregate_labels(meter_mongodb_cluster_document_avg_qps, sum(doc_op_type))"], "span": 4, "rowSpan": 2 },
-      { "id": "op_qps", "title": "Operation QPS", "type": "line", "expressions": ["aggregate_labels(meter_mongodb_cluster_operation_avg_qps, sum(legacy_op_type))"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "Total Connections", "type": "line", "expressions": ["aggregate_labels(meter_mongodb_cluster_connections,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "cursors", "title": "Cursor Total", "type": "line", "expressions": ["aggregate_labels(meter_mongodb_cluster_cursor_avg, sum(csr_type))"], "span": 4, "rowSpan": 2 },
-      { "id": "repl_lag", "title": "Replication Lag (ms)", "type": "line", "unit": "ms", "expressions": ["meter_mongodb_cluster_repl_lag"], "span": 4, "rowSpan": 2 },
-      { "id": "db_data_size", "title": "DB Total Data (GB)", "type": "line", "expressions": ["latest(aggregate_labels(meter_mongodb_cluster_db_data_size, sum(database)))/1024/1024/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "db_index_size", "title": "DB Total Index (GB)", "type": "line", "expressions": ["latest(aggregate_labels(meter_mongodb_cluster_db_index_size, sum(database)))/1024/1024/1024"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "uptime",
+        "title": "Cluster Uptime (days)",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_mongodb_cluster_uptime,max))/3600/24"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "data_size",
+        "title": "Data Size (GB)",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_mongodb_cluster_data_size,sum))/1024/1024/1024"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "coll_count",
+        "title": "Collection Count",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_mongodb_cluster_collection_count,sum))"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "obj_count",
+        "title": "Object Count",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_mongodb_cluster_object_count,sum))"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "doc_qps",
+        "title": "Document QPS",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_mongodb_cluster_document_avg_qps, sum(doc_op_type))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "op_qps",
+        "title": "Operation QPS",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_mongodb_cluster_operation_avg_qps, sum(legacy_op_type))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Total Connections",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_mongodb_cluster_connections,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cursors",
+        "title": "Cursor Total",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_mongodb_cluster_cursor_avg, sum(csr_type))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "repl_lag",
+        "title": "Replication Lag (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_mongodb_cluster_repl_lag"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "db_data_size",
+        "title": "DB Total Data (GB)",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_mongodb_cluster_db_data_size, sum(database)))/1024/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "db_index_size",
+        "title": "DB Total Index (GB)",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_mongodb_cluster_db_index_size, sum(database)))/1024/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "uptime", "title": "Uptime (days)", "type": "line", "expressions": ["latest(meter_mongodb_node_uptime)/3600/24"], "span": 3, "rowSpan": 2 },
-      { "id": "qps", "title": "QPS", "type": "line", "expressions": ["meter_mongodb_node_qps"], "span": 3, "rowSpan": 2 },
-      { "id": "rs_state", "title": "ReplSet State", "type": "line", "expressions": ["meter_mongodb_node_rs_state"], "span": 3, "rowSpan": 2 },
-      { "id": "conns", "title": "Connections", "type": "line", "expressions": ["meter_mongodb_node_connections"], "span": 3, "rowSpan": 2 },
-      { "id": "cpu", "title": "CPU Usage (%)", "type": "line", "unit": "%", "expressions": ["meter_mongodb_node_cpu_total_percentage"], "span": 4, "rowSpan": 2 },
-      { "id": "mem", "title": "Memory Usage", "type": "line", "expressions": ["meter_mongodb_node_memory_usage"], "span": 4, "rowSpan": 2 },
-      { "id": "mem_free", "title": "Memory Free (GB)", "type": "line", "expressions": ["meter_mongodb_node_memory_free_kb/1024/1024", "meter_mongodb_node_swap_memory_free_kb/1024/1024"], "expressionLabels": ["mem", "swap"], "span": 4, "rowSpan": 2 },
-      { "id": "disk", "title": "Disk (GB)", "type": "line", "expressions": ["meter_mongodb_node_fs_used_size/1024/1024/1024", "meter_mongodb_node_fs_total_size/1024/1024/1024"], "expressionLabels": ["used", "total"], "span": 4, "rowSpan": 2 },
-      { "id": "network", "title": "Network (KB/s)", "type": "line", "expressions": ["meter_mongodb_node_network_bytes_in/1024", "meter_mongodb_node_network_bytes_out/1024"], "expressionLabels": ["in", "out"], "span": 4, "rowSpan": 2 },
-      { "id": "active_clients", "title": "Active Clients", "type": "line", "expressions": ["meter_mongodb_node_active_total_num", "meter_mongodb_node_active_writer_num", "meter_mongodb_node_active_reader_num"], "expressionLabels": ["total", "writers", "readers"], "span": 4, "rowSpan": 2 },
-      { "id": "doc_qps", "title": "Document QPS", "type": "line", "expressions": ["meter_mongodb_node_document_qps"], "span": 4, "rowSpan": 2 },
-      { "id": "op_qps", "title": "Operation QPS", "type": "line", "expressions": ["meter_mongodb_node_operation_qps"], "span": 4, "rowSpan": 2 },
-      { "id": "op_latency", "title": "Op Latency (µs)", "type": "line", "expressions": ["aggregate_labels(meter_mongodb_node_latency_rate,sum(op_type))/aggregate_labels(meter_mongodb_node_op_rate,sum(op_type))"], "span": 4, "rowSpan": 2 },
-      { "id": "transactions", "title": "Transactions", "type": "line", "expressions": ["meter_mongodb_node_transactions_active", "meter_mongodb_node_transactions_inactive"], "expressionLabels": ["active", "inactive"], "span": 4, "rowSpan": 2 },
-      { "id": "repl_buffer", "title": "Repl Buffer", "type": "line", "expressions": ["meter_mongodb_node_repl_buffer_count", "meter_mongodb_node_repl_buffer_size/1024/1024"], "expressionLabels": ["count", "size (MB)"], "span": 4, "rowSpan": 2 },
-      { "id": "queued_op", "title": "Queued Operations", "type": "line", "expressions": ["meter_mongodb_node_queued_operation"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "uptime",
+        "title": "Uptime (days)",
+        "type": "line",
+        "expressions": [
+          "latest(meter_mongodb_node_uptime)/3600/24"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "qps",
+        "title": "QPS",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_qps"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "rs_state",
+        "title": "ReplSet State",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_rs_state"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Connections",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_connections"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu",
+        "title": "CPU Usage (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_mongodb_node_cpu_total_percentage"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mem",
+        "title": "Memory Usage",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_memory_usage"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mem_free",
+        "title": "Memory Free (GB)",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_memory_free_kb/1024/1024",
+          "meter_mongodb_node_swap_memory_free_kb/1024/1024"
+        ],
+        "expressionLabels": [
+          "mem",
+          "swap"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk",
+        "title": "Disk (GB)",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_fs_used_size/1024/1024/1024",
+          "meter_mongodb_node_fs_total_size/1024/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "total"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "network",
+        "title": "Network (KB/s)",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_network_bytes_in/1024",
+          "meter_mongodb_node_network_bytes_out/1024"
+        ],
+        "expressionLabels": [
+          "in",
+          "out"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "active_clients",
+        "title": "Active Clients",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_active_total_num",
+          "meter_mongodb_node_active_writer_num",
+          "meter_mongodb_node_active_reader_num"
+        ],
+        "expressionLabels": [
+          "total",
+          "writers",
+          "readers"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "doc_qps",
+        "title": "Document QPS",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_document_qps"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "op_qps",
+        "title": "Operation QPS",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_operation_qps"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "op_latency",
+        "title": "Op Latency (\u00b5s)",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_mongodb_node_latency_rate,sum(op_type))/aggregate_labels(meter_mongodb_node_op_rate,sum(op_type))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "transactions",
+        "title": "Transactions",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_transactions_active",
+          "meter_mongodb_node_transactions_inactive"
+        ],
+        "expressionLabels": [
+          "active",
+          "inactive"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "repl_buffer",
+        "title": "Repl Buffer",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_repl_buffer_count",
+          "meter_mongodb_node_repl_buffer_size/1024/1024"
+        ],
+        "expressionLabels": [
+          "count",
+          "size (MB)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "queued_op",
+        "title": "Queued Operations",
+        "type": "line",
+        "expressions": [
+          "meter_mongodb_node_queued_operation"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ]
   }
 }

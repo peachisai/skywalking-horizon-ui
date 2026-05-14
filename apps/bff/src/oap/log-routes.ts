@@ -89,10 +89,14 @@ const QUERY_LOGS = /* GraphQL */ `
         content
         tags { key value }
       }
-      total
     }
   }
 `;
+// OAP's `Logs.total` field was removed in newer query-protocol
+// versions (>=10.x — the paging model went cursor-based and the
+// caller computes total client-side). We don't ask for it anymore;
+// the response handler falls back to `logs.length` for the pagination
+// hint, which is what booster-ui does now.
 
 interface OapLogRow {
   serviceName?: string | null;
@@ -180,7 +184,7 @@ export function registerLogRoute(app: FastifyInstance, deps: LogRouteDeps): void
 
       try {
         const env = await graphqlPost<{
-          data: { logs: OapLogRow[]; total: number };
+          data: { logs: OapLogRow[] };
         }>(opts, QUERY_LOGS, { condition });
         const logs: LogRow[] = (env.data?.logs ?? []).map((r) => ({
           serviceName: r.serviceName ?? null,
@@ -198,7 +202,7 @@ export function registerLogRoute(app: FastifyInstance, deps: LogRouteDeps): void
         return reply.send({
           generatedAt: Date.now(),
           query: body,
-          total: env.data?.total ?? logs.length,
+          total: logs.length,
           logs,
           reachable: true,
         } satisfies LogsResponse);
@@ -269,7 +273,7 @@ export function registerLogRoute(app: FastifyInstance, deps: LogRouteDeps): void
 
       try {
         const env = await graphqlPost<{
-          data: { logs: OapLogRow[]; total: number };
+          data: { logs: OapLogRow[] };
         }>(opts, QUERY_LOGS, { condition });
         const rows = env.data?.logs ?? [];
         const level: LogFacetsResponse['level'] = { error: 0, warn: 0, info: 0, debug: 0, other: 0 };
@@ -291,7 +295,7 @@ export function registerLogRoute(app: FastifyInstance, deps: LogRouteDeps): void
           .slice(0, 12);
         return reply.send({
           generatedAt: Date.now(),
-          total: env.data?.total ?? rows.length,
+          total: rows.length,
           sampled: rows.length,
           level,
           services,

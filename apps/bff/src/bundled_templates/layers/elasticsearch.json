@@ -1,59 +1,444 @@
 {
   "key": "ELASTICSEARCH",
   "alias": "Elasticsearch",
+  "group": "Databases",
   "color": "var(--sw-cyan)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-elasticsearch-monitoring/",
-  "aliases": { "services": "ES clusters", "instances": "Nodes", "endpoints": "Indices" },
-  "components": { "service": true, "instances": true, "endpoints": true, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "ES clusters",
+    "instances": "Nodes",
+    "endpoints": "Indices"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": true,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "shards",
     "columns": [
-      { "metric": "health", "label": "Health", "mqe": "meter_elasticsearch_cluster_health_status", "aggregation": "avg" },
-      { "metric": "shards", "label": "Shards", "mqe": "latest(meter_elasticsearch_cluster_shards_total)", "aggregation": "sum" },
-      { "metric": "nodes", "label": "Nodes", "mqe": "latest(meter_elasticsearch_cluster_nodes)", "aggregation": "sum" },
-      { "metric": "unassigned", "label": "Unassigned", "mqe": "latest(meter_elasticsearch_cluster_unassigned_shards_total)", "aggregation": "sum" }
+      {
+        "metric": "health",
+        "label": "Health",
+        "mqe": "meter_elasticsearch_cluster_health_status",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "shards",
+        "label": "Shards",
+        "mqe": "latest(meter_elasticsearch_cluster_shards_total)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "nodes",
+        "label": "Nodes",
+        "mqe": "latest(meter_elasticsearch_cluster_nodes)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "unassigned",
+        "label": "Unassigned",
+        "mqe": "latest(meter_elasticsearch_cluster_unassigned_shards_total)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Cluster", "size": "auto", "metrics": [
-        { "id": "health", "label": "Health", "tip": "0 green / 1 yellow / 2 red.", "mqe": "meter_elasticsearch_cluster_health_status", "aggregation": "avg" },
-        { "id": "unassigned", "label": "Unassigned Shards", "tip": "Shards not yet placed on any node.", "mqe": "latest(meter_elasticsearch_cluster_unassigned_shards_total)", "aggregation": "sum" },
-        { "id": "breakers", "label": "Tripped Breakers", "tip": "Cumulative circuit-breaker trips — high values indicate memory pressure.", "mqe": "latest(meter_elasticsearch_cluster_breakers_tripped)", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Cluster",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "health",
+            "label": "Health",
+            "tip": "0 green / 1 yellow / 2 red.",
+            "mqe": "meter_elasticsearch_cluster_health_status",
+            "aggregation": "avg"
+          },
+          {
+            "id": "unassigned",
+            "label": "Unassigned Shards",
+            "tip": "Shards not yet placed on any node.",
+            "mqe": "latest(meter_elasticsearch_cluster_unassigned_shards_total)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "breakers",
+            "label": "Tripped Breakers",
+            "tip": "Cumulative circuit-breaker trips \u2014 high values indicate memory pressure.",
+            "mqe": "latest(meter_elasticsearch_cluster_breakers_tripped)",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "health", "title": "Cluster Health", "type": "line", "expressions": ["meter_elasticsearch_cluster_health_status"], "span": 3, "rowSpan": 2 },
-      { "id": "nodes", "title": "Nodes", "type": "line", "expressions": ["latest(meter_elasticsearch_cluster_nodes)"], "span": 3, "rowSpan": 2 },
-      { "id": "pending_tasks", "title": "Pending Tasks", "type": "line", "expressions": ["avg(meter_elasticsearch_cluster_pending_tasks_total)"], "span": 3, "rowSpan": 2 },
-      { "id": "primary_shards", "title": "Primary Shards", "type": "line", "expressions": ["latest(meter_elasticsearch_cluster_primary_shards_total)"], "span": 3, "rowSpan": 2 },
-      { "id": "shards_breakdown", "title": "Shards Breakdown", "type": "line", "expressions": ["latest(meter_elasticsearch_cluster_shards_total)", "latest(meter_elasticsearch_cluster_initializing_shards_total)", "latest(meter_elasticsearch_cluster_relocating_shards_total)", "latest(meter_elasticsearch_cluster_unassigned_shards_total)", "latest(meter_elasticsearch_cluster_delayed_unassigned_shards_total)"], "expressionLabels": ["active", "initializing", "relocating", "unassigned", "delayed-unassigned"], "span": 6, "rowSpan": 2 },
-      { "id": "breakers", "title": "Tripped Breakers", "type": "line", "expressions": ["latest(meter_elasticsearch_cluster_breakers_tripped)"], "span": 3, "rowSpan": 2 },
-      { "id": "cluster_cpu", "title": "Cluster CPU Avg", "type": "line", "unit": "%", "expressions": ["avg(meter_elasticsearch_cluster_cpu_usage_avg)"], "span": 3, "rowSpan": 2 },
-      { "id": "cluster_jvm", "title": "JVM Memory Used Avg", "type": "line", "expressions": ["avg(meter_elasticsearch_cluster_jvm_memory_used_avg)"], "span": 4, "rowSpan": 2 },
-      { "id": "open_files", "title": "Open Files Avg", "type": "line", "expressions": ["avg(meter_elasticsearch_cluster_open_file_count)"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "health",
+        "title": "Cluster Health",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_cluster_health_status"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "nodes",
+        "title": "Nodes",
+        "type": "line",
+        "expressions": [
+          "latest(meter_elasticsearch_cluster_nodes)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "pending_tasks",
+        "title": "Pending Tasks",
+        "type": "line",
+        "expressions": [
+          "avg(meter_elasticsearch_cluster_pending_tasks_total)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "primary_shards",
+        "title": "Primary Shards",
+        "type": "line",
+        "expressions": [
+          "latest(meter_elasticsearch_cluster_primary_shards_total)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "shards_breakdown",
+        "title": "Shards Breakdown",
+        "type": "line",
+        "expressions": [
+          "latest(meter_elasticsearch_cluster_shards_total)",
+          "latest(meter_elasticsearch_cluster_initializing_shards_total)",
+          "latest(meter_elasticsearch_cluster_relocating_shards_total)",
+          "latest(meter_elasticsearch_cluster_unassigned_shards_total)",
+          "latest(meter_elasticsearch_cluster_delayed_unassigned_shards_total)"
+        ],
+        "expressionLabels": [
+          "active",
+          "initializing",
+          "relocating",
+          "unassigned",
+          "delayed-unassigned"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "breakers",
+        "title": "Tripped Breakers",
+        "type": "line",
+        "expressions": [
+          "latest(meter_elasticsearch_cluster_breakers_tripped)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "cluster_cpu",
+        "title": "Cluster CPU Avg",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "avg(meter_elasticsearch_cluster_cpu_usage_avg)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "cluster_jvm",
+        "title": "JVM Memory Used Avg",
+        "type": "line",
+        "expressions": [
+          "avg(meter_elasticsearch_cluster_jvm_memory_used_avg)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "open_files",
+        "title": "Open Files Avg",
+        "type": "line",
+        "expressions": [
+          "avg(meter_elasticsearch_cluster_open_file_count)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "cpu", "title": "Process CPU (%)", "type": "line", "unit": "%", "expressions": ["meter_elasticsearch_node_process_cpu_percent"], "span": 4, "rowSpan": 2 },
-      { "id": "os_cpu", "title": "OS CPU (%)", "type": "line", "unit": "%", "expressions": ["meter_elasticsearch_node_os_cpu_percent"], "span": 4, "rowSpan": 2 },
-      { "id": "load_avg", "title": "Load Average", "type": "line", "expressions": ["meter_elasticsearch_node_os_load1", "meter_elasticsearch_node_os_load5", "meter_elasticsearch_node_os_load15"], "expressionLabels": ["1m", "5m", "15m"], "span": 4, "rowSpan": 2 },
-      { "id": "jvm_mem", "title": "JVM Memory (MB)", "type": "line", "expressions": ["meter_elasticsearch_node_jvm_memory_heap_used/1024/1024", "meter_elasticsearch_node_jvm_memory_heap_max/1024/1024", "meter_elasticsearch_node_jvm_memory_nonheap_used/1024/1024"], "expressionLabels": ["heap used", "heap max", "non-heap"], "span": 6, "rowSpan": 2 },
-      { "id": "gc", "title": "GC", "type": "line", "expressions": ["meter_elasticsearch_node_jvm_gc_count", "meter_elasticsearch_node_jvm_gc_time"], "expressionLabels": ["count", "time (ms/min)"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "translog", "title": "Translog", "type": "line", "expressions": ["meter_elasticsearch_node_indices_translog_operations", "meter_elasticsearch_node_indices_translog_size/1024/1024"], "expressionLabels": ["operations", "size (MB)"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "breakers", "title": "Breakers", "type": "line", "expressions": ["meter_elasticsearch_node_breakers_tripped", "meter_elasticsearch_node_breakers_estimated_size/1024/1024"], "expressionLabels": ["tripped", "estimated (MB)"], "span": 6, "rowSpan": 2 },
-      { "id": "segments", "title": "Segments", "type": "line", "expressions": ["meter_elasticsearch_node_segment_count", "meter_elasticsearch_node_segment_memory"], "expressionLabels": ["count", "memory (MB)"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "disk", "title": "Disk Usage", "type": "line", "expressions": ["meter_elasticsearch_node_disk_usage/1024/1024/1024", "meter_elasticsearch_node_disk_usage_percent"], "expressionLabels": ["GB", "%"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "network", "title": "Network", "type": "line", "expressions": ["meter_elasticsearch_node_network_send_bytes", "meter_elasticsearch_node_network_receive_bytes"], "expressionLabels": ["send", "receive"], "span": 6, "rowSpan": 2 },
-      { "id": "open_files", "title": "Open Files", "type": "line", "expressions": ["avg(meter_elasticsearch_node_open_file_count)"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "cpu",
+        "title": "Process CPU (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_elasticsearch_node_process_cpu_percent"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "os_cpu",
+        "title": "OS CPU (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_elasticsearch_node_os_cpu_percent"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "load_avg",
+        "title": "Load Average",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_os_load1",
+          "meter_elasticsearch_node_os_load5",
+          "meter_elasticsearch_node_os_load15"
+        ],
+        "expressionLabels": [
+          "1m",
+          "5m",
+          "15m"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "jvm_mem",
+        "title": "JVM Memory (MB)",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_jvm_memory_heap_used/1024/1024",
+          "meter_elasticsearch_node_jvm_memory_heap_max/1024/1024",
+          "meter_elasticsearch_node_jvm_memory_nonheap_used/1024/1024"
+        ],
+        "expressionLabels": [
+          "heap used",
+          "heap max",
+          "non-heap"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "gc",
+        "title": "GC",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_jvm_gc_count",
+          "meter_elasticsearch_node_jvm_gc_time"
+        ],
+        "expressionLabels": [
+          "count",
+          "time (ms/min)"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "translog",
+        "title": "Translog",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_indices_translog_operations",
+          "meter_elasticsearch_node_indices_translog_size/1024/1024"
+        ],
+        "expressionLabels": [
+          "operations",
+          "size (MB)"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "breakers",
+        "title": "Breakers",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_breakers_tripped",
+          "meter_elasticsearch_node_breakers_estimated_size/1024/1024"
+        ],
+        "expressionLabels": [
+          "tripped",
+          "estimated (MB)"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "segments",
+        "title": "Segments",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_segment_count",
+          "meter_elasticsearch_node_segment_memory"
+        ],
+        "expressionLabels": [
+          "count",
+          "memory (MB)"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk",
+        "title": "Disk Usage",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_disk_usage/1024/1024/1024",
+          "meter_elasticsearch_node_disk_usage_percent"
+        ],
+        "expressionLabels": [
+          "GB",
+          "%"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "network",
+        "title": "Network",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_node_network_send_bytes",
+          "meter_elasticsearch_node_network_receive_bytes"
+        ],
+        "expressionLabels": [
+          "send",
+          "receive"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "open_files",
+        "title": "Open Files",
+        "type": "line",
+        "expressions": [
+          "avg(meter_elasticsearch_node_open_file_count)"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "indexing_rate", "title": "Indexing Rate", "type": "line", "expressions": ["meter_elasticsearch_index_stats_indexing_index_total_req_rate", "meter_elasticsearch_index_stats_indexing_index_total_proc_rate"], "expressionLabels": ["req", "proc"], "span": 6, "rowSpan": 2 },
-      { "id": "search_rate", "title": "Search Rate", "type": "line", "expressions": ["meter_elasticsearch_index_stats_search_query_total_req_rate", "meter_elasticsearch_index_stats_search_query_total_proc_rate"], "expressionLabels": ["req", "proc"], "span": 6, "rowSpan": 2 },
-      { "id": "data_size", "title": "Index Size", "type": "line", "unit": "GB", "expressions": ["latest(meter_elasticsearch_index_indices_store_size_bytes_total)/1024/1024/1024", "latest(meter_elasticsearch_index_indices_store_size_bytes_primary)/1024/1024/1024"], "expressionLabels": ["all shards", "primary"], "span": 6, "rowSpan": 2 },
-      { "id": "docs", "title": "Documents", "type": "line", "expressions": ["meter_elasticsearch_index_indices_docs_total", "meter_elasticsearch_index_indices_docs_primary", "latest(meter_elasticsearch_index_indices_deleted_docs_primary)"], "expressionLabels": ["all", "primary", "deleted"], "span": 6, "rowSpan": 2 },
-      { "id": "search_time", "title": "Avg Search Time / Req (s)", "type": "line", "expressions": ["meter_elasticsearch_index_search_fetch_avg_time", "meter_elasticsearch_index_search_query_avg_time", "meter_elasticsearch_index_search_scroll_avg_time", "meter_elasticsearch_index_search_suggest_avg_time"], "expressionLabels": ["fetch", "query", "scroll", "suggest"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "indexing_rate",
+        "title": "Indexing Rate",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_index_stats_indexing_index_total_req_rate",
+          "meter_elasticsearch_index_stats_indexing_index_total_proc_rate"
+        ],
+        "expressionLabels": [
+          "req",
+          "proc"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "search_rate",
+        "title": "Search Rate",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_index_stats_search_query_total_req_rate",
+          "meter_elasticsearch_index_stats_search_query_total_proc_rate"
+        ],
+        "expressionLabels": [
+          "req",
+          "proc"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "data_size",
+        "title": "Index Size",
+        "type": "line",
+        "unit": "GB",
+        "expressions": [
+          "latest(meter_elasticsearch_index_indices_store_size_bytes_total)/1024/1024/1024",
+          "latest(meter_elasticsearch_index_indices_store_size_bytes_primary)/1024/1024/1024"
+        ],
+        "expressionLabels": [
+          "all shards",
+          "primary"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "docs",
+        "title": "Documents",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_index_indices_docs_total",
+          "meter_elasticsearch_index_indices_docs_primary",
+          "latest(meter_elasticsearch_index_indices_deleted_docs_primary)"
+        ],
+        "expressionLabels": [
+          "all",
+          "primary",
+          "deleted"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "search_time",
+        "title": "Avg Search Time / Req (s)",
+        "type": "line",
+        "expressions": [
+          "meter_elasticsearch_index_search_fetch_avg_time",
+          "meter_elasticsearch_index_search_query_avg_time",
+          "meter_elasticsearch_index_search_scroll_avg_time",
+          "meter_elasticsearch_index_search_suggest_avg_time"
+        ],
+        "expressionLabels": [
+          "fetch",
+          "query",
+          "scroll",
+          "suggest"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ]
   }
 }

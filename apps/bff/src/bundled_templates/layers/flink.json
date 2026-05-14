@@ -1,67 +1,554 @@
 {
   "key": "FLINK",
   "alias": "Flink",
+  "group": "MQ",
   "color": "var(--sw-pink)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-flink-monitoring/",
-  "aliases": { "services": "Flink JobManagers", "instances": "TaskManagers", "endpoints": "Jobs" },
-  "components": { "service": true, "instances": true, "endpoints": true, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Flink JobManagers",
+    "instances": "TaskManagers",
+    "endpoints": "Jobs"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": true,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "jobs",
     "columns": [
-      { "metric": "jobs", "label": "Running Jobs", "mqe": "latest(meter_flink_jobManager_running_job_number)", "aggregation": "sum" },
-      { "metric": "taskMgrs", "label": "TaskManagers", "mqe": "latest(meter_flink_jobManager_taskManagers_registered_number)", "aggregation": "sum" },
-      { "metric": "slotsAvail", "label": "Slots Available", "mqe": "latest(meter_flink_jobManager_taskManagers_slots_available)", "aggregation": "sum" },
-      { "metric": "slotsTotal", "label": "Slots Total", "mqe": "latest(meter_flink_jobManager_taskManagers_slots_total)", "aggregation": "sum" }
+      {
+        "metric": "jobs",
+        "label": "Running Jobs",
+        "mqe": "latest(meter_flink_jobManager_running_job_number)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "taskMgrs",
+        "label": "TaskManagers",
+        "mqe": "latest(meter_flink_jobManager_taskManagers_registered_number)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "slotsAvail",
+        "label": "Slots Available",
+        "mqe": "latest(meter_flink_jobManager_taskManagers_slots_available)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "slotsTotal",
+        "label": "Slots Total",
+        "mqe": "latest(meter_flink_jobManager_taskManagers_slots_total)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Cluster", "size": "auto", "metrics": [
-        { "id": "jobs", "label": "Running Jobs", "tip": "Active Flink jobs.", "mqe": "latest(meter_flink_jobManager_running_job_number)", "aggregation": "sum" },
-        { "id": "slotsAvail", "label": "Slots Available", "tip": "Free task slots.", "mqe": "latest(meter_flink_jobManager_taskManagers_slots_available)", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Cluster",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "jobs",
+            "label": "Running Jobs",
+            "tip": "Active Flink jobs.",
+            "mqe": "latest(meter_flink_jobManager_running_job_number)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "slotsAvail",
+            "label": "Slots Available",
+            "tip": "Free task slots.",
+            "mqe": "latest(meter_flink_jobManager_taskManagers_slots_available)",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "jobs", "title": "Running Jobs", "type": "line", "expressions": ["latest(meter_flink_jobManager_running_job_number)"], "span": 3, "rowSpan": 2 },
-      { "id": "task_mgrs", "title": "TaskManagers", "type": "line", "expressions": ["latest(meter_flink_jobManager_taskManagers_registered_number)"], "span": 3, "rowSpan": 2 },
-      { "id": "slots", "title": "Slots Total / Available", "type": "line", "expressions": ["latest(meter_flink_jobManager_taskManagers_slots_total)", "latest(meter_flink_jobManager_taskManagers_slots_available)"], "expressionLabels": ["total", "available"], "span": 3, "rowSpan": 2 },
-      { "id": "cpu_load", "title": "JM JVM CPU Load (%)", "type": "line", "unit": "%", "expressions": ["meter_flink_jobManager_jvm_cpu_load/10"], "span": 3, "rowSpan": 2 },
-      { "id": "jm_threads", "title": "JM JVM Thread Count", "type": "line", "expressions": ["meter_flink_jobManager_jvm_thread_count"], "span": 3, "rowSpan": 2 },
-      { "id": "jm_cpu_time", "title": "JM CPU Time (ms)", "type": "line", "unit": "ms", "expressions": ["meter_flink_jobManager_jvm_cpu_time/1000/1000"], "span": 3, "rowSpan": 2 },
-      { "id": "jm_mem_heap", "title": "JM Heap (MB)", "type": "line", "unit": "MB", "expressions": ["meter_flink_jobManager_jvm_memory_heap_used/1024/1024", "(meter_flink_jobManager_jvm_memory_heap_available)/1024/1024"], "expressionLabels": ["used", "available"], "span": 3, "rowSpan": 2 },
-      { "id": "jm_mem_nonheap", "title": "JM NonHeap (MB)", "type": "line", "unit": "MB", "expressions": ["(meter_flink_jobManager_jvm_memory_nonHeap_used)/1024/1024", "(meter_flink_jobManager_jvm_memory_nonHeap_available)/1024/1024"], "expressionLabels": ["used", "available"], "span": 3, "rowSpan": 2 },
-      { "id": "jm_metaspace", "title": "JM Metaspace (MB)", "type": "line", "unit": "MB", "expressions": ["meter_flink_jobManager_jvm_memory_metaspace_used/1024/1024", "(meter_flink_jobManager_jvm_memory_metaspace_available)/1024/1024"], "expressionLabels": ["used", "available"], "span": 6, "rowSpan": 2 },
-      { "id": "g1_young", "title": "G1 Young GC", "type": "line", "expressions": ["meter_flink_jobManager_jvm_g1_young_generation_count", "meter_flink_jobManager_jvm_g1_young_generation_time"], "expressionLabels": ["count", "time (ms)"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "g1_old", "title": "G1 Old GC", "type": "line", "expressions": ["meter_flink_jobManager_jvm_g1_old_generation_count", "meter_flink_jobManager_jvm_g1_old_generation_time"], "expressionLabels": ["count", "time (ms)"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "all_gc", "title": "All GC", "type": "line", "expressions": ["meter_flink_jobManager_jvm_all_garbageCollector_count", "meter_flink_jobManager_jvm_all_garbageCollector_time"], "expressionLabels": ["count", "time (ms)"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "top_running", "title": "Top 10 Running Jobs", "type": "top", "expressions": ["top_n(meter_flink_job_runningTime,10,des)"], "span": 12, "rowSpan": 3 }
+      {
+        "id": "jobs",
+        "title": "Running Jobs",
+        "type": "line",
+        "expressions": [
+          "latest(meter_flink_jobManager_running_job_number)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "task_mgrs",
+        "title": "TaskManagers",
+        "type": "line",
+        "expressions": [
+          "latest(meter_flink_jobManager_taskManagers_registered_number)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "slots",
+        "title": "Slots Total / Available",
+        "type": "line",
+        "expressions": [
+          "latest(meter_flink_jobManager_taskManagers_slots_total)",
+          "latest(meter_flink_jobManager_taskManagers_slots_available)"
+        ],
+        "expressionLabels": [
+          "total",
+          "available"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu_load",
+        "title": "JM JVM CPU Load (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_flink_jobManager_jvm_cpu_load/10"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "jm_threads",
+        "title": "JM JVM Thread Count",
+        "type": "line",
+        "expressions": [
+          "meter_flink_jobManager_jvm_thread_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "jm_cpu_time",
+        "title": "JM CPU Time (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_flink_jobManager_jvm_cpu_time/1000/1000"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "jm_mem_heap",
+        "title": "JM Heap (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_flink_jobManager_jvm_memory_heap_used/1024/1024",
+          "(meter_flink_jobManager_jvm_memory_heap_available)/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "jm_mem_nonheap",
+        "title": "JM NonHeap (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "(meter_flink_jobManager_jvm_memory_nonHeap_used)/1024/1024",
+          "(meter_flink_jobManager_jvm_memory_nonHeap_available)/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "jm_metaspace",
+        "title": "JM Metaspace (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_flink_jobManager_jvm_memory_metaspace_used/1024/1024",
+          "(meter_flink_jobManager_jvm_memory_metaspace_available)/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "g1_young",
+        "title": "G1 Young GC",
+        "type": "line",
+        "expressions": [
+          "meter_flink_jobManager_jvm_g1_young_generation_count",
+          "meter_flink_jobManager_jvm_g1_young_generation_time"
+        ],
+        "expressionLabels": [
+          "count",
+          "time (ms)"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "g1_old",
+        "title": "G1 Old GC",
+        "type": "line",
+        "expressions": [
+          "meter_flink_jobManager_jvm_g1_old_generation_count",
+          "meter_flink_jobManager_jvm_g1_old_generation_time"
+        ],
+        "expressionLabels": [
+          "count",
+          "time (ms)"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "all_gc",
+        "title": "All GC",
+        "type": "line",
+        "expressions": [
+          "meter_flink_jobManager_jvm_all_garbageCollector_count",
+          "meter_flink_jobManager_jvm_all_garbageCollector_time"
+        ],
+        "expressionLabels": [
+          "count",
+          "time (ms)"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "top_running",
+        "title": "Top 10 Running Jobs",
+        "type": "top",
+        "expressions": [
+          "top_n(meter_flink_job_runningTime,10,des)"
+        ],
+        "span": 12,
+        "rowSpan": 3
+      }
     ],
     "instance": [
-      { "id": "cpu_load", "title": "JVM CPU Load (%)", "type": "line", "unit": "%", "expressions": ["meter_flink_taskManager_jvm_cpu_load/10"], "span": 3, "rowSpan": 2 },
-      { "id": "threads", "title": "JVM Thread Count", "type": "line", "expressions": ["meter_flink_taskManager_jvm_thread_count"], "span": 3, "rowSpan": 2 },
-      { "id": "cpu_time", "title": "CPU Time (ms)", "type": "line", "unit": "ms", "expressions": ["meter_flink_taskManager_jvm_cpu_time/1000/1000"], "span": 3, "rowSpan": 2 },
-      { "id": "back_pressure", "title": "Back Pressured", "type": "line", "expressions": ["meter_flink_taskManager_isBackPressured"], "span": 3, "rowSpan": 2 },
-      { "id": "mem_heap", "title": "Heap (MB)", "type": "line", "unit": "MB", "expressions": ["meter_flink_taskManager_jvm_memory_heap_used/1024/1024", "(meter_flink_taskManager_jvm_memory_heap_available)/1024/1024"], "expressionLabels": ["used", "available"], "span": 4, "rowSpan": 2 },
-      { "id": "mem_nonheap", "title": "NonHeap (MB)", "type": "line", "unit": "MB", "expressions": ["(meter_flink_taskManager_jvm_memory_nonHeap_used)/1024/1024", "(meter_flink_taskManager_jvm_memory_nonHeap_available)/1024/1024"], "expressionLabels": ["used", "available"], "span": 4, "rowSpan": 2 },
-      { "id": "mem_meta", "title": "Metaspace (MB)", "type": "line", "unit": "MB", "expressions": ["meter_flink_taskManager_jvm_memory_metaspace_used/1024/1024", "(meter_flink_taskManager_jvm_memory_metaspace_available)/1024/1024"], "expressionLabels": ["used", "available"], "span": 4, "rowSpan": 2 },
-      { "id": "records", "title": "Records In / Out", "type": "line", "expressions": ["meter_flink_taskManager_numRecordsIn", "meter_flink_taskManager_numRecordsOut"], "expressionLabels": ["in", "out"], "span": 6, "rowSpan": 2 },
-      { "id": "bytes", "title": "Bytes In / Out / s", "type": "line", "expressions": ["meter_flink_taskManager_numBytesInPerSecond", "meter_flink_taskManager_numBytesOutPerSecond"], "expressionLabels": ["in", "out"], "span": 6, "rowSpan": 2 },
-      { "id": "netty", "title": "Netty Memory (MB)", "type": "line", "unit": "MB", "expressions": ["meter_flink_taskManager_netty_usedMemory/1024/1024", "meter_flink_taskManager_netty_availableMemory/1024/1024"], "expressionLabels": ["used", "available"], "span": 6, "rowSpan": 2 },
-      { "id": "pool_usage", "title": "Pool Usage (%)", "type": "line", "unit": "%", "expressions": ["meter_flink_taskManager_inPoolUsage*10", "meter_flink_taskManager_outPoolUsage"], "expressionLabels": ["in pool", "out pool"], "span": 6, "rowSpan": 2 },
-      { "id": "back_pressure_time", "title": "Back-Pressure Time (ms/s)", "type": "line", "unit": "ms/s", "expressions": ["meter_flink_taskManager_softBackPressuredTimeMsPerSecond", "meter_flink_taskManager_hardBackPressuredTimeMsPerSecond", "meter_flink_taskManager_idleTimeMsPerSecond", "meter_flink_taskManager_busyTimeMsPerSecond"], "expressionLabels": ["soft bp", "hard bp", "idle", "busy"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "cpu_load",
+        "title": "JVM CPU Load (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_flink_taskManager_jvm_cpu_load/10"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "threads",
+        "title": "JVM Thread Count",
+        "type": "line",
+        "expressions": [
+          "meter_flink_taskManager_jvm_thread_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu_time",
+        "title": "CPU Time (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_flink_taskManager_jvm_cpu_time/1000/1000"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "back_pressure",
+        "title": "Back Pressured",
+        "type": "line",
+        "expressions": [
+          "meter_flink_taskManager_isBackPressured"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "mem_heap",
+        "title": "Heap (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_flink_taskManager_jvm_memory_heap_used/1024/1024",
+          "(meter_flink_taskManager_jvm_memory_heap_available)/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mem_nonheap",
+        "title": "NonHeap (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "(meter_flink_taskManager_jvm_memory_nonHeap_used)/1024/1024",
+          "(meter_flink_taskManager_jvm_memory_nonHeap_available)/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mem_meta",
+        "title": "Metaspace (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_flink_taskManager_jvm_memory_metaspace_used/1024/1024",
+          "(meter_flink_taskManager_jvm_memory_metaspace_available)/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "records",
+        "title": "Records In / Out",
+        "type": "line",
+        "expressions": [
+          "meter_flink_taskManager_numRecordsIn",
+          "meter_flink_taskManager_numRecordsOut"
+        ],
+        "expressionLabels": [
+          "in",
+          "out"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "bytes",
+        "title": "Bytes In / Out / s",
+        "type": "line",
+        "expressions": [
+          "meter_flink_taskManager_numBytesInPerSecond",
+          "meter_flink_taskManager_numBytesOutPerSecond"
+        ],
+        "expressionLabels": [
+          "in",
+          "out"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "netty",
+        "title": "Netty Memory (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_flink_taskManager_netty_usedMemory/1024/1024",
+          "meter_flink_taskManager_netty_availableMemory/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "available"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "pool_usage",
+        "title": "Pool Usage (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_flink_taskManager_inPoolUsage*10",
+          "meter_flink_taskManager_outPoolUsage"
+        ],
+        "expressionLabels": [
+          "in pool",
+          "out pool"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "back_pressure_time",
+        "title": "Back-Pressure Time (ms/s)",
+        "type": "line",
+        "unit": "ms/s",
+        "expressions": [
+          "meter_flink_taskManager_softBackPressuredTimeMsPerSecond",
+          "meter_flink_taskManager_hardBackPressuredTimeMsPerSecond",
+          "meter_flink_taskManager_idleTimeMsPerSecond",
+          "meter_flink_taskManager_busyTimeMsPerSecond"
+        ],
+        "expressionLabels": [
+          "soft bp",
+          "hard bp",
+          "idle",
+          "busy"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "running_time", "title": "Job Running Time (min)", "type": "line", "expressions": ["latest(meter_flink_job_runningTime)/1000/60"], "span": 4, "rowSpan": 2 },
-      { "id": "restarting_time", "title": "Job Restarting Time (min)", "type": "line", "expressions": ["latest(meter_flink_job_restartingTime)/1000/60"], "span": 4, "rowSpan": 2 },
-      { "id": "cancelling_time", "title": "Job Cancelling Time (min)", "type": "line", "expressions": ["latest(meter_flink_job_cancellingTime)/1000/60"], "span": 4, "rowSpan": 2 },
-      { "id": "restarts", "title": "Job Restarts", "type": "line", "expressions": ["latest(meter_flink_job_restart_number)"], "span": 4, "rowSpan": 2 },
-      { "id": "checkpoints", "title": "Checkpoints", "type": "line", "expressions": ["meter_flink_job_checkpoints_total", "meter_flink_job_checkpoints_completed", "meter_flink_job_checkpoints_failed", "meter_flink_job_checkpoints_inProgress"], "expressionLabels": ["total", "completed", "failed", "in-progress"], "span": 8, "rowSpan": 2 },
-      { "id": "checkpoint_last", "title": "Last Checkpoint", "type": "line", "expressions": ["meter_flink_job_lastCheckpointSize", "meter_flink_job_lastCheckpointDuration"], "expressionLabels": ["size (bytes)", "duration (ms)"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "emit_lag", "title": "Current Emit Event Time Lag (ms)", "type": "line", "unit": "ms", "expressions": ["meter_flink_job_currentEmitEventTimeLag"], "span": 6, "rowSpan": 2 },
-      { "id": "records", "title": "Records In / Out", "type": "line", "expressions": ["meter_flink_job_numRecordsIn", "meter_flink_job_numRecordsOut"], "expressionLabels": ["in", "out"], "span": 6, "rowSpan": 2 },
-      { "id": "bytes", "title": "Bytes In / Out / s", "type": "line", "expressions": ["meter_flink_job_numBytesInPerSecond", "meter_flink_job_numBytesOutPerSecond"], "expressionLabels": ["in", "out"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "running_time",
+        "title": "Job Running Time (min)",
+        "type": "line",
+        "expressions": [
+          "latest(meter_flink_job_runningTime)/1000/60"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "restarting_time",
+        "title": "Job Restarting Time (min)",
+        "type": "line",
+        "expressions": [
+          "latest(meter_flink_job_restartingTime)/1000/60"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cancelling_time",
+        "title": "Job Cancelling Time (min)",
+        "type": "line",
+        "expressions": [
+          "latest(meter_flink_job_cancellingTime)/1000/60"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "restarts",
+        "title": "Job Restarts",
+        "type": "line",
+        "expressions": [
+          "latest(meter_flink_job_restart_number)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "checkpoints",
+        "title": "Checkpoints",
+        "type": "line",
+        "expressions": [
+          "meter_flink_job_checkpoints_total",
+          "meter_flink_job_checkpoints_completed",
+          "meter_flink_job_checkpoints_failed",
+          "meter_flink_job_checkpoints_inProgress"
+        ],
+        "expressionLabels": [
+          "total",
+          "completed",
+          "failed",
+          "in-progress"
+        ],
+        "span": 8,
+        "rowSpan": 2
+      },
+      {
+        "id": "checkpoint_last",
+        "title": "Last Checkpoint",
+        "type": "line",
+        "expressions": [
+          "meter_flink_job_lastCheckpointSize",
+          "meter_flink_job_lastCheckpointDuration"
+        ],
+        "expressionLabels": [
+          "size (bytes)",
+          "duration (ms)"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "emit_lag",
+        "title": "Current Emit Event Time Lag (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_flink_job_currentEmitEventTimeLag"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "records",
+        "title": "Records In / Out",
+        "type": "line",
+        "expressions": [
+          "meter_flink_job_numRecordsIn",
+          "meter_flink_job_numRecordsOut"
+        ],
+        "expressionLabels": [
+          "in",
+          "out"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "bytes",
+        "title": "Bytes In / Out / s",
+        "type": "line",
+        "expressions": [
+          "meter_flink_job_numBytesInPerSecond",
+          "meter_flink_job_numBytesOutPerSecond"
+        ],
+        "expressionLabels": [
+          "in",
+          "out"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

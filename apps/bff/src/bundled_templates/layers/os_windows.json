@@ -1,33 +1,151 @@
 {
   "key": "OS_WINDOWS",
   "alias": "Windows",
+  "group": "OS",
   "color": "var(--sw-fg-1)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-win-monitoring/",
-  "aliases": { "services": "Hosts" },
-  "components": { "service": true, "instances": false, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Hosts"
+  },
+  "components": {
+    "service": true,
+    "instances": false,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "cpu",
     "columns": [
-      { "metric": "cpu", "label": "CPU %", "unit": "%", "mqe": "meter_win_cpu_total_percentage", "aggregation": "avg" },
-      { "metric": "memUsed", "label": "Memory MB", "unit": "MB", "mqe": "meter_win_memory_used/1024/1024", "aggregation": "avg" },
-      { "metric": "vmem", "label": "VMem %", "unit": "%", "mqe": "avg(meter_win_memory_virtual_memory_percentage)", "aggregation": "avg" }
+      {
+        "metric": "cpu",
+        "label": "CPU %",
+        "unit": "%",
+        "mqe": "meter_win_cpu_total_percentage",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "memUsed",
+        "label": "Memory MB",
+        "unit": "MB",
+        "mqe": "meter_win_memory_used/1024/1024",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "vmem",
+        "label": "VMem %",
+        "unit": "%",
+        "mqe": "avg(meter_win_memory_virtual_memory_percentage)",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Resource", "size": "auto", "metrics": [
-        { "id": "cpu", "label": "CPU %", "tip": "Total CPU utilization.", "mqe": "meter_win_cpu_total_percentage", "unit": "%", "aggregation": "avg" },
-        { "id": "vmem", "label": "VMem %", "tip": "Virtual memory utilization.", "mqe": "avg(meter_win_memory_virtual_memory_percentage)", "unit": "%", "aggregation": "avg" }
-      ]}
+      {
+        "title": "Resource",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "cpu",
+            "label": "CPU %",
+            "tip": "Total CPU utilization.",
+            "mqe": "meter_win_cpu_total_percentage",
+            "unit": "%",
+            "aggregation": "avg"
+          },
+          {
+            "id": "vmem",
+            "label": "VMem %",
+            "tip": "Virtual memory utilization.",
+            "mqe": "avg(meter_win_memory_virtual_memory_percentage)",
+            "unit": "%",
+            "aggregation": "avg"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "cpu", "title": "CPU Average Used (%)", "type": "line", "unit": "%", "expressions": ["meter_win_cpu_average_used"], "span": 4, "rowSpan": 2 },
-      { "id": "memory", "title": "Memory RAM (MB)", "type": "line", "unit": "MB", "expressions": ["meter_win_memory_used/1024/1024", "meter_win_memory_total/1024/1024", "meter_win_memory_available/1024/1024"], "expressionLabels": ["used", "total", "available"], "span": 4, "rowSpan": 2 },
-      { "id": "virtual_memory", "title": "Virtual Memory (MB)", "type": "line", "unit": "MB", "expressions": ["meter_win_memory_virtual_memory_free/1024/1024", "meter_win_memory_virtual_memory_total/1024/1024"], "expressionLabels": ["free", "total"], "span": 4, "rowSpan": 2 },
-      { "id": "network_bandwidth", "title": "Network Bandwidth (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["meter_win_network_receive/1024", "meter_win_network_transmit/1024"], "expressionLabels": ["receive", "transmit"], "span": 6, "rowSpan": 2 },
-      { "id": "disk", "title": "Disk R/W (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["meter_win_disk_read/1024", "meter_win_disk_written/1024"], "expressionLabels": ["read", "written"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "cpu",
+        "title": "CPU Average Used (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_win_cpu_average_used"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory",
+        "title": "Memory RAM (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_win_memory_used/1024/1024",
+          "meter_win_memory_total/1024/1024",
+          "meter_win_memory_available/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "total",
+          "available"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "virtual_memory",
+        "title": "Virtual Memory (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_win_memory_virtual_memory_free/1024/1024",
+          "meter_win_memory_virtual_memory_total/1024/1024"
+        ],
+        "expressionLabels": [
+          "free",
+          "total"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "network_bandwidth",
+        "title": "Network Bandwidth (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_win_network_receive/1024",
+          "meter_win_network_transmit/1024"
+        ],
+        "expressionLabels": [
+          "receive",
+          "transmit"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk",
+        "title": "Disk R/W (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_win_disk_read/1024",
+          "meter_win_disk_written/1024"
+        ],
+        "expressionLabels": [
+          "read",
+          "written"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

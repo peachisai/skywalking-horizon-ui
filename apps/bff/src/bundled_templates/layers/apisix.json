@@ -1,6 +1,7 @@
 {
   "key": "APISIX",
   "alias": "APISIX",
+  "group": "Gateways",
   "color": "var(--sw-ok)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-apisix-monitoring/",
   "aliases": {
@@ -19,10 +20,30 @@
   "layer-header": {
     "orderBy": "rps",
     "columns": [
-      { "metric": "rps", "label": "RPS", "mqe": "aggregate_labels(meter_apisix_sv_http_requests,sum(service_instance_id))", "aggregation": "sum" },
-      { "metric": "status200", "label": "200/s", "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='200'},sum(code))", "aggregation": "sum" },
-      { "metric": "status404", "label": "404/s", "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='404'},sum(code))", "aggregation": "sum" },
-      { "metric": "status503", "label": "503/s", "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='503'},sum(code))", "aggregation": "sum" }
+      {
+        "metric": "rps",
+        "label": "RPS",
+        "mqe": "aggregate_labels(meter_apisix_sv_http_requests,sum(service_instance_id))",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "status200",
+        "label": "200/s",
+        "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='200'},sum(code))",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "status404",
+        "label": "404/s",
+        "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='404'},sum(code))",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "status503",
+        "label": "503/s",
+        "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='503'},sum(code))",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -31,37 +52,249 @@
         "title": "Throughput",
         "size": "auto",
         "metrics": [
-          { "id": "rps", "label": "RPS", "tip": "Requests per second matched by APISIX routes.", "mqe": "aggregate_labels(meter_apisix_sv_http_requests,sum(service_instance_id))", "aggregation": "sum" },
-          { "id": "status5xx", "label": "5xx", "tip": "Upstream / gateway error class.", "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='503'},sum(code))", "aggregation": "sum" }
+          {
+            "id": "rps",
+            "label": "RPS",
+            "tip": "Requests per second matched by APISIX routes.",
+            "mqe": "aggregate_labels(meter_apisix_sv_http_requests,sum(service_instance_id))",
+            "aggregation": "sum"
+          },
+          {
+            "id": "status5xx",
+            "label": "5xx",
+            "tip": "Upstream / gateway error class.",
+            "mqe": "aggregate_labels(meter_apisix_sv_http_status_matched{code='503'},sum(code))",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "rps", "title": "HTTP Request Trend", "type": "line", "expressions": ["aggregate_labels(meter_apisix_sv_http_requests,sum(service_instance_id))"], "span": 6, "rowSpan": 2 },
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["aggregate_labels(meter_apisix_sv_http_status_matched,sum(code))"], "span": 6, "rowSpan": 2 },
-      { "id": "latency", "title": "HTTP Latency", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_apisix_sv_http_latency_matched,avg(type,p))"], "span": 6, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB", "expressions": ["aggregate_labels(meter_apisix_sv_bandwidth_matched/1024,sum(type))"], "span": 6, "rowSpan": 2 },
-      { "id": "conns", "title": "HTTP Connections", "type": "line", "expressions": ["aggregate_labels(meter_apisix_sv_http_connections,sum(state))"], "span": 6, "rowSpan": 2 },
-      { "id": "status_unmatched", "title": "Non-matched Status Trend", "tip": "Requests with no matching APISIX route.", "type": "line", "expressions": ["aggregate_labels(meter_apisix_sv_http_status_unmatched,sum(code))"], "span": 6, "rowSpan": 2 },
-      { "id": "latency_unmatched", "title": "Non-matched Latency", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_apisix_sv_http_latency_unmatched,avg(type,p))"], "span": 6, "rowSpan": 2 },
-      { "id": "bandwidth_unmatched", "title": "Non-matched Bandwidth", "type": "line", "unit": "KB", "expressions": ["aggregate_labels(meter_apisix_sv_bandwidth_unmatched/1024,sum(type))"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "rps",
+        "title": "HTTP Request Trend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_http_requests,sum(service_instance_id))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_http_status_matched,sum(code))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "HTTP Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_http_latency_matched,avg(type,p))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_bandwidth_matched/1024,sum(type))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "HTTP Connections",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_http_connections,sum(state))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "status_unmatched",
+        "title": "Non-matched Status Trend",
+        "tip": "Requests with no matching APISIX route.",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_http_status_unmatched,sum(code))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency_unmatched",
+        "title": "Non-matched Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_http_latency_unmatched,avg(type,p))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth_unmatched",
+        "title": "Non-matched Bandwidth",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "aggregate_labels(meter_apisix_sv_bandwidth_unmatched/1024,sum(type))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "rps", "title": "HTTP Request Trend", "type": "line", "expressions": ["meter_apisix_instance_http_requests"], "span": 4, "rowSpan": 2 },
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["meter_apisix_instance_http_status_matched"], "span": 4, "rowSpan": 2 },
-      { "id": "latency", "title": "HTTP Latency", "type": "line", "unit": "ms", "expressions": ["meter_apisix_instance_http_latency_matched"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB", "expressions": ["meter_apisix_instance_bandwidth_matched/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "HTTP Connections", "type": "line", "expressions": ["meter_apisix_instance_http_connections"], "span": 4, "rowSpan": 2 },
-      { "id": "shared_dict", "title": "Shared Dict", "tip": "Capacity vs free space.", "type": "line", "unit": "MB", "expressions": ["meter_apisix_instance_shared_dict_capacity_bytes/1024/1024", "meter_apisix_instance_shared_dict_free_space_bytes/1024/1024"], "expressionLabels": ["capacity", "free"], "span": 4, "rowSpan": 2 },
-      { "id": "etcd", "title": "etcd", "type": "line", "expressions": ["meter_apisix_instance_etcd_indexes", "latest(meter_apisix_instance_etcd_reachable)"], "expressionLabels": ["indexes", "reachable"], "span": 6, "rowSpan": 2 },
-      { "id": "unmatched", "title": "Non-matched Traffic", "tip": "Status + latency + bandwidth for requests with no matching route.", "type": "line", "expressions": ["meter_apisix_instance_http_status_unmatched", "meter_apisix_instance_http_latency_unmatched", "meter_apisix_instance_bandwidth_unmatched/1024"], "expressionLabels": ["status", "latency (ms)", "bandwidth (KB)"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "rps",
+        "title": "HTTP Request Trend",
+        "type": "line",
+        "expressions": [
+          "meter_apisix_instance_http_requests"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "meter_apisix_instance_http_status_matched"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "HTTP Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_apisix_instance_http_latency_matched"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "meter_apisix_instance_bandwidth_matched/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "HTTP Connections",
+        "type": "line",
+        "expressions": [
+          "meter_apisix_instance_http_connections"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "shared_dict",
+        "title": "Shared Dict",
+        "tip": "Capacity vs free space.",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_apisix_instance_shared_dict_capacity_bytes/1024/1024",
+          "meter_apisix_instance_shared_dict_free_space_bytes/1024/1024"
+        ],
+        "expressionLabels": [
+          "capacity",
+          "free"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "etcd",
+        "title": "etcd",
+        "type": "line",
+        "expressions": [
+          "meter_apisix_instance_etcd_indexes",
+          "latest(meter_apisix_instance_etcd_reachable)"
+        ],
+        "expressionLabels": [
+          "indexes",
+          "reachable"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "unmatched",
+        "title": "Non-matched Traffic",
+        "tip": "Status + latency + bandwidth for requests with no matching route.",
+        "type": "line",
+        "expressions": [
+          "meter_apisix_instance_http_status_unmatched",
+          "meter_apisix_instance_http_latency_unmatched",
+          "meter_apisix_instance_bandwidth_unmatched/1024"
+        ],
+        "expressionLabels": [
+          "status",
+          "latency (ms)",
+          "bandwidth (KB)"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["aggregate_labels(meter_apisix_endpoint_http_status,sum(code))"], "span": 4, "rowSpan": 2 },
-      { "id": "latency", "title": "HTTP Latency", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_apisix_endpoint_http_latency,avg(type,p))"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB", "expressions": ["aggregate_labels(meter_apisix_endpoint_bandwidth/1024,sum(type))"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_apisix_endpoint_http_status,sum(code))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "HTTP Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_apisix_endpoint_http_latency,avg(type,p))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "aggregate_labels(meter_apisix_endpoint_bandwidth/1024,sum(type))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ]
   }
 }

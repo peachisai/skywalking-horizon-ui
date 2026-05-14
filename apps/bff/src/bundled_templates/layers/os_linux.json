@@ -1,38 +1,218 @@
 {
   "key": "OS_LINUX",
   "alias": "Linux",
+  "group": "OS",
   "color": "var(--sw-fg-1)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-vm-monitoring/",
-  "aliases": { "services": "Hosts" },
-  "components": { "service": true, "instances": false, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Hosts"
+  },
+  "components": {
+    "service": true,
+    "instances": false,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "cpu",
     "columns": [
-      { "metric": "cpu", "label": "CPU %", "unit": "%", "mqe": "meter_vm_cpu_total_percentage", "aggregation": "avg" },
-      { "metric": "memUsed", "label": "Memory MB", "unit": "MB", "mqe": "meter_vm_memory_used/1024/1024", "aggregation": "avg" },
-      { "metric": "load1", "label": "Load 1m", "mqe": "meter_vm_cpu_load1/100", "aggregation": "avg" },
-      { "metric": "fs", "label": "FS %", "unit": "%", "mqe": "meter_vm_filesystem_percentage", "aggregation": "avg" }
+      {
+        "metric": "cpu",
+        "label": "CPU %",
+        "unit": "%",
+        "mqe": "meter_vm_cpu_total_percentage",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "memUsed",
+        "label": "Memory MB",
+        "unit": "MB",
+        "mqe": "meter_vm_memory_used/1024/1024",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "load1",
+        "label": "Load 1m",
+        "mqe": "meter_vm_cpu_load1/100",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "fs",
+        "label": "FS %",
+        "unit": "%",
+        "mqe": "meter_vm_filesystem_percentage",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Resource", "size": "auto", "metrics": [
-        { "id": "cpu", "label": "CPU %", "tip": "Total CPU utilization.", "mqe": "meter_vm_cpu_total_percentage", "unit": "%", "aggregation": "avg" },
-        { "id": "memUsage", "label": "Mem %", "tip": "Memory used / total.", "mqe": "avg(meter_vm_memory_swap_percentage)", "unit": "%", "aggregation": "avg" }
-      ]}
+      {
+        "title": "Resource",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "cpu",
+            "label": "CPU %",
+            "tip": "Total CPU utilization.",
+            "mqe": "meter_vm_cpu_total_percentage",
+            "unit": "%",
+            "aggregation": "avg"
+          },
+          {
+            "id": "memUsage",
+            "label": "Mem %",
+            "tip": "Memory used / total.",
+            "mqe": "avg(meter_vm_memory_swap_percentage)",
+            "unit": "%",
+            "aggregation": "avg"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "cpu", "title": "CPU Average Used (%)", "type": "line", "unit": "%", "expressions": ["meter_vm_cpu_average_used"], "span": 4, "rowSpan": 2 },
-      { "id": "cpu_load", "title": "CPU Load", "type": "line", "expressions": ["meter_vm_cpu_load1/100", "meter_vm_cpu_load5/100", "meter_vm_cpu_load15/100"], "expressionLabels": ["1m", "5m", "15m"], "span": 4, "rowSpan": 2 },
-      { "id": "filefd", "title": "File FD Allocated", "type": "line", "expressions": ["meter_vm_filefd_allocated"], "span": 4, "rowSpan": 2 },
-      { "id": "memory", "title": "Memory RAM (MB)", "type": "line", "unit": "MB", "expressions": ["meter_vm_memory_used/1024/1024", "meter_vm_memory_total/1024/1024", "meter_vm_memory_available/1024/1024", "meter_vm_memory_buff_cache/1024/1024"], "expressionLabels": ["used", "total", "available", "buff/cache"], "span": 6, "rowSpan": 2 },
-      { "id": "swap", "title": "Memory Swap (MB)", "type": "line", "unit": "MB", "expressions": ["meter_vm_memory_swap_free/1024/1024", "meter_vm_memory_swap_total/1024/1024"], "expressionLabels": ["free", "total"], "span": 6, "rowSpan": 2 },
-      { "id": "network_bandwidth", "title": "Network Bandwidth (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["meter_vm_network_receive/1024", "meter_vm_network_transmit/1024"], "expressionLabels": ["receive", "transmit"], "span": 6, "rowSpan": 2 },
-      { "id": "disk", "title": "Disk R/W (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["meter_vm_disk_read/1024", "meter_vm_disk_written/1024"], "expressionLabels": ["read", "written"], "span": 6, "rowSpan": 2 },
-      { "id": "fs", "title": "Filesystem Usage (%)", "type": "line", "unit": "%", "expressions": ["meter_vm_filesystem_percentage"], "span": 6, "rowSpan": 2 },
-      { "id": "network_status", "title": "Network Status", "type": "line", "expressions": ["meter_vm_tcp_curr_estab", "meter_vm_tcp_tw", "meter_vm_tcp_alloc", "meter_vm_sockets_used", "meter_vm_udp_inuse"], "expressionLabels": ["tcp estab", "tcp time-wait", "tcp alloc", "sockets used", "udp in-use"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "cpu",
+        "title": "CPU Average Used (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_vm_cpu_average_used"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu_load",
+        "title": "CPU Load",
+        "type": "line",
+        "expressions": [
+          "meter_vm_cpu_load1/100",
+          "meter_vm_cpu_load5/100",
+          "meter_vm_cpu_load15/100"
+        ],
+        "expressionLabels": [
+          "1m",
+          "5m",
+          "15m"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "filefd",
+        "title": "File FD Allocated",
+        "type": "line",
+        "expressions": [
+          "meter_vm_filefd_allocated"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory",
+        "title": "Memory RAM (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_vm_memory_used/1024/1024",
+          "meter_vm_memory_total/1024/1024",
+          "meter_vm_memory_available/1024/1024",
+          "meter_vm_memory_buff_cache/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "total",
+          "available",
+          "buff/cache"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "swap",
+        "title": "Memory Swap (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_vm_memory_swap_free/1024/1024",
+          "meter_vm_memory_swap_total/1024/1024"
+        ],
+        "expressionLabels": [
+          "free",
+          "total"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "network_bandwidth",
+        "title": "Network Bandwidth (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_vm_network_receive/1024",
+          "meter_vm_network_transmit/1024"
+        ],
+        "expressionLabels": [
+          "receive",
+          "transmit"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk",
+        "title": "Disk R/W (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_vm_disk_read/1024",
+          "meter_vm_disk_written/1024"
+        ],
+        "expressionLabels": [
+          "read",
+          "written"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "fs",
+        "title": "Filesystem Usage (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "meter_vm_filesystem_percentage"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "network_status",
+        "title": "Network Status",
+        "type": "line",
+        "expressions": [
+          "meter_vm_tcp_curr_estab",
+          "meter_vm_tcp_tw",
+          "meter_vm_tcp_alloc",
+          "meter_vm_sockets_used",
+          "meter_vm_udp_inuse"
+        ],
+        "expressionLabels": [
+          "tcp estab",
+          "tcp time-wait",
+          "tcp alloc",
+          "sockets used",
+          "udp in-use"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

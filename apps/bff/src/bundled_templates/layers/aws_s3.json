@@ -1,40 +1,188 @@
 {
   "key": "AWS_S3",
   "alias": "AWS S3",
+  "group": "AWS",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-aws-s3-monitoring/",
-  "aliases": { "services": "S3 buckets" },
-  "components": { "service": true, "instances": false, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "S3 buckets"
+  },
+  "components": {
+    "service": true,
+    "instances": false,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "all",
     "columns": [
-      { "metric": "all", "label": "Requests", "mqe": "latest(aws_s3_all_requests)", "aggregation": "sum" },
-      { "metric": "latency", "label": "Avg Latency", "unit": "ms", "mqe": "avg(aws_s3_request_latency)", "aggregation": "avg" },
-      { "metric": "err4xx", "label": "4xx", "mqe": "latest(aws_s3_4xx)", "aggregation": "sum" },
-      { "metric": "err5xx", "label": "5xx", "mqe": "latest(aws_s3_5xx)", "aggregation": "sum" }
+      {
+        "metric": "all",
+        "label": "Requests",
+        "mqe": "latest(aws_s3_all_requests)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "latency",
+        "label": "Avg Latency",
+        "unit": "ms",
+        "mqe": "avg(aws_s3_request_latency)",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "err4xx",
+        "label": "4xx",
+        "mqe": "latest(aws_s3_4xx)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "err5xx",
+        "label": "5xx",
+        "mqe": "latest(aws_s3_5xx)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Errors", "size": "auto", "metrics": [
-        { "id": "err4xx", "label": "4xx Count", "tip": "Client errors observed by CloudWatch.", "mqe": "latest(aws_s3_4xx)", "aggregation": "sum" },
-        { "id": "err5xx", "label": "5xx Count", "tip": "Server errors observed by CloudWatch.", "mqe": "latest(aws_s3_5xx)", "aggregation": "sum" },
-        { "id": "latency", "label": "Avg Latency", "tip": "Average request latency.", "mqe": "avg(aws_s3_request_latency)", "unit": "ms", "aggregation": "avg" }
-      ]}
+      {
+        "title": "Errors",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "err4xx",
+            "label": "4xx Count",
+            "tip": "Client errors observed by CloudWatch.",
+            "mqe": "latest(aws_s3_4xx)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "err5xx",
+            "label": "5xx Count",
+            "tip": "Server errors observed by CloudWatch.",
+            "mqe": "latest(aws_s3_5xx)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "latency",
+            "label": "Avg Latency",
+            "tip": "Average request latency.",
+            "mqe": "avg(aws_s3_request_latency)",
+            "unit": "ms",
+            "aggregation": "avg"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "all_req", "title": "All Request Count", "type": "line", "expressions": ["aws_s3_all_requests"], "span": 3, "rowSpan": 2 },
-      { "id": "get_req", "title": "GET Request Count", "type": "line", "expressions": ["aws_s3_get_requests"], "span": 3, "rowSpan": 2 },
-      { "id": "put_req", "title": "PUT Request Count", "type": "line", "expressions": ["aws_s3_put_requests"], "span": 3, "rowSpan": 2 },
-      { "id": "delete_req", "title": "DELETE Request Count", "type": "line", "expressions": ["aws_s3_delete_requests"], "span": 3, "rowSpan": 2 },
-      { "id": "err4xx", "title": "4xx Count", "type": "line", "expressions": ["aws_s3_4xx"], "span": 3, "rowSpan": 2 },
-      { "id": "err5xx", "title": "5xx Count", "type": "line", "expressions": ["aws_s3_5xx"], "span": 3, "rowSpan": 2 },
-      { "id": "latency", "title": "Request Avg Latency", "type": "line", "unit": "ms", "expressions": ["aws_s3_request_latency"], "span": 3, "rowSpan": 2 },
-      { "id": "first_byte_latency", "title": "First Byte Avg Latency", "type": "line", "unit": "ms", "expressions": ["aws_s3_first_latency_bytes"], "span": 3, "rowSpan": 2 },
-      { "id": "downloaded", "title": "Downloaded (KB)", "type": "line", "unit": "KB", "expressions": ["aws_s3_downloaded_bytes"], "span": 6, "rowSpan": 2 },
-      { "id": "uploaded", "title": "Uploaded (KB)", "type": "line", "unit": "KB", "expressions": ["aws_s3_uploaded_bytes"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "all_req",
+        "title": "All Request Count",
+        "type": "line",
+        "expressions": [
+          "aws_s3_all_requests"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "get_req",
+        "title": "GET Request Count",
+        "type": "line",
+        "expressions": [
+          "aws_s3_get_requests"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "put_req",
+        "title": "PUT Request Count",
+        "type": "line",
+        "expressions": [
+          "aws_s3_put_requests"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "delete_req",
+        "title": "DELETE Request Count",
+        "type": "line",
+        "expressions": [
+          "aws_s3_delete_requests"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "err4xx",
+        "title": "4xx Count",
+        "type": "line",
+        "expressions": [
+          "aws_s3_4xx"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "err5xx",
+        "title": "5xx Count",
+        "type": "line",
+        "expressions": [
+          "aws_s3_5xx"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency",
+        "title": "Request Avg Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aws_s3_request_latency"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "first_byte_latency",
+        "title": "First Byte Avg Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aws_s3_first_latency_bytes"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "downloaded",
+        "title": "Downloaded (KB)",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "aws_s3_downloaded_bytes"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "uploaded",
+        "title": "Uploaded (KB)",
+        "type": "line",
+        "unit": "KB",
+        "expressions": [
+          "aws_s3_uploaded_bytes"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

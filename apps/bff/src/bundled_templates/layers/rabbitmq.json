@@ -1,52 +1,363 @@
 {
   "key": "RABBITMQ",
   "alias": "RabbitMQ",
+  "group": "MQ",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-rabbitmq-monitoring/",
-  "aliases": { "services": "RabbitMQ clusters", "instances": "Nodes" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "RabbitMQ clusters",
+    "instances": "Nodes"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "queues",
     "columns": [
-      { "metric": "queues", "label": "Queues", "mqe": "aggregate_labels(meter_rabbitmq_queues,sum)", "aggregation": "sum" },
-      { "metric": "channels", "label": "Channels", "mqe": "aggregate_labels(meter_rabbitmq_channels,sum)", "aggregation": "sum" },
-      { "metric": "conns", "label": "Connections", "mqe": "aggregate_labels(meter_rabbitmq_connections,sum)", "aggregation": "sum" },
-      { "metric": "unconfirmed", "label": "Unconfirmed", "mqe": "aggregate_labels(meter_rabbitmq_messages_unconfirmed,sum)", "aggregation": "sum" }
+      {
+        "metric": "queues",
+        "label": "Queues",
+        "mqe": "aggregate_labels(meter_rabbitmq_queues,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "channels",
+        "label": "Channels",
+        "mqe": "aggregate_labels(meter_rabbitmq_channels,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "conns",
+        "label": "Connections",
+        "mqe": "aggregate_labels(meter_rabbitmq_connections,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "unconfirmed",
+        "label": "Unconfirmed",
+        "mqe": "aggregate_labels(meter_rabbitmq_messages_unconfirmed,sum)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Throughput", "size": "auto", "metrics": [
-        { "id": "published", "label": "Published / min", "tip": "Messages published per minute.", "mqe": "aggregate_labels(meter_rabbitmq_messages_published,sum)", "aggregation": "sum" },
-        { "id": "unconfirmed", "label": "Unconfirmed", "tip": "Messages awaiting publisher confirm.", "mqe": "aggregate_labels(meter_rabbitmq_messages_unconfirmed,sum)", "aggregation": "sum" },
-        { "id": "unroutable", "label": "Unroutable dropped", "tip": "Messages dropped because no exchange route matched.", "mqe": "meter_rabbitmq_messages_unroutable_dropped", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "published",
+            "label": "Published / min",
+            "tip": "Messages published per minute.",
+            "mqe": "aggregate_labels(meter_rabbitmq_messages_published,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "unconfirmed",
+            "label": "Unconfirmed",
+            "tip": "Messages awaiting publisher confirm.",
+            "mqe": "aggregate_labels(meter_rabbitmq_messages_unconfirmed,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "unroutable",
+            "label": "Unroutable dropped",
+            "tip": "Messages dropped because no exchange route matched.",
+            "mqe": "meter_rabbitmq_messages_unroutable_dropped",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "mem_available", "title": "Memory Available Before Block (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rabbitmq_memory_available_before_publisher_blocked/1024/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "disk_available", "title": "Disk Available Before Block (GB)", "type": "line", "unit": "GB", "expressions": ["meter_rabbitmq_disk_space_available_before_publisher_blocked/1024/1024/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "fds", "title": "File Descriptors + Sockets", "type": "line", "expressions": ["meter_rabbitmq_file_descriptors_available", "meter_rabbitmq_tcp_socket_available"], "expressionLabels": ["fds", "sockets"], "span": 4, "rowSpan": 2 },
-      { "id": "messages_ready", "title": "Ready Messages", "type": "line", "expressions": ["meter_rabbitmq_message_ready_delivered_consumers"], "span": 6, "rowSpan": 2 },
-      { "id": "messages_pending", "title": "Pending Ack", "type": "line", "expressions": ["meter_rabbitmq_message_unacknowledged_delivered_consumers"], "span": 6, "rowSpan": 2 },
-      { "id": "publish_pipeline", "title": "Publish Pipeline", "type": "line", "expressions": ["meter_rabbitmq_messages_published", "meter_rabbitmq_messages_confirmed", "meter_rabbitmq_messages_routed", "meter_rabbitmq_messages_unconfirmed"], "expressionLabels": ["published", "confirmed", "routed", "unconfirmed"], "span": 6, "rowSpan": 2 },
-      { "id": "unroutable", "title": "Unroutable Messages", "type": "line", "expressions": ["meter_rabbitmq_messages_unroutable_dropped", "meter_rabbitmq_messages_unroutable_returned"], "expressionLabels": ["dropped", "returned"], "span": 6, "rowSpan": 2 },
-      { "id": "queue_totals", "title": "Queues", "type": "line", "expressions": ["meter_rabbitmq_queues", "meter_rabbitmq_queues_declared_total", "meter_rabbitmq_queues_created_total", "meter_rabbitmq_queues_deleted_total"], "expressionLabels": ["total", "declared", "created", "deleted"], "span": 6, "rowSpan": 2 },
-      { "id": "channel_totals", "title": "Channels", "type": "line", "expressions": ["meter_rabbitmq_channels", "meter_rabbitmq_channels_opened_total", "meter_rabbitmq_channels_closed_total"], "expressionLabels": ["total", "opened", "closed"], "span": 6, "rowSpan": 2 },
-      { "id": "conn_totals", "title": "Connections", "type": "line", "expressions": ["meter_rabbitmq_connections", "meter_rabbitmq_connections_opened_total", "meter_rabbitmq_connections_closed_total"], "expressionLabels": ["total", "opened", "closed"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "mem_available",
+        "title": "Memory Available Before Block (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rabbitmq_memory_available_before_publisher_blocked/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk_available",
+        "title": "Disk Available Before Block (GB)",
+        "type": "line",
+        "unit": "GB",
+        "expressions": [
+          "meter_rabbitmq_disk_space_available_before_publisher_blocked/1024/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "fds",
+        "title": "File Descriptors + Sockets",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_file_descriptors_available",
+          "meter_rabbitmq_tcp_socket_available"
+        ],
+        "expressionLabels": [
+          "fds",
+          "sockets"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "messages_ready",
+        "title": "Ready Messages",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_message_ready_delivered_consumers"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "messages_pending",
+        "title": "Pending Ack",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_message_unacknowledged_delivered_consumers"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "publish_pipeline",
+        "title": "Publish Pipeline",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_messages_published",
+          "meter_rabbitmq_messages_confirmed",
+          "meter_rabbitmq_messages_routed",
+          "meter_rabbitmq_messages_unconfirmed"
+        ],
+        "expressionLabels": [
+          "published",
+          "confirmed",
+          "routed",
+          "unconfirmed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "unroutable",
+        "title": "Unroutable Messages",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_messages_unroutable_dropped",
+          "meter_rabbitmq_messages_unroutable_returned"
+        ],
+        "expressionLabels": [
+          "dropped",
+          "returned"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "queue_totals",
+        "title": "Queues",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_queues",
+          "meter_rabbitmq_queues_declared_total",
+          "meter_rabbitmq_queues_created_total",
+          "meter_rabbitmq_queues_deleted_total"
+        ],
+        "expressionLabels": [
+          "total",
+          "declared",
+          "created",
+          "deleted"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "channel_totals",
+        "title": "Channels",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_channels",
+          "meter_rabbitmq_channels_opened_total",
+          "meter_rabbitmq_channels_closed_total"
+        ],
+        "expressionLabels": [
+          "total",
+          "opened",
+          "closed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "conn_totals",
+        "title": "Connections",
+        "type": "line",
+        "expressions": [
+          "meter_rabbitmq_connections",
+          "meter_rabbitmq_connections_opened_total",
+          "meter_rabbitmq_connections_closed_total"
+        ],
+        "expressionLabels": [
+          "total",
+          "opened",
+          "closed"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "ready_msgs", "title": "Ready Messages", "type": "line", "expressions": ["latest(meter_rabbitmq_node_queue_messages_ready)"], "span": 4, "rowSpan": 2 },
-      { "id": "incoming", "title": "Incoming Messages", "type": "line", "expressions": ["latest(meter_rabbitmq_node_incoming_messages)"], "span": 4, "rowSpan": 2 },
-      { "id": "outgoing", "title": "Outgoing Messages", "type": "line", "expressions": ["latest(meter_rabbitmq_node_outgoing_messages_total)"], "span": 4, "rowSpan": 2 },
-      { "id": "unack", "title": "Unacknowledged Messages", "type": "line", "expressions": ["latest(meter_rabbitmq_node_unacknowledged_messages)"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "Connections / Publishers / Consumers", "type": "line", "expressions": ["latest(meter_rabbitmq_node_connections_total)", "latest(meter_rabbitmq_node_publisher_total)", "latest(meter_rabbitmq_node_consumer_total)"], "expressionLabels": ["connections", "publishers", "consumers"], "span": 4, "rowSpan": 2 },
-      { "id": "channels", "title": "Channels + Queues", "type": "line", "expressions": ["latest(meter_rabbitmq_node_channel_total)", "latest(meter_rabbitmq_node_queue_total)"], "expressionLabels": ["channels", "queues"], "span": 4, "rowSpan": 2 },
-      { "id": "memory_pct", "title": "Allocated Used %", "type": "line", "unit": "%", "expressions": ["latest(meter_rabbitmq_node_allocated_used_percent)/100"], "span": 4, "rowSpan": 2 },
-      { "id": "memory_bytes", "title": "Memory (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rabbitmq_node_allocated_used_bytes/1024/1024", "meter_rabbitmq_node_allocated_unused_bytes/1024/1024", "meter_rabbitmq_node_process_resident_memory_bytes/1024/1024", "latest(meter_rabbitmq_node_allocated_total_bytes)/1024/1024"], "expressionLabels": ["used", "unused", "resident", "total"], "span": 8, "rowSpan": 2 },
-      { "id": "alloc_by_type", "title": "Allocated By Type (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rabbitmq_node_allocated_by_type/1024/1024"], "span": 6, "rowSpan": 2 },
-      { "id": "blocks", "title": "Multi/Single-block Memory (MB)", "type": "line", "unit": "MB", "expressions": ["meter_rabbitmq_node_allocated_multiblock_used/1024/1024", "meter_rabbitmq_node_allocated_multiblock_unused/1024/1024", "meter_rabbitmq_node_allocated_singleblock_used/1024/1024", "meter_rabbitmq_node_allocated_singleblock_unused/1024/1024"], "expressionLabels": ["multi used", "multi unused", "single used", "single unused"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "ready_msgs",
+        "title": "Ready Messages",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rabbitmq_node_queue_messages_ready)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "incoming",
+        "title": "Incoming Messages",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rabbitmq_node_incoming_messages)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "outgoing",
+        "title": "Outgoing Messages",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rabbitmq_node_outgoing_messages_total)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "unack",
+        "title": "Unacknowledged Messages",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rabbitmq_node_unacknowledged_messages)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Connections / Publishers / Consumers",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rabbitmq_node_connections_total)",
+          "latest(meter_rabbitmq_node_publisher_total)",
+          "latest(meter_rabbitmq_node_consumer_total)"
+        ],
+        "expressionLabels": [
+          "connections",
+          "publishers",
+          "consumers"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "channels",
+        "title": "Channels + Queues",
+        "type": "line",
+        "expressions": [
+          "latest(meter_rabbitmq_node_channel_total)",
+          "latest(meter_rabbitmq_node_queue_total)"
+        ],
+        "expressionLabels": [
+          "channels",
+          "queues"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory_pct",
+        "title": "Allocated Used %",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "latest(meter_rabbitmq_node_allocated_used_percent)/100"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory_bytes",
+        "title": "Memory (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rabbitmq_node_allocated_used_bytes/1024/1024",
+          "meter_rabbitmq_node_allocated_unused_bytes/1024/1024",
+          "meter_rabbitmq_node_process_resident_memory_bytes/1024/1024",
+          "latest(meter_rabbitmq_node_allocated_total_bytes)/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "unused",
+          "resident",
+          "total"
+        ],
+        "span": 8,
+        "rowSpan": 2
+      },
+      {
+        "id": "alloc_by_type",
+        "title": "Allocated By Type (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rabbitmq_node_allocated_by_type/1024/1024"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "blocks",
+        "title": "Multi/Single-block Memory (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_rabbitmq_node_allocated_multiblock_used/1024/1024",
+          "meter_rabbitmq_node_allocated_multiblock_unused/1024/1024",
+          "meter_rabbitmq_node_allocated_singleblock_used/1024/1024",
+          "meter_rabbitmq_node_allocated_singleblock_unused/1024/1024"
+        ],
+        "expressionLabels": [
+          "multi used",
+          "multi unused",
+          "single used",
+          "single unused"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

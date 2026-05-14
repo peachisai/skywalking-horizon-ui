@@ -1,45 +1,287 @@
 {
   "key": "BOOKKEEPER",
   "alias": "BookKeeper",
+  "group": "MQ",
   "color": "var(--sw-purple)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-bookkeeper-monitoring/",
-  "aliases": { "services": "BookKeeper clusters", "instances": "Bookies" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "BookKeeper clusters",
+    "instances": "Bookies"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "ledgers",
     "columns": [
-      { "metric": "ledgers", "label": "Ledgers", "mqe": "aggregate_labels(meter_bookkeeper_bookie_ledgers_count,sum)", "aggregation": "sum" },
-      { "metric": "entries", "label": "Entries", "mqe": "aggregate_labels(meter_bookkeeper_bookie_entries_count,sum)", "aggregation": "sum" },
-      { "metric": "writableDirs", "label": "Writable Dirs", "mqe": "aggregate_labels(meter_bookkeeper_bookie_ledger_writable_dirs,sum)", "aggregation": "sum" },
-      { "metric": "dirUsage", "label": "Dir Usage", "mqe": "aggregate_labels(meter_bookkeeper_bookie_ledger_dir_data_bookkeeper_ledgers_usage,sum)", "aggregation": "avg" }
+      {
+        "metric": "ledgers",
+        "label": "Ledgers",
+        "mqe": "aggregate_labels(meter_bookkeeper_bookie_ledgers_count,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "entries",
+        "label": "Entries",
+        "mqe": "aggregate_labels(meter_bookkeeper_bookie_entries_count,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "writableDirs",
+        "label": "Writable Dirs",
+        "mqe": "aggregate_labels(meter_bookkeeper_bookie_ledger_writable_dirs,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "dirUsage",
+        "label": "Dir Usage",
+        "mqe": "aggregate_labels(meter_bookkeeper_bookie_ledger_dir_data_bookkeeper_ledgers_usage,sum)",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Throughput", "size": "auto", "metrics": [
-        { "id": "writeRate", "label": "Write B/s", "tip": "Bookie write throughput across the cluster.", "mqe": "aggregate_labels(meter_bookkeeper_bookie_write_rate,sum)", "aggregation": "sum" },
-        { "id": "readRate", "label": "Read B/s", "tip": "Bookie read throughput across the cluster.", "mqe": "aggregate_labels(meter_bookkeeper_bookie_read_rate,sum)", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "writeRate",
+            "label": "Write B/s",
+            "tip": "Bookie write throughput across the cluster.",
+            "mqe": "aggregate_labels(meter_bookkeeper_bookie_write_rate,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "readRate",
+            "label": "Read B/s",
+            "tip": "Bookie read throughput across the cluster.",
+            "mqe": "aggregate_labels(meter_bookkeeper_bookie_read_rate,sum)",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "ledgers", "title": "Bookie Ledgers", "type": "line", "expressions": ["aggregate_labels(meter_bookkeeper_bookie_ledgers_count,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "entries", "title": "Bookie Entries", "type": "line", "expressions": ["aggregate_labels(meter_bookkeeper_bookie_entries_count,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "writable_dirs", "title": "Writable Ledger Dirs", "type": "line", "expressions": ["aggregate_labels(meter_bookkeeper_bookie_ledger_writable_dirs,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "write_cache", "title": "Write Cache", "type": "line", "expressions": ["aggregate_labels(meter_bookkeeper_bookie_write_cache_size,sum)/1024/1024", "aggregate_labels(meter_bookkeeper_bookie_write_cache_count,sum)"], "expressionLabels": ["size (MB)", "entries"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "read_cache", "title": "Read Cache", "type": "line", "expressions": ["aggregate_labels(meter_bookkeeper_bookie_read_cache_size,sum)/1024/1024", "aggregate_labels(meter_bookkeeper_bookie_read_cache_count,sum)"], "expressionLabels": ["size (MB)", "entries"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "io_rates", "title": "Read / Write Rate (B/s)", "type": "line", "expressions": ["aggregate_labels(meter_bookkeeper_bookie_read_rate,sum)", "aggregate_labels(meter_bookkeeper_bookie_write_rate,sum)"], "expressionLabels": ["read", "write"], "span": 6, "rowSpan": 2 },
-      { "id": "dir_usage", "title": "Ledger Dir Usage", "type": "line", "expressions": ["aggregate_labels(meter_bookkeeper_bookie_ledger_dir_data_bookkeeper_ledgers_usage,sum)"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "ledgers",
+        "title": "Bookie Ledgers",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_bookkeeper_bookie_ledgers_count,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "entries",
+        "title": "Bookie Entries",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_bookkeeper_bookie_entries_count,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "writable_dirs",
+        "title": "Writable Ledger Dirs",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_bookkeeper_bookie_ledger_writable_dirs,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "write_cache",
+        "title": "Write Cache",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_bookkeeper_bookie_write_cache_size,sum)/1024/1024",
+          "aggregate_labels(meter_bookkeeper_bookie_write_cache_count,sum)"
+        ],
+        "expressionLabels": [
+          "size (MB)",
+          "entries"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "read_cache",
+        "title": "Read Cache",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_bookkeeper_bookie_read_cache_size,sum)/1024/1024",
+          "aggregate_labels(meter_bookkeeper_bookie_read_cache_count,sum)"
+        ],
+        "expressionLabels": [
+          "size (MB)",
+          "entries"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "io_rates",
+        "title": "Read / Write Rate (B/s)",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_bookkeeper_bookie_read_rate,sum)",
+          "aggregate_labels(meter_bookkeeper_bookie_write_rate,sum)"
+        ],
+        "expressionLabels": [
+          "read",
+          "write"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "dir_usage",
+        "title": "Ledger Dir Usage",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_bookkeeper_bookie_ledger_dir_data_bookkeeper_ledgers_usage,sum)"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "jvm_pool", "title": "JVM Memory Pool (MB)", "type": "line", "unit": "MB", "expressions": ["meter_bookkeeper_node_jvm_memory_pool_used/1024/1024"], "span": 6, "rowSpan": 2 },
-      { "id": "jvm_mem", "title": "JVM Memory (MB)", "type": "line", "unit": "MB", "expressions": ["meter_bookkeeper_node_jvm_memory_used/1024/1024", "meter_bookkeeper_node_jvm_memory_committed/1024/1024", "meter_bookkeeper_node_jvm_memory_init/1024/1024"], "expressionLabels": ["used", "committed", "init"], "span": 6, "rowSpan": 2 },
-      { "id": "jvm_threads", "title": "JVM Threads", "type": "line", "expressions": ["meter_bookkeeper_node_jvm_threads_current", "meter_bookkeeper_node_jvm_threads_daemon", "meter_bookkeeper_node_jvm_threads_peak", "meter_bookkeeper_node_jvm_threads_deadlocked"], "expressionLabels": ["current", "daemon", "peak", "deadlocked"], "span": 6, "rowSpan": 2 },
-      { "id": "gc", "title": "GC", "type": "line", "expressions": ["meter_bookkeeper_node_jvm_gc_collection_seconds_sum", "meter_bookkeeper_node_jvm_gc_collection_seconds_count"], "expressionLabels": ["seconds", "count"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "thread_executor", "title": "Thread Executor", "type": "line", "expressions": ["meter_bookkeeper_node_thread_executor_completed", "meter_bookkeeper_node_thread_executor_tasks_completed", "meter_bookkeeper_node_thread_executor_tasks_rejected", "meter_bookkeeper_node_thread_executor_tasks_failed"], "expressionLabels": ["completed", "tasks completed", "rejected", "failed"], "span": 6, "rowSpan": 2 },
-      { "id": "pooled_threads", "title": "Pooled Threads", "type": "line", "expressions": ["meter_bookkeeper_node_high_priority_threads", "meter_bookkeeper_node_read_thread_pool_threads"], "expressionLabels": ["high-priority", "read"], "span": 6, "rowSpan": 2 },
-      { "id": "queue_size", "title": "Pool Max Queue Size", "type": "line", "expressions": ["meter_bookkeeper_node_high_priority_thread_max_queue_size", "meter_bookkeeper_node_read_thread_pool_max_queue_size"], "expressionLabels": ["high-priority", "read"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "jvm_pool",
+        "title": "JVM Memory Pool (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_bookkeeper_node_jvm_memory_pool_used/1024/1024"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "jvm_mem",
+        "title": "JVM Memory (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_bookkeeper_node_jvm_memory_used/1024/1024",
+          "meter_bookkeeper_node_jvm_memory_committed/1024/1024",
+          "meter_bookkeeper_node_jvm_memory_init/1024/1024"
+        ],
+        "expressionLabels": [
+          "used",
+          "committed",
+          "init"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "jvm_threads",
+        "title": "JVM Threads",
+        "type": "line",
+        "expressions": [
+          "meter_bookkeeper_node_jvm_threads_current",
+          "meter_bookkeeper_node_jvm_threads_daemon",
+          "meter_bookkeeper_node_jvm_threads_peak",
+          "meter_bookkeeper_node_jvm_threads_deadlocked"
+        ],
+        "expressionLabels": [
+          "current",
+          "daemon",
+          "peak",
+          "deadlocked"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "gc",
+        "title": "GC",
+        "type": "line",
+        "expressions": [
+          "meter_bookkeeper_node_jvm_gc_collection_seconds_sum",
+          "meter_bookkeeper_node_jvm_gc_collection_seconds_count"
+        ],
+        "expressionLabels": [
+          "seconds",
+          "count"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "thread_executor",
+        "title": "Thread Executor",
+        "type": "line",
+        "expressions": [
+          "meter_bookkeeper_node_thread_executor_completed",
+          "meter_bookkeeper_node_thread_executor_tasks_completed",
+          "meter_bookkeeper_node_thread_executor_tasks_rejected",
+          "meter_bookkeeper_node_thread_executor_tasks_failed"
+        ],
+        "expressionLabels": [
+          "completed",
+          "tasks completed",
+          "rejected",
+          "failed"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "pooled_threads",
+        "title": "Pooled Threads",
+        "type": "line",
+        "expressions": [
+          "meter_bookkeeper_node_high_priority_threads",
+          "meter_bookkeeper_node_read_thread_pool_threads"
+        ],
+        "expressionLabels": [
+          "high-priority",
+          "read"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "queue_size",
+        "title": "Pool Max Queue Size",
+        "type": "line",
+        "expressions": [
+          "meter_bookkeeper_node_high_priority_thread_max_queue_size",
+          "meter_bookkeeper_node_read_thread_pool_max_queue_size"
+        ],
+        "expressionLabels": [
+          "high-priority",
+          "read"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ]
   }
 }

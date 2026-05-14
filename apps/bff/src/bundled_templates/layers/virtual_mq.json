@@ -1,6 +1,7 @@
 {
   "key": "VIRTUAL_MQ",
   "alias": "Virtual MQ",
+  "group": "Virtual targets",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/service-agent/virtual-mq/",
   "aliases": {
@@ -19,10 +20,34 @@
   "layer-header": {
     "orderBy": "consumeCpm",
     "columns": [
-      { "metric": "consumeCpm", "label": "Consume RPM", "unit": "rpm", "mqe": "mq_service_consume_cpm", "aggregation": "sum" },
-      { "metric": "produceCpm", "label": "Produce RPM", "unit": "rpm", "mqe": "mq_service_produce_cpm", "aggregation": "sum" },
-      { "metric": "consumeLatency", "label": "Consume Latency", "unit": "ms", "mqe": "mq_service_consume_latency", "aggregation": "avg" },
-      { "metric": "consumeErr", "label": "Consume Error Rate", "unit": "%", "mqe": "100 - mq_service_consume_sla/100", "aggregation": "avg" }
+      {
+        "metric": "consumeCpm",
+        "label": "Consume RPM",
+        "unit": "rpm",
+        "mqe": "mq_service_consume_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "produceCpm",
+        "label": "Produce RPM",
+        "unit": "rpm",
+        "mqe": "mq_service_produce_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "consumeLatency",
+        "label": "Consume Latency",
+        "unit": "ms",
+        "mqe": "mq_service_consume_latency",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "consumeErr",
+        "label": "Consume Error Rate",
+        "unit": "%",
+        "mqe": "100 - mq_service_consume_sla/100",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
@@ -31,16 +56,44 @@
         "title": "Latency & errors",
         "size": "auto",
         "metrics": [
-          { "id": "p95", "label": "P95", "tip": "95th-percentile consume latency (timestamp(received) − timestamp(producing)).", "mqe": "mq_service_consume_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
-          { "id": "consumeErr", "label": "Consume Error Rate", "tip": "100 − consume success rate.", "mqe": "100 - mq_service_consume_sla/100", "unit": "%", "aggregation": "avg" },
-          { "id": "produceErr", "label": "Produce Error Rate", "tip": "100 − produce success rate.", "mqe": "100 - mq_service_produce_sla/100", "unit": "%", "aggregation": "avg" }
+          {
+            "id": "p95",
+            "label": "P95",
+            "tip": "95th-percentile consume latency (timestamp(received) \u2212 timestamp(producing)).",
+            "mqe": "mq_service_consume_percentile{p='95'}",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "consumeErr",
+            "label": "Consume Error Rate",
+            "tip": "100 \u2212 consume success rate.",
+            "mqe": "100 - mq_service_consume_sla/100",
+            "unit": "%",
+            "aggregation": "avg"
+          },
+          {
+            "id": "produceErr",
+            "label": "Produce Error Rate",
+            "tip": "100 \u2212 produce success rate.",
+            "mqe": "100 - mq_service_produce_sla/100",
+            "unit": "%",
+            "aggregation": "avg"
+          }
         ]
       },
       {
         "title": "Throughput",
         "size": "square",
         "metrics": [
-          { "id": "consumeCpm", "label": "Consume RPM", "tip": "Messages consumed per minute.", "mqe": "mq_service_consume_cpm", "unit": "rpm", "aggregation": "sum" }
+          {
+            "id": "consumeCpm",
+            "label": "Consume RPM",
+            "tip": "Messages consumed per minute.",
+            "mqe": "mq_service_consume_cpm",
+            "unit": "rpm",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
@@ -52,7 +105,9 @@
         "title": "Consume Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["mq_service_consume_cpm"],
+        "expressions": [
+          "mq_service_consume_cpm"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -61,7 +116,9 @@
         "title": "Produce Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["mq_service_produce_cpm"],
+        "expressions": [
+          "mq_service_produce_cpm"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -71,7 +128,9 @@
         "tip": "Avg time between message production and consumption.",
         "type": "line",
         "unit": "ms",
-        "expressions": ["mq_service_consume_latency"],
+        "expressions": [
+          "mq_service_consume_latency"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -80,7 +139,9 @@
         "title": "Consume Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["mq_service_consume_sla/100"],
+        "expressions": [
+          "mq_service_consume_sla/100"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -89,7 +150,9 @@
         "title": "Produce Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["mq_service_produce_sla/100"],
+        "expressions": [
+          "mq_service_produce_sla/100"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -112,7 +175,9 @@
         "title": "Topic Consume Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["mq_endpoint_consume_cpm"],
+        "expressions": [
+          "mq_endpoint_consume_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -121,7 +186,9 @@
         "title": "Topic Produce Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["mq_endpoint_produce_cpm"],
+        "expressions": [
+          "mq_endpoint_produce_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -130,7 +197,9 @@
         "title": "Topic Consume Avg Latency",
         "type": "line",
         "unit": "ms",
-        "expressions": ["mq_endpoint_consume_latency"],
+        "expressions": [
+          "mq_endpoint_consume_latency"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -139,7 +208,9 @@
         "title": "Topic Consume Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["mq_endpoint_consume_sla/100"],
+        "expressions": [
+          "mq_endpoint_consume_sla/100"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -148,7 +219,9 @@
         "title": "Topic Produce Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["mq_endpoint_produce_sla/100"],
+        "expressions": [
+          "mq_endpoint_produce_sla/100"
+        ],
         "span": 6,
         "rowSpan": 2
       },

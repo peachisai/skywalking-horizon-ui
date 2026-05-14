@@ -1,6 +1,7 @@
 {
   "key": "MYSQL",
   "alias": "MySQL / MariaDB",
+  "group": "Databases",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-mysql-monitoring/",
   "aliases": {
@@ -18,10 +19,30 @@
   "layer-header": {
     "orderBy": "qps",
     "columns": [
-      { "metric": "qps", "label": "QPS", "mqe": "aggregate_labels(meter_mysql_qps,sum)", "aggregation": "sum" },
-      { "metric": "tps", "label": "TPS", "mqe": "aggregate_labels(meter_mysql_tps,sum)", "aggregation": "sum" },
-      { "metric": "slowQps", "label": "Slow QPS", "mqe": "aggregate_labels(meter_mysql_slow_queries_rate,sum)", "aggregation": "sum" },
-      { "metric": "connErr", "label": "Conn Errors", "mqe": "aggregate_labels(meter_mysql_connection_errors_internal,sum) + aggregate_labels(meter_mysql_connection_errors_max_connections,sum)", "aggregation": "sum" }
+      {
+        "metric": "qps",
+        "label": "QPS",
+        "mqe": "aggregate_labels(meter_mysql_qps,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "tps",
+        "label": "TPS",
+        "mqe": "aggregate_labels(meter_mysql_tps,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "slowQps",
+        "label": "Slow QPS",
+        "mqe": "aggregate_labels(meter_mysql_slow_queries_rate,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "connErr",
+        "label": "Conn Errors",
+        "mqe": "aggregate_labels(meter_mysql_connection_errors_internal,sum) + aggregate_labels(meter_mysql_connection_errors_max_connections,sum)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -30,9 +51,27 @@
         "title": "Throughput",
         "size": "auto",
         "metrics": [
-          { "id": "qps", "label": "QPS", "tip": "Queries per second across the cluster.", "mqe": "aggregate_labels(meter_mysql_qps,sum)", "aggregation": "sum" },
-          { "id": "tps", "label": "TPS", "tip": "Transactions per second.", "mqe": "aggregate_labels(meter_mysql_tps,sum)", "aggregation": "sum" },
-          { "id": "slowRate", "label": "Slow Queries/s", "tip": "Slow query rate across the cluster.", "mqe": "aggregate_labels(meter_mysql_slow_queries_rate,sum)", "aggregation": "sum" }
+          {
+            "id": "qps",
+            "label": "QPS",
+            "tip": "Queries per second across the cluster.",
+            "mqe": "aggregate_labels(meter_mysql_qps,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "tps",
+            "label": "TPS",
+            "tip": "Transactions per second.",
+            "mqe": "aggregate_labels(meter_mysql_tps,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "slowRate",
+            "label": "Slow Queries/s",
+            "tip": "Slow query rate across the cluster.",
+            "mqe": "aggregate_labels(meter_mysql_slow_queries_rate,sum)",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
@@ -43,7 +82,9 @@
         "id": "qps",
         "title": "QPS",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_mysql_qps,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_mysql_qps,sum)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -51,7 +92,9 @@
         "id": "tps",
         "title": "TPS",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_mysql_tps,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_mysql_tps,sum)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -59,7 +102,9 @@
         "id": "slow_qps",
         "title": "Slow Queries / s",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_mysql_slow_queries_rate,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_mysql_slow_queries_rate,sum)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -72,7 +117,10 @@
           "aggregate_labels(meter_mysql_connection_errors_internal,sum)",
           "aggregate_labels(meter_mysql_connection_errors_max_connections,sum)"
         ],
-        "expressionLabels": ["internal", "max-connections"],
+        "expressionLabels": [
+          "internal",
+          "max-connections"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -87,7 +135,12 @@
           "aggregate_labels(meter_mysql_commands_update_rate,sum)",
           "aggregate_labels(meter_mysql_commands_delete_rate,sum)"
         ],
-        "expressionLabels": ["select", "insert", "update", "delete"],
+        "expressionLabels": [
+          "select",
+          "insert",
+          "update",
+          "delete"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -101,7 +154,12 @@
           "aggregate_labels(meter_mysql_threads_cached,sum)",
           "aggregate_labels(meter_mysql_threads_created,sum)"
         ],
-        "expressionLabels": ["connected", "running", "cached", "created"],
+        "expressionLabels": [
+          "connected",
+          "running",
+          "cached",
+          "created"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -111,7 +169,9 @@
         "tip": "Top 20 slowest captured statements across the cluster.",
         "type": "record",
         "unit": "ms",
-        "expressions": ["top_n(top_n_database_statement, 20, des)"],
+        "expressions": [
+          "top_n(top_n_database_statement, 20, des)"
+        ],
         "span": 12,
         "rowSpan": 4
       }
@@ -122,7 +182,9 @@
         "title": "Uptime",
         "type": "line",
         "unit": "days",
-        "expressions": ["latest(meter_mysql_instance_uptime)/3600/24"],
+        "expressions": [
+          "latest(meter_mysql_instance_uptime)/3600/24"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -130,7 +192,9 @@
         "id": "max_conns",
         "title": "Max Connections",
         "type": "line",
-        "expressions": ["latest(meter_mysql_instance_max_connections)"],
+        "expressions": [
+          "latest(meter_mysql_instance_max_connections)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -139,7 +203,9 @@
         "title": "InnoDB Buffer Pool",
         "type": "line",
         "unit": "MB",
-        "expressions": ["latest(meter_mysql_instance_innodb_buffer_pool_size)/1024/1024"],
+        "expressions": [
+          "latest(meter_mysql_instance_innodb_buffer_pool_size)/1024/1024"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -147,7 +213,9 @@
         "id": "thread_cache",
         "title": "Thread Cache Size",
         "type": "line",
-        "expressions": ["latest(meter_mysql_instance_thread_cache_size)"],
+        "expressions": [
+          "latest(meter_mysql_instance_thread_cache_size)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -159,7 +227,10 @@
           "meter_mysql_instance_qps",
           "meter_mysql_instance_tps"
         ],
-        "expressionLabels": ["QPS", "TPS"],
+        "expressionLabels": [
+          "QPS",
+          "TPS"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -167,7 +238,9 @@
         "id": "instance_slow_queries",
         "title": "Slow Queries / s",
         "type": "line",
-        "expressions": ["meter_mysql_instance_slow_queries_rate"],
+        "expressions": [
+          "meter_mysql_instance_slow_queries_rate"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -181,7 +254,12 @@
           "meter_mysql_instance_commands_update_rate",
           "meter_mysql_instance_commands_delete_rate"
         ],
-        "expressionLabels": ["select", "insert", "update", "delete"],
+        "expressionLabels": [
+          "select",
+          "insert",
+          "update",
+          "delete"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -195,7 +273,12 @@
           "meter_mysql_instance_threads_cached",
           "meter_mysql_instance_threads_created"
         ],
-        "expressionLabels": ["connected", "running", "cached", "created"],
+        "expressionLabels": [
+          "connected",
+          "running",
+          "cached",
+          "created"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -207,7 +290,10 @@
           "meter_mysql_instance_connects_available",
           "meter_mysql_instance_connects_aborted"
         ],
-        "expressionLabels": ["available", "aborted"],
+        "expressionLabels": [
+          "available",
+          "aborted"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -219,7 +305,10 @@
           "meter_mysql_instance_connection_errors_internal",
           "meter_mysql_instance_connection_errors_max_connections"
         ],
-        "expressionLabels": ["internal", "max-connections"],
+        "expressionLabels": [
+          "internal",
+          "max-connections"
+        ],
         "span": 6,
         "rowSpan": 2
       }

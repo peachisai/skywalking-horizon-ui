@@ -1,34 +1,145 @@
 {
   "key": "SO11Y_JAVA_AGENT",
   "alias": "Java Agent (self-obs)",
+  "group": "Self-Observability",
   "color": "var(--sw-fg-2)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/service-agent/server-agents/",
-  "aliases": { "services": "Agent services", "instances": "Agents" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Agent services",
+    "instances": "Agents"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "created",
     "columns": [
-      { "metric": "created", "label": "Tracing/min", "mqe": "aggregate_labels(meter_java_agent_created_tracing_context_count,sum)", "aggregation": "sum" },
-      { "metric": "ignored", "label": "Ignored/min", "mqe": "aggregate_labels(meter_java_agent_created_ignored_context_count,sum)", "aggregation": "sum" }
+      {
+        "metric": "created",
+        "label": "Tracing/min",
+        "mqe": "aggregate_labels(meter_java_agent_created_tracing_context_count,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "ignored",
+        "label": "Ignored/min",
+        "mqe": "aggregate_labels(meter_java_agent_created_ignored_context_count,sum)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Agent throughput", "size": "auto", "metrics": [
-        { "id": "created", "label": "Tracing/min", "tip": "Tracing contexts created per minute (sum across instances).", "mqe": "aggregate_labels(meter_java_agent_created_tracing_context_count,sum)", "aggregation": "sum" },
-        { "id": "ignored", "label": "Ignored/min", "tip": "Ignored contexts created per minute.", "mqe": "aggregate_labels(meter_java_agent_created_ignored_context_count,sum)", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Agent throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "created",
+            "label": "Tracing/min",
+            "tip": "Tracing contexts created per minute (sum across instances).",
+            "mqe": "aggregate_labels(meter_java_agent_created_tracing_context_count,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "ignored",
+            "label": "Ignored/min",
+            "tip": "Ignored contexts created per minute.",
+            "mqe": "aggregate_labels(meter_java_agent_created_ignored_context_count,sum)",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "instance": [
-      { "id": "tracing_created", "title": "Tracing Context Creation / min", "type": "line", "expressions": ["meter_java_agent_created_tracing_context_count"], "span": 6, "rowSpan": 2 },
-      { "id": "tracing_create_complete", "title": "Tracing Created + Finished / min", "type": "line", "expressions": ["aggregate_labels(meter_java_agent_created_tracing_context_count,sum)", "meter_java_agent_finished_tracing_context_count"], "expressionLabels": ["created", "finished"], "span": 6, "rowSpan": 2 },
-      { "id": "ignored_created", "title": "Ignored Context Creation / min", "type": "line", "expressions": ["meter_java_agent_created_ignored_context_count"], "span": 6, "rowSpan": 2 },
-      { "id": "ignored_create_complete", "title": "Ignored Created + Finished / min", "type": "line", "expressions": ["aggregate_labels(meter_java_agent_created_ignored_context_count,sum)", "meter_java_agent_finished_ignored_context_count"], "expressionLabels": ["created", "finished"], "span": 6, "rowSpan": 2 },
-      { "id": "leaked", "title": "Possible Leaked Context / min", "type": "line", "expressions": ["meter_java_agent_possible_leaked_context_count"], "span": 6, "rowSpan": 2 },
-      { "id": "interceptor_err", "title": "Interceptor Error Count / min", "type": "line", "expressions": ["meter_java_agent_interceptor_error_count"], "span": 6, "rowSpan": 2 },
-      { "id": "exec_time", "title": "Tracing Context Execution Time (ms)", "type": "line", "unit": "ms", "expressions": ["relabels(meter_java_agent_tracing_context_execution_time_percentile,p='50,75,90,95,99',p='50,75,90,95,99')/1000000"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "tracing_created",
+        "title": "Tracing Context Creation / min",
+        "type": "line",
+        "expressions": [
+          "meter_java_agent_created_tracing_context_count"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "tracing_create_complete",
+        "title": "Tracing Created + Finished / min",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_java_agent_created_tracing_context_count,sum)",
+          "meter_java_agent_finished_tracing_context_count"
+        ],
+        "expressionLabels": [
+          "created",
+          "finished"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "ignored_created",
+        "title": "Ignored Context Creation / min",
+        "type": "line",
+        "expressions": [
+          "meter_java_agent_created_ignored_context_count"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "ignored_create_complete",
+        "title": "Ignored Created + Finished / min",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_java_agent_created_ignored_context_count,sum)",
+          "meter_java_agent_finished_ignored_context_count"
+        ],
+        "expressionLabels": [
+          "created",
+          "finished"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "leaked",
+        "title": "Possible Leaked Context / min",
+        "type": "line",
+        "expressions": [
+          "meter_java_agent_possible_leaked_context_count"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "interceptor_err",
+        "title": "Interceptor Error Count / min",
+        "type": "line",
+        "expressions": [
+          "meter_java_agent_interceptor_error_count"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "exec_time",
+        "title": "Tracing Context Execution Time (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "relabels(meter_java_agent_tracing_context_execution_time_percentile,p='50,75,90,95,99',p='50,75,90,95,99')/1000000"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ]
   }
 }

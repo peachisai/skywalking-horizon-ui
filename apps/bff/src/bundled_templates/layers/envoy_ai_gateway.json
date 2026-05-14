@@ -1,61 +1,406 @@
 {
   "key": "ENVOY_AI_GATEWAY",
   "alias": "Envoy AI Gateway",
+  "group": "Gateways",
   "color": "var(--sw-pink)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-envoy-ai-gateway-monitoring/",
-  "aliases": { "services": "AI Gateways", "instances": "Nodes" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "AI Gateways",
+    "instances": "Nodes"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "cpm",
     "columns": [
-      { "metric": "cpm", "label": "RPM", "unit": "rpm", "mqe": "meter_envoy_ai_gw_request_cpm", "aggregation": "sum" },
-      { "metric": "latency", "label": "Avg Latency", "unit": "ms", "mqe": "meter_envoy_ai_gw_request_latency_avg", "aggregation": "avg" },
-      { "metric": "inTokens", "label": "Input Tokens/min", "mqe": "meter_envoy_ai_gw_input_token_rate", "aggregation": "sum" },
-      { "metric": "outTokens", "label": "Output Tokens/min", "mqe": "meter_envoy_ai_gw_output_token_rate", "aggregation": "sum" }
+      {
+        "metric": "cpm",
+        "label": "RPM",
+        "unit": "rpm",
+        "mqe": "meter_envoy_ai_gw_request_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "latency",
+        "label": "Avg Latency",
+        "unit": "ms",
+        "mqe": "meter_envoy_ai_gw_request_latency_avg",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "inTokens",
+        "label": "Input Tokens/min",
+        "mqe": "meter_envoy_ai_gw_input_token_rate",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "outTokens",
+        "label": "Output Tokens/min",
+        "mqe": "meter_envoy_ai_gw_output_token_rate",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Latency", "size": "auto", "metrics": [
-        { "id": "latency", "label": "Avg Latency", "tip": "Average end-to-end request latency.", "mqe": "meter_envoy_ai_gw_request_latency_avg", "unit": "ms", "aggregation": "avg" },
-        { "id": "ttft", "label": "TTFT Avg", "tip": "Time to first token — generative-model latency indicator.", "mqe": "meter_envoy_ai_gw_ttft_avg", "unit": "ms", "aggregation": "avg" }
-      ]},
-      { "title": "Tokens", "size": "square", "metrics": [
-        { "id": "tokens", "label": "Tokens/min", "tip": "Combined input + output token rate.", "mqe": "meter_envoy_ai_gw_input_token_rate + meter_envoy_ai_gw_output_token_rate", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Latency",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "latency",
+            "label": "Avg Latency",
+            "tip": "Average end-to-end request latency.",
+            "mqe": "meter_envoy_ai_gw_request_latency_avg",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "ttft",
+            "label": "TTFT Avg",
+            "tip": "Time to first token \u2014 generative-model latency indicator.",
+            "mqe": "meter_envoy_ai_gw_ttft_avg",
+            "unit": "ms",
+            "aggregation": "avg"
+          }
+        ]
+      },
+      {
+        "title": "Tokens",
+        "size": "square",
+        "metrics": [
+          {
+            "id": "tokens",
+            "label": "Tokens/min",
+            "tip": "Combined input + output token rate.",
+            "mqe": "meter_envoy_ai_gw_input_token_rate + meter_envoy_ai_gw_output_token_rate",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "cpm", "title": "Request RPM", "type": "line", "unit": "rpm", "expressions": ["meter_envoy_ai_gw_request_cpm"], "span": 3, "rowSpan": 2 },
-      { "id": "latency_avg", "title": "Request Latency Avg", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_request_latency_avg"], "span": 3, "rowSpan": 2 },
-      { "id": "input_tokens", "title": "Input Token Rate", "type": "line", "expressions": ["meter_envoy_ai_gw_input_token_rate"], "span": 3, "rowSpan": 2 },
-      { "id": "output_tokens", "title": "Output Token Rate", "type": "line", "expressions": ["meter_envoy_ai_gw_output_token_rate"], "span": 3, "rowSpan": 2 },
-      { "id": "latency_percentile", "title": "Request Latency Percentile", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_request_latency_percentile"], "span": 12, "rowSpan": 2 },
-      { "id": "ttft", "title": "TTFT (Time to First Token)", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_ttft_avg", "meter_envoy_ai_gw_ttft_percentile"], "expressionLabels": ["avg", "percentile"], "span": 6, "rowSpan": 2 },
-      { "id": "tpot", "title": "TPOT (Time Per Output Token)", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_tpot_avg", "meter_envoy_ai_gw_tpot_percentile"], "expressionLabels": ["avg", "percentile"], "span": 6, "rowSpan": 2 },
-      { "id": "provider_cpm", "title": "RPM by Provider", "type": "line", "expressions": ["aggregate_labels(meter_envoy_ai_gw_provider_request_cpm,sum(gen_ai_provider_name))"], "span": 4, "rowSpan": 2 },
-      { "id": "provider_tokens", "title": "Tokens by Provider", "type": "line", "expressions": ["aggregate_labels(meter_envoy_ai_gw_provider_token_rate,sum(gen_ai_provider_name))"], "span": 4, "rowSpan": 2 },
-      { "id": "provider_latency", "title": "Latency Avg by Provider", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_envoy_ai_gw_provider_latency_avg,avg(gen_ai_provider_name))"], "span": 4, "rowSpan": 2 },
-      { "id": "model_cpm", "title": "RPM by Model", "type": "line", "expressions": ["aggregate_labels(meter_envoy_ai_gw_model_request_cpm,sum(gen_ai_response_model))"], "span": 4, "rowSpan": 2 },
-      { "id": "model_tokens", "title": "Tokens by Model", "type": "line", "expressions": ["aggregate_labels(meter_envoy_ai_gw_model_token_rate,sum(gen_ai_response_model))"], "span": 4, "rowSpan": 2 },
-      { "id": "model_latency", "title": "Latency Avg by Model", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_envoy_ai_gw_model_latency_avg,avg(gen_ai_response_model))"], "span": 4, "rowSpan": 2 },
-      { "id": "model_ttft", "title": "TTFT by Model", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_envoy_ai_gw_model_ttft_avg,avg(gen_ai_response_model))"], "span": 6, "rowSpan": 2 },
-      { "id": "model_tpot", "title": "TPOT by Model", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_envoy_ai_gw_model_tpot_avg,avg(gen_ai_response_model))"], "span": 6, "rowSpan": 2 },
-      { "id": "mcp_cpm", "title": "MCP RPM", "tip": "Model Context Protocol — when used.", "type": "line", "expressions": ["meter_envoy_ai_gw_mcp_request_cpm"], "visibleWhen": "meter_envoy_ai_gw_mcp_request_cpm has value", "span": 4, "rowSpan": 2 },
-      { "id": "mcp_latency", "title": "MCP Avg Latency", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_mcp_request_latency_avg"], "visibleWhen": "meter_envoy_ai_gw_mcp_request_latency_avg has value", "span": 4, "rowSpan": 2 },
-      { "id": "mcp_err", "title": "MCP Error RPM", "type": "line", "expressions": ["meter_envoy_ai_gw_mcp_error_cpm"], "visibleWhen": "meter_envoy_ai_gw_mcp_error_cpm has value", "span": 4, "rowSpan": 2 },
-      { "id": "mcp_method", "title": "MCP by Method", "type": "line", "expressions": ["aggregate_labels(meter_envoy_ai_gw_mcp_method_cpm,sum(mcp_method_name))"], "visibleWhen": "meter_envoy_ai_gw_mcp_method_cpm has value", "span": 6, "rowSpan": 2 },
-      { "id": "mcp_backend", "title": "MCP by Backend", "type": "line", "expressions": ["aggregate_labels(meter_envoy_ai_gw_mcp_backend_request_cpm,sum(mcp_backend))"], "visibleWhen": "meter_envoy_ai_gw_mcp_backend_request_cpm has value", "span": 6, "rowSpan": 2 }
+      {
+        "id": "cpm",
+        "title": "Request RPM",
+        "type": "line",
+        "unit": "rpm",
+        "expressions": [
+          "meter_envoy_ai_gw_request_cpm"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency_avg",
+        "title": "Request Latency Avg",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_request_latency_avg"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "input_tokens",
+        "title": "Input Token Rate",
+        "type": "line",
+        "expressions": [
+          "meter_envoy_ai_gw_input_token_rate"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "output_tokens",
+        "title": "Output Token Rate",
+        "type": "line",
+        "expressions": [
+          "meter_envoy_ai_gw_output_token_rate"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency_percentile",
+        "title": "Request Latency Percentile",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_request_latency_percentile"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      },
+      {
+        "id": "ttft",
+        "title": "TTFT (Time to First Token)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_ttft_avg",
+          "meter_envoy_ai_gw_ttft_percentile"
+        ],
+        "expressionLabels": [
+          "avg",
+          "percentile"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "tpot",
+        "title": "TPOT (Time Per Output Token)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_tpot_avg",
+          "meter_envoy_ai_gw_tpot_percentile"
+        ],
+        "expressionLabels": [
+          "avg",
+          "percentile"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "provider_cpm",
+        "title": "RPM by Provider",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_provider_request_cpm,sum(gen_ai_provider_name))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "provider_tokens",
+        "title": "Tokens by Provider",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_provider_token_rate,sum(gen_ai_provider_name))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "provider_latency",
+        "title": "Latency Avg by Provider",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_provider_latency_avg,avg(gen_ai_provider_name))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "model_cpm",
+        "title": "RPM by Model",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_model_request_cpm,sum(gen_ai_response_model))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "model_tokens",
+        "title": "Tokens by Model",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_model_token_rate,sum(gen_ai_response_model))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "model_latency",
+        "title": "Latency Avg by Model",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_model_latency_avg,avg(gen_ai_response_model))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "model_ttft",
+        "title": "TTFT by Model",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_model_ttft_avg,avg(gen_ai_response_model))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "model_tpot",
+        "title": "TPOT by Model",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_model_tpot_avg,avg(gen_ai_response_model))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "mcp_cpm",
+        "title": "MCP RPM",
+        "tip": "Model Context Protocol \u2014 when used.",
+        "type": "line",
+        "expressions": [
+          "meter_envoy_ai_gw_mcp_request_cpm"
+        ],
+        "visibleWhen": "meter_envoy_ai_gw_mcp_request_cpm has value",
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mcp_latency",
+        "title": "MCP Avg Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_mcp_request_latency_avg"
+        ],
+        "visibleWhen": "meter_envoy_ai_gw_mcp_request_latency_avg has value",
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mcp_err",
+        "title": "MCP Error RPM",
+        "type": "line",
+        "expressions": [
+          "meter_envoy_ai_gw_mcp_error_cpm"
+        ],
+        "visibleWhen": "meter_envoy_ai_gw_mcp_error_cpm has value",
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "mcp_method",
+        "title": "MCP by Method",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_mcp_method_cpm,sum(mcp_method_name))"
+        ],
+        "visibleWhen": "meter_envoy_ai_gw_mcp_method_cpm has value",
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "mcp_backend",
+        "title": "MCP by Backend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_envoy_ai_gw_mcp_backend_request_cpm,sum(mcp_backend))"
+        ],
+        "visibleWhen": "meter_envoy_ai_gw_mcp_backend_request_cpm has value",
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "cpm", "title": "Request RPM", "type": "line", "unit": "rpm", "expressions": ["meter_envoy_ai_gw_instance_request_cpm"], "span": 3, "rowSpan": 2 },
-      { "id": "latency_avg", "title": "Request Latency Avg", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_instance_request_latency_avg"], "span": 3, "rowSpan": 2 },
-      { "id": "input_tokens", "title": "Input Token Rate", "type": "line", "expressions": ["meter_envoy_ai_gw_instance_input_token_rate"], "span": 3, "rowSpan": 2 },
-      { "id": "output_tokens", "title": "Output Token Rate", "type": "line", "expressions": ["meter_envoy_ai_gw_instance_output_token_rate"], "span": 3, "rowSpan": 2 },
-      { "id": "latency_percentile", "title": "Request Latency Percentile", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_instance_request_latency_percentile"], "span": 12, "rowSpan": 2 },
-      { "id": "ttft", "title": "TTFT", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_instance_ttft_avg", "meter_envoy_ai_gw_instance_ttft_percentile"], "expressionLabels": ["avg", "percentile"], "span": 6, "rowSpan": 2 },
-      { "id": "tpot", "title": "TPOT", "type": "line", "unit": "ms", "expressions": ["meter_envoy_ai_gw_instance_tpot_avg", "meter_envoy_ai_gw_instance_tpot_percentile"], "expressionLabels": ["avg", "percentile"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "cpm",
+        "title": "Request RPM",
+        "type": "line",
+        "unit": "rpm",
+        "expressions": [
+          "meter_envoy_ai_gw_instance_request_cpm"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency_avg",
+        "title": "Request Latency Avg",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_instance_request_latency_avg"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "input_tokens",
+        "title": "Input Token Rate",
+        "type": "line",
+        "expressions": [
+          "meter_envoy_ai_gw_instance_input_token_rate"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "output_tokens",
+        "title": "Output Token Rate",
+        "type": "line",
+        "expressions": [
+          "meter_envoy_ai_gw_instance_output_token_rate"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency_percentile",
+        "title": "Request Latency Percentile",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_instance_request_latency_percentile"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      },
+      {
+        "id": "ttft",
+        "title": "TTFT",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_instance_ttft_avg",
+          "meter_envoy_ai_gw_instance_ttft_percentile"
+        ],
+        "expressionLabels": [
+          "avg",
+          "percentile"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "tpot",
+        "title": "TPOT",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_envoy_ai_gw_instance_tpot_avg",
+          "meter_envoy_ai_gw_instance_tpot_percentile"
+        ],
+        "expressionLabels": [
+          "avg",
+          "percentile"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

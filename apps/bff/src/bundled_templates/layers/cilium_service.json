@@ -1,73 +1,481 @@
 {
   "key": "CILIUM_SERVICE",
   "alias": "Cilium Service",
+  "group": "Kubernetes",
   "color": "var(--sw-info)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-k8s-monitoring-cilium/",
-  "aliases": { "services": "Services", "instances": "Pods", "endpoints": "Endpoints" },
-  "components": { "service": true, "instances": true, "endpoints": true, "topology": true, "traces": false, "logs": false },
+  "aliases": {
+    "services": "Services",
+    "instances": "Pods",
+    "endpoints": "Endpoints"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": true,
+    "topology": true,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "cpm",
     "columns": [
-      { "metric": "cpm", "label": "RPM", "unit": "rpm", "mqe": "cilium_service_protocol_cpm", "aggregation": "sum" },
-      { "metric": "respTime", "label": "Latency", "unit": "ms", "mqe": "cilium_service_protocol_call_duration/cilium_service_protocol_cpm/1000000", "aggregation": "avg" },
-      { "metric": "sla", "label": "Success Rate", "unit": "%", "mqe": "cilium_service_protocol_call_success_count/cilium_service_protocol_cpm*100", "aggregation": "avg" },
-      { "metric": "drop", "label": "TCP Drop", "mqe": "cilium_service_l4_read_pkg_drop_cpm + cilium_service_l4_write_pkg_drop_cpm", "aggregation": "sum" }
+      {
+        "metric": "cpm",
+        "label": "RPM",
+        "unit": "rpm",
+        "mqe": "cilium_service_protocol_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "respTime",
+        "label": "Latency",
+        "unit": "ms",
+        "mqe": "cilium_service_protocol_call_duration/cilium_service_protocol_cpm/1000000",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "sla",
+        "label": "Success Rate",
+        "unit": "%",
+        "mqe": "cilium_service_protocol_call_success_count/cilium_service_protocol_cpm*100",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "drop",
+        "label": "TCP Drop",
+        "mqe": "cilium_service_l4_read_pkg_drop_cpm + cilium_service_l4_write_pkg_drop_cpm",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Latency & errors", "size": "auto", "metrics": [
-        { "id": "respTime", "label": "Avg Latency", "tip": "Average protocol latency (ms).", "mqe": "cilium_service_protocol_call_duration/cilium_service_protocol_cpm/1000000", "unit": "ms", "aggregation": "avg" },
-        { "id": "successRate", "label": "Success Rate", "tip": "Successful calls / total calls.", "mqe": "cilium_service_protocol_call_success_count/cilium_service_protocol_cpm*100", "unit": "%", "aggregation": "avg" }
-      ]},
-      { "title": "Throughput", "size": "square", "metrics": [
-        { "id": "cpm", "label": "Protocol RPM", "tip": "Protocol calls per minute.", "mqe": "cilium_service_protocol_cpm", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Latency & errors",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "respTime",
+            "label": "Avg Latency",
+            "tip": "Average protocol latency (ms).",
+            "mqe": "cilium_service_protocol_call_duration/cilium_service_protocol_cpm/1000000",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "successRate",
+            "label": "Success Rate",
+            "tip": "Successful calls / total calls.",
+            "mqe": "cilium_service_protocol_call_success_count/cilium_service_protocol_cpm*100",
+            "unit": "%",
+            "aggregation": "avg"
+          }
+        ]
+      },
+      {
+        "title": "Throughput",
+        "size": "square",
+        "metrics": [
+          {
+            "id": "cpm",
+            "label": "Protocol RPM",
+            "tip": "Protocol calls per minute.",
+            "mqe": "cilium_service_protocol_cpm",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "l4_read", "title": "L4 Read Packages/min", "type": "line", "expressions": ["cilium_service_l4_read_pkg_cpm"], "span": 3, "rowSpan": 2 },
-      { "id": "l4_write", "title": "L4 Write Packages/min", "type": "line", "expressions": ["cilium_service_l4_write_pkg_cpm"], "span": 3, "rowSpan": 2 },
-      { "id": "tcp_drop", "title": "TCP Drop / min", "type": "line", "expressions": ["cilium_service_l4_read_pkg_drop_cpm", "cilium_service_l4_write_pkg_drop_cpm"], "expressionLabels": ["read", "write"], "span": 3, "rowSpan": 2 },
-      { "id": "tcp_drop_reason", "title": "TCP Drop by Reason", "type": "line", "expressions": ["cilium_service_l4_drop_reason_count"], "span": 3, "rowSpan": 2 },
-      { "id": "http_load", "title": "HTTP Load", "type": "line", "expressions": ["cilium_service_protocol_http_call_cpm", "cilium_service_protocol_http_call_success_count"], "expressionLabels": ["calls", "success"], "span": 4, "rowSpan": 2 },
-      { "id": "http_duration", "title": "HTTP Duration", "type": "line", "unit": "ms", "expressions": ["cilium_service_protocol_http_call_duration/cilium_service_protocol_http_call_cpm/1000000"], "span": 4, "rowSpan": 2 },
-      { "id": "http_status", "title": "HTTP Non-2xx Status", "type": "line", "expressions": ["cilium_service_protocol_http_status_1xx_cpm", "cilium_service_protocol_http_status_3xx_cpm", "cilium_service_protocol_http_status_4xx_cpm", "cilium_service_protocol_http_status_5xx_cpm"], "expressionLabels": ["1xx", "3xx", "4xx", "5xx"], "span": 4, "rowSpan": 2 },
-      { "id": "dns_load", "title": "DNS Load", "type": "line", "expressions": ["cilium_service_protocol_dns_call_cpm", "cilium_service_protocol_dns_call_success_count"], "expressionLabels": ["calls", "success"], "span": 4, "rowSpan": 2 },
-      { "id": "dns_duration", "title": "DNS Duration", "type": "line", "unit": "ms", "expressions": ["cilium_service_protocol_dns_call_duration/cilium_service_protocol_dns_call_cpm/1000000"], "span": 4, "rowSpan": 2 },
-      { "id": "dns_error", "title": "DNS Errors / min", "type": "line", "expressions": ["cilium_service_protocol_dns_error_count"], "span": 4, "rowSpan": 2 },
-      { "id": "kafka_load", "title": "Kafka Load", "type": "line", "expressions": ["cilium_service_protocol_kafka_call_cpm", "cilium_service_protocol_kafka_call_success_count"], "expressionLabels": ["calls", "success"], "span": 4, "rowSpan": 2 },
-      { "id": "kafka_duration", "title": "Kafka Duration", "type": "line", "unit": "ms", "expressions": ["cilium_service_protocol_kafka_call_duration/cilium_service_protocol_kafka_call_cpm/1000000"], "span": 4, "rowSpan": 2 },
-      { "id": "kafka_error", "title": "Kafka Errors / min", "type": "line", "expressions": ["cilium_service_protocol_kafka_call_error_count"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "l4_read",
+        "title": "L4 Read Packages/min",
+        "type": "line",
+        "expressions": [
+          "cilium_service_l4_read_pkg_cpm"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "l4_write",
+        "title": "L4 Write Packages/min",
+        "type": "line",
+        "expressions": [
+          "cilium_service_l4_write_pkg_cpm"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "tcp_drop",
+        "title": "TCP Drop / min",
+        "type": "line",
+        "expressions": [
+          "cilium_service_l4_read_pkg_drop_cpm",
+          "cilium_service_l4_write_pkg_drop_cpm"
+        ],
+        "expressionLabels": [
+          "read",
+          "write"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "tcp_drop_reason",
+        "title": "TCP Drop by Reason",
+        "type": "line",
+        "expressions": [
+          "cilium_service_l4_drop_reason_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "http_load",
+        "title": "HTTP Load",
+        "type": "line",
+        "expressions": [
+          "cilium_service_protocol_http_call_cpm",
+          "cilium_service_protocol_http_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "http_duration",
+        "title": "HTTP Duration",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "cilium_service_protocol_http_call_duration/cilium_service_protocol_http_call_cpm/1000000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "http_status",
+        "title": "HTTP Non-2xx Status",
+        "type": "line",
+        "expressions": [
+          "cilium_service_protocol_http_status_1xx_cpm",
+          "cilium_service_protocol_http_status_3xx_cpm",
+          "cilium_service_protocol_http_status_4xx_cpm",
+          "cilium_service_protocol_http_status_5xx_cpm"
+        ],
+        "expressionLabels": [
+          "1xx",
+          "3xx",
+          "4xx",
+          "5xx"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_load",
+        "title": "DNS Load",
+        "type": "line",
+        "expressions": [
+          "cilium_service_protocol_dns_call_cpm",
+          "cilium_service_protocol_dns_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_duration",
+        "title": "DNS Duration",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "cilium_service_protocol_dns_call_duration/cilium_service_protocol_dns_call_cpm/1000000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_error",
+        "title": "DNS Errors / min",
+        "type": "line",
+        "expressions": [
+          "cilium_service_protocol_dns_error_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "kafka_load",
+        "title": "Kafka Load",
+        "type": "line",
+        "expressions": [
+          "cilium_service_protocol_kafka_call_cpm",
+          "cilium_service_protocol_kafka_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "kafka_duration",
+        "title": "Kafka Duration",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "cilium_service_protocol_kafka_call_duration/cilium_service_protocol_kafka_call_cpm/1000000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "kafka_error",
+        "title": "Kafka Errors / min",
+        "type": "line",
+        "expressions": [
+          "cilium_service_protocol_kafka_call_error_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "l4_read", "title": "L4 Read Packages/min", "type": "line", "expressions": ["cilium_service_instance_l4_read_pkg_cpm"], "span": 3, "rowSpan": 2 },
-      { "id": "l4_write", "title": "L4 Write Packages/min", "type": "line", "expressions": ["cilium_service_instance_l4_write_pkg_cpm"], "span": 3, "rowSpan": 2 },
-      { "id": "http_load", "title": "HTTP Load", "type": "line", "expressions": ["cilium_service_instance_protocol_http_call_cpm", "cilium_service_instance_protocol_http_call_success_count"], "expressionLabels": ["calls", "success"], "span": 3, "rowSpan": 2 },
-      { "id": "http_status", "title": "HTTP Non-2xx Status", "type": "line", "expressions": ["cilium_service_instance_protocol_http_status_1xx_cpm", "cilium_service_instance_protocol_http_status_3xx_cpm", "cilium_service_instance_protocol_http_status_4xx_cpm", "cilium_service_instance_protocol_http_status_5xx_cpm"], "expressionLabels": ["1xx", "3xx", "4xx", "5xx"], "span": 3, "rowSpan": 2 },
-      { "id": "dns_load", "title": "DNS Load", "type": "line", "expressions": ["cilium_service_instance_protocol_dns_call_cpm", "cilium_service_instance_protocol_dns_call_success_count"], "expressionLabels": ["calls", "success"], "span": 4, "rowSpan": 2 },
-      { "id": "dns_error", "title": "DNS Errors", "type": "line", "expressions": ["cilium_service_instance_protocol_dns_error_count"], "span": 4, "rowSpan": 2 },
-      { "id": "kafka_load", "title": "Kafka Load", "type": "line", "expressions": ["cilium_service_instance_protocol_kafka_call_cpm", "cilium_service_instance_protocol_kafka_call_success_count"], "expressionLabels": ["calls", "success"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "l4_read",
+        "title": "L4 Read Packages/min",
+        "type": "line",
+        "expressions": [
+          "cilium_service_instance_l4_read_pkg_cpm"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "l4_write",
+        "title": "L4 Write Packages/min",
+        "type": "line",
+        "expressions": [
+          "cilium_service_instance_l4_write_pkg_cpm"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "http_load",
+        "title": "HTTP Load",
+        "type": "line",
+        "expressions": [
+          "cilium_service_instance_protocol_http_call_cpm",
+          "cilium_service_instance_protocol_http_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "http_status",
+        "title": "HTTP Non-2xx Status",
+        "type": "line",
+        "expressions": [
+          "cilium_service_instance_protocol_http_status_1xx_cpm",
+          "cilium_service_instance_protocol_http_status_3xx_cpm",
+          "cilium_service_instance_protocol_http_status_4xx_cpm",
+          "cilium_service_instance_protocol_http_status_5xx_cpm"
+        ],
+        "expressionLabels": [
+          "1xx",
+          "3xx",
+          "4xx",
+          "5xx"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_load",
+        "title": "DNS Load",
+        "type": "line",
+        "expressions": [
+          "cilium_service_instance_protocol_dns_call_cpm",
+          "cilium_service_instance_protocol_dns_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_error",
+        "title": "DNS Errors",
+        "type": "line",
+        "expressions": [
+          "cilium_service_instance_protocol_dns_error_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "kafka_load",
+        "title": "Kafka Load",
+        "type": "line",
+        "expressions": [
+          "cilium_service_instance_protocol_kafka_call_cpm",
+          "cilium_service_instance_protocol_kafka_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "http_load", "title": "HTTP Load", "type": "line", "expressions": ["cilium_endpoint_protocol_http_call_cpm", "cilium_endpoint_protocol_http_call_success_count"], "expressionLabels": ["calls", "success"], "span": 4, "rowSpan": 2 },
-      { "id": "http_duration", "title": "HTTP Duration", "type": "line", "unit": "ms", "expressions": ["cilium_endpoint_protocol_http_call_duration/cilium_endpoint_protocol_http_call_cpm/1000000"], "span": 4, "rowSpan": 2 },
-      { "id": "http_status", "title": "HTTP Non-2xx Status", "type": "line", "expressions": ["cilium_endpoint_protocol_http_status_1xx_cpm", "cilium_endpoint_protocol_http_status_3xx_cpm", "cilium_endpoint_protocol_http_status_4xx_cpm", "cilium_endpoint_protocol_http_status_5xx_cpm"], "expressionLabels": ["1xx", "3xx", "4xx", "5xx"], "span": 4, "rowSpan": 2 },
-      { "id": "dns_load", "title": "DNS Load", "type": "line", "expressions": ["cilium_endpoint_protocol_dns_call_cpm", "cilium_endpoint_protocol_dns_call_success_count"], "expressionLabels": ["calls", "success"], "span": 4, "rowSpan": 2 },
-      { "id": "dns_duration", "title": "DNS Duration", "type": "line", "unit": "ms", "expressions": ["cilium_endpoint_protocol_dns_call_duration/cilium_endpoint_protocol_dns_call_cpm/1000000"], "span": 4, "rowSpan": 2 },
-      { "id": "dns_error", "title": "DNS Errors", "type": "line", "expressions": ["cilium_endpoint_protocol_dns_error_count"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "http_load",
+        "title": "HTTP Load",
+        "type": "line",
+        "expressions": [
+          "cilium_endpoint_protocol_http_call_cpm",
+          "cilium_endpoint_protocol_http_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "http_duration",
+        "title": "HTTP Duration",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "cilium_endpoint_protocol_http_call_duration/cilium_endpoint_protocol_http_call_cpm/1000000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "http_status",
+        "title": "HTTP Non-2xx Status",
+        "type": "line",
+        "expressions": [
+          "cilium_endpoint_protocol_http_status_1xx_cpm",
+          "cilium_endpoint_protocol_http_status_3xx_cpm",
+          "cilium_endpoint_protocol_http_status_4xx_cpm",
+          "cilium_endpoint_protocol_http_status_5xx_cpm"
+        ],
+        "expressionLabels": [
+          "1xx",
+          "3xx",
+          "4xx",
+          "5xx"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_load",
+        "title": "DNS Load",
+        "type": "line",
+        "expressions": [
+          "cilium_endpoint_protocol_dns_call_cpm",
+          "cilium_endpoint_protocol_dns_call_success_count"
+        ],
+        "expressionLabels": [
+          "calls",
+          "success"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_duration",
+        "title": "DNS Duration",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "cilium_endpoint_protocol_dns_call_duration/cilium_endpoint_protocol_dns_call_cpm/1000000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "dns_error",
+        "title": "DNS Errors",
+        "type": "line",
+        "expressions": [
+          "cilium_endpoint_protocol_dns_error_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ]
   },
   "topology": {
     "nodeMetrics": [
-      { "id": "cpm", "label": "RPM", "mqe": "cilium_service_protocol_cpm", "unit": "rpm", "role": "center", "aggregation": "avg" },
-      { "id": "success", "label": "Success %", "mqe": "cilium_service_protocol_call_success_count/cilium_service_protocol_cpm*100", "unit": "%", "role": "ring", "aggregation": "avg" },
-      { "id": "respTime", "label": "Latency", "mqe": "cilium_service_protocol_call_duration/cilium_service_protocol_cpm/1000000", "unit": "ms", "role": "secondary", "aggregation": "avg" }
+      {
+        "id": "cpm",
+        "label": "RPM",
+        "mqe": "cilium_service_protocol_cpm",
+        "unit": "rpm",
+        "role": "center",
+        "aggregation": "avg"
+      },
+      {
+        "id": "success",
+        "label": "Success %",
+        "mqe": "cilium_service_protocol_call_success_count/cilium_service_protocol_cpm*100",
+        "unit": "%",
+        "role": "ring",
+        "aggregation": "avg"
+      },
+      {
+        "id": "respTime",
+        "label": "Latency",
+        "mqe": "cilium_service_protocol_call_duration/cilium_service_protocol_cpm/1000000",
+        "unit": "ms",
+        "role": "secondary",
+        "aggregation": "avg"
+      }
     ],
     "linkServerMetrics": [
-      { "id": "cpm", "label": "HTTP RPM", "mqe": "cilium_service_relation_server_protocol_http_call_cpm", "unit": "rpm", "role": "lineServer", "aggregation": "avg" },
-      { "id": "respTime", "label": "Avg Latency", "mqe": "cilium_service_relation_server_protocol_http_call_duration/cilium_service_relation_server_protocol_http_call_cpm/1000000", "unit": "ms", "aggregation": "avg" }
+      {
+        "id": "cpm",
+        "label": "HTTP RPM",
+        "mqe": "cilium_service_relation_server_protocol_http_call_cpm",
+        "unit": "rpm",
+        "role": "lineServer",
+        "aggregation": "avg"
+      },
+      {
+        "id": "respTime",
+        "label": "Avg Latency",
+        "mqe": "cilium_service_relation_server_protocol_http_call_duration/cilium_service_relation_server_protocol_http_call_cpm/1000000",
+        "unit": "ms",
+        "aggregation": "avg"
+      }
     ]
   }
 }

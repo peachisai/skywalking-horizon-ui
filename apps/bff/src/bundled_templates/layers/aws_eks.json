@@ -1,46 +1,266 @@
 {
   "key": "AWS_EKS",
   "alias": "AWS EKS",
+  "group": "AWS",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-aws-eks-monitoring/",
-  "aliases": { "services": "EKS services", "instances": "Nodes" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "EKS services",
+    "instances": "Nodes"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "podCpu",
     "columns": [
-      { "metric": "podCpu", "label": "Pod CPU %", "unit": "%", "mqe": "avg(eks_cluster_service_pod_cpu_utilization)", "aggregation": "avg" },
-      { "metric": "podMem", "label": "Pod Mem %", "unit": "%", "mqe": "avg(eks_cluster_service_pod_memory_utilization)", "aggregation": "avg" },
-      { "metric": "txErr", "label": "TX Err", "mqe": "avg(eks_cluster_service_pod_net_tx_error)", "aggregation": "avg" },
-      { "metric": "rxErr", "label": "RX Err", "mqe": "avg(eks_cluster_service_pod_net_rx_error)", "aggregation": "avg" }
+      {
+        "metric": "podCpu",
+        "label": "Pod CPU %",
+        "unit": "%",
+        "mqe": "avg(eks_cluster_service_pod_cpu_utilization)",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "podMem",
+        "label": "Pod Mem %",
+        "unit": "%",
+        "mqe": "avg(eks_cluster_service_pod_memory_utilization)",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "txErr",
+        "label": "TX Err",
+        "mqe": "avg(eks_cluster_service_pod_net_tx_error)",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "rxErr",
+        "label": "RX Err",
+        "mqe": "avg(eks_cluster_service_pod_net_rx_error)",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Resource", "size": "auto", "metrics": [
-        { "id": "podCpu", "label": "Pod CPU %", "tip": "Service pods CPU utilization.", "mqe": "avg(eks_cluster_service_pod_cpu_utilization)", "unit": "%", "aggregation": "avg" },
-        { "id": "podMem", "label": "Pod Mem %", "tip": "Service pods memory utilization.", "mqe": "avg(eks_cluster_service_pod_memory_utilization)", "unit": "%", "aggregation": "avg" }
-      ]}
+      {
+        "title": "Resource",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "podCpu",
+            "label": "Pod CPU %",
+            "tip": "Service pods CPU utilization.",
+            "mqe": "avg(eks_cluster_service_pod_cpu_utilization)",
+            "unit": "%",
+            "aggregation": "avg"
+          },
+          {
+            "id": "podMem",
+            "label": "Pod Mem %",
+            "tip": "Service pods memory utilization.",
+            "mqe": "avg(eks_cluster_service_pod_memory_utilization)",
+            "unit": "%",
+            "aggregation": "avg"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "pod_cpu", "title": "Pod CPU Utilization (%)", "type": "line", "unit": "%", "expressions": ["eks_cluster_service_pod_cpu_utilization"], "span": 4, "rowSpan": 2 },
-      { "id": "pod_mem", "title": "Pod Memory Utilization (%)", "type": "line", "unit": "%", "expressions": ["eks_cluster_service_pod_memory_utilization"], "span": 4, "rowSpan": 2 },
-      { "id": "pod_net_rx", "title": "Pod Network RX (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["eks_cluster_service_pod_net_rx_bytes/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "pod_net_rx_err", "title": "Pod RX Errors / s", "type": "line", "expressions": ["eks_cluster_service_pod_net_rx_error"], "span": 4, "rowSpan": 2 },
-      { "id": "pod_net_tx", "title": "Pod Network TX (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["eks_cluster_service_pod_net_tx_bytes/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "pod_net_tx_err", "title": "Pod TX Errors / s", "type": "line", "expressions": ["eks_cluster_service_pod_net_tx_error"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "pod_cpu",
+        "title": "Pod CPU Utilization (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "eks_cluster_service_pod_cpu_utilization"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "pod_mem",
+        "title": "Pod Memory Utilization (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "eks_cluster_service_pod_memory_utilization"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "pod_net_rx",
+        "title": "Pod Network RX (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "eks_cluster_service_pod_net_rx_bytes/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "pod_net_rx_err",
+        "title": "Pod RX Errors / s",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_service_pod_net_rx_error"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "pod_net_tx",
+        "title": "Pod Network TX (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "eks_cluster_service_pod_net_tx_bytes/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "pod_net_tx_err",
+        "title": "Pod TX Errors / s",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_service_pod_net_tx_error"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "pods", "title": "Pod Count", "type": "line", "expressions": ["eks_cluster_node_pod_number"], "span": 3, "rowSpan": 2 },
-      { "id": "node_cpu", "title": "CPU Utilization (%)", "type": "line", "unit": "%", "expressions": ["eks_cluster_node_cpu_utilization"], "span": 3, "rowSpan": 2 },
-      { "id": "node_mem", "title": "Memory Utilization (%)", "type": "line", "unit": "%", "expressions": ["eks_cluster_node_memory_utilization"], "span": 3, "rowSpan": 2 },
-      { "id": "node_fs", "title": "FS Utilization (%)", "type": "line", "unit": "%", "expressions": ["eks_cluster_node_fs_utilization"], "span": 3, "rowSpan": 2 },
-      { "id": "node_net_rx", "title": "Network RX (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["eks_cluster_node_net_rx_bytes/1024", "eks_cluster_node_net_rx_error"], "expressionLabels": ["bytes", "errors"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "node_net_tx", "title": "Network TX (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["eks_cluster_node_net_tx_bytes/1024", "eks_cluster_node_net_tx_error"], "expressionLabels": ["bytes", "errors"], "expressionAxes": [0, 1], "span": 6, "rowSpan": 2 },
-      { "id": "disk", "title": "Disk IO (B/s)", "type": "line", "expressions": ["eks_cluster_node_disk_io_read", "eks_cluster_node_disk_io_write"], "expressionLabels": ["read", "write"], "span": 6, "rowSpan": 2 },
-      { "id": "pod_cpu", "title": "Pod CPU on Node", "type": "line", "unit": "%", "expressions": ["eks_cluster_node_pod_cpu_utilization"], "span": 6, "rowSpan": 2 },
-      { "id": "pod_mem", "title": "Pod Memory on Node", "type": "line", "unit": "%", "expressions": ["eks_cluster_node_pod_memory_utilization"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "pods",
+        "title": "Pod Count",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_node_pod_number"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "node_cpu",
+        "title": "CPU Utilization (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "eks_cluster_node_cpu_utilization"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "node_mem",
+        "title": "Memory Utilization (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "eks_cluster_node_memory_utilization"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "node_fs",
+        "title": "FS Utilization (%)",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "eks_cluster_node_fs_utilization"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "node_net_rx",
+        "title": "Network RX (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "eks_cluster_node_net_rx_bytes/1024",
+          "eks_cluster_node_net_rx_error"
+        ],
+        "expressionLabels": [
+          "bytes",
+          "errors"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "node_net_tx",
+        "title": "Network TX (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "eks_cluster_node_net_tx_bytes/1024",
+          "eks_cluster_node_net_tx_error"
+        ],
+        "expressionLabels": [
+          "bytes",
+          "errors"
+        ],
+        "expressionAxes": [
+          0,
+          1
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk",
+        "title": "Disk IO (B/s)",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_node_disk_io_read",
+          "eks_cluster_node_disk_io_write"
+        ],
+        "expressionLabels": [
+          "read",
+          "write"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "pod_cpu",
+        "title": "Pod CPU on Node",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "eks_cluster_node_pod_cpu_utilization"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "pod_mem",
+        "title": "Pod Memory on Node",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "eks_cluster_node_pod_memory_utilization"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

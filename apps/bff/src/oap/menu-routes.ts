@@ -185,6 +185,7 @@ function deriveLayer(
       active,
       level,
       normal,
+      group: tpl.group,
       documentLink: tpl.documentLink ?? item?.documentLink ?? undefined,
       slots: tpl.slots,
       caps: componentsToCaps(tpl.components),

@@ -1,69 +1,490 @@
 {
   "key": "BANYANDB",
   "alias": "BanyanDB",
+  "group": "Databases",
   "color": "var(--sw-cyan)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/banyandb/banyandb-introduction/",
-  "aliases": { "services": "BanyanDB clusters", "instances": "Nodes" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "BanyanDB clusters",
+    "instances": "Nodes"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "writeRate",
     "columns": [
-      { "metric": "writeRate", "label": "Write/s", "mqe": "latest(meter_banyandb_write_rate)", "aggregation": "sum" },
-      { "metric": "queryRate", "label": "Query/s", "mqe": "latest(meter_banyandb_query_rate{method='query'})", "aggregation": "sum" },
-      { "metric": "errRate", "label": "Err/s", "mqe": "latest(meter_banyandb_write_and_query_errors_rate)", "aggregation": "sum" },
-      { "metric": "active", "label": "Active", "mqe": "meter_banyandb_active_instance", "aggregation": "sum" }
+      {
+        "metric": "writeRate",
+        "label": "Write/s",
+        "mqe": "latest(meter_banyandb_write_rate)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "queryRate",
+        "label": "Query/s",
+        "mqe": "latest(meter_banyandb_query_rate{method='query'})",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "errRate",
+        "label": "Err/s",
+        "mqe": "latest(meter_banyandb_write_and_query_errors_rate)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "active",
+        "label": "Active",
+        "mqe": "meter_banyandb_active_instance",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Throughput", "size": "auto", "metrics": [
-        { "id": "writeRate", "label": "Write/s", "tip": "Writes per second across the cluster.", "mqe": "latest(meter_banyandb_write_rate)", "aggregation": "sum" },
-        { "id": "queryRate", "label": "Query/s", "tip": "Queries per second.", "mqe": "latest(meter_banyandb_query_rate{method='query'})", "aggregation": "sum" },
-        { "id": "errRate", "label": "Errors/s", "tip": "Combined write + query error rate.", "mqe": "latest(meter_banyandb_write_and_query_errors_rate)", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "writeRate",
+            "label": "Write/s",
+            "tip": "Writes per second across the cluster.",
+            "mqe": "latest(meter_banyandb_write_rate)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "queryRate",
+            "label": "Query/s",
+            "tip": "Queries per second.",
+            "mqe": "latest(meter_banyandb_query_rate{method='query'})",
+            "aggregation": "sum"
+          },
+          {
+            "id": "errRate",
+            "label": "Errors/s",
+            "tip": "Combined write + query error rate.",
+            "mqe": "latest(meter_banyandb_write_and_query_errors_rate)",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "write_rate", "title": "Write Rate", "type": "line", "expressions": ["latest(meter_banyandb_write_rate)"], "span": 4, "rowSpan": 2 },
-      { "id": "query_rate", "title": "Query Rate", "type": "line", "expressions": ["latest(meter_banyandb_query_rate{method='query'})"], "span": 4, "rowSpan": 2 },
-      { "id": "err_rate", "title": "Write/Query Error Rate", "type": "line", "expressions": ["latest(meter_banyandb_write_and_query_errors_rate)"], "span": 4, "rowSpan": 2 },
-      { "id": "memory", "title": "Total Memory (GB)", "type": "line", "unit": "GB", "expressions": ["latest(meter_banyandb_total_memory/1024/1024/1024)"], "span": 4, "rowSpan": 2 },
-      { "id": "disk", "title": "Disk Usage (GB)", "type": "line", "unit": "GB", "expressions": ["latest(meter_banyandb_disk_usage/1024/1024/1024)"], "span": 4, "rowSpan": 2 },
-      { "id": "cpu", "title": "Total CPU", "type": "line", "expressions": ["latest(meter_banyandb_total_cpu)"], "span": 4, "rowSpan": 2 },
-      { "id": "active", "title": "Active Instances", "type": "line", "expressions": ["meter_banyandb_active_instance"], "span": 4, "rowSpan": 2 },
-      { "id": "etcd", "title": "Etcd Operation Rate", "type": "line", "expressions": ["latest(meter_banyandb_etcd_operation_rate)"], "span": 4, "rowSpan": 2 },
-      { "id": "cpu_usage", "title": "CPU Usage", "type": "line", "expressions": ["meter_banyandb_cpu_usage/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "rss", "title": "RSS Memory", "type": "line", "expressions": ["meter_banyandb_rss_memory_usage/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "disk_all", "title": "Disk Usage (all)", "type": "line", "expressions": ["meter_banyandb_disk_usage_all/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "network", "title": "Network (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["meter_banyandb_network_usage_recv/1024", "meter_banyandb_network_usage_sent/1024"], "expressionLabels": ["recv", "sent"], "span": 4, "rowSpan": 2 },
-      { "id": "merge", "title": "Merge File Latency", "type": "line", "expressions": ["meter_banyandb_merge_file_latency/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "merge_data", "title": "Merge File Data", "type": "line", "expressions": ["meter_banyandb_merge_file_data"], "span": 4, "rowSpan": 2 },
-      { "id": "merge_parts", "title": "Merge File Partitions", "type": "line", "expressions": ["meter_banyandb_merge_file_partitions"], "span": 4, "rowSpan": 2 },
-      { "id": "stream_write", "title": "Stream Write Rate", "type": "line", "expressions": ["meter_banyandb_stream_write_rate"], "span": 4, "rowSpan": 2 },
-      { "id": "group_write", "title": "Group Write Rate", "type": "line", "expressions": ["meter_banyandb_storage_write_rate/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "series_write", "title": "Series Write Rate", "type": "line", "expressions": ["meter_banyandb_series_write_rate/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "query_latency", "title": "Query Latency", "type": "line", "expressions": ["meter_banyandb_query_latency/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "totals", "title": "Total Data + Series + Documents", "type": "line", "expressions": ["meter_banyandb_total_data", "meter_banyandb_total_series", "meter_banyandb_total_document"], "expressionLabels": ["data", "series", "documents"], "span": 8, "rowSpan": 2 },
-      { "id": "term_search", "title": "Term Search Rate", "type": "line", "expressions": ["meter_banyandb_term_search_rate/1000"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "write_rate",
+        "title": "Write Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_write_rate)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "query_rate",
+        "title": "Query Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_query_rate{method='query'})"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err_rate",
+        "title": "Write/Query Error Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_write_and_query_errors_rate)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory",
+        "title": "Total Memory (GB)",
+        "type": "line",
+        "unit": "GB",
+        "expressions": [
+          "latest(meter_banyandb_total_memory/1024/1024/1024)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk",
+        "title": "Disk Usage (GB)",
+        "type": "line",
+        "unit": "GB",
+        "expressions": [
+          "latest(meter_banyandb_disk_usage/1024/1024/1024)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu",
+        "title": "Total CPU",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_total_cpu)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "active",
+        "title": "Active Instances",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_active_instance"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "etcd",
+        "title": "Etcd Operation Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_etcd_operation_rate)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu_usage",
+        "title": "CPU Usage",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_cpu_usage/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "rss",
+        "title": "RSS Memory",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_rss_memory_usage/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk_all",
+        "title": "Disk Usage (all)",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_disk_usage_all/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "network",
+        "title": "Network (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_banyandb_network_usage_recv/1024",
+          "meter_banyandb_network_usage_sent/1024"
+        ],
+        "expressionLabels": [
+          "recv",
+          "sent"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "merge",
+        "title": "Merge File Latency",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_merge_file_latency/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "merge_data",
+        "title": "Merge File Data",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_merge_file_data"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "merge_parts",
+        "title": "Merge File Partitions",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_merge_file_partitions"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "stream_write",
+        "title": "Stream Write Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_stream_write_rate"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "group_write",
+        "title": "Group Write Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_storage_write_rate/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "series_write",
+        "title": "Series Write Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_series_write_rate/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "query_latency",
+        "title": "Query Latency",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_query_latency/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "totals",
+        "title": "Total Data + Series + Documents",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_total_data",
+          "meter_banyandb_total_series",
+          "meter_banyandb_total_document"
+        ],
+        "expressionLabels": [
+          "data",
+          "series",
+          "documents"
+        ],
+        "span": 8,
+        "rowSpan": 2
+      },
+      {
+        "id": "term_search",
+        "title": "Term Search Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_term_search_rate/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "write_rate", "title": "Write Rate", "type": "line", "expressions": ["latest(meter_banyandb_instance_write_rate)"], "span": 4, "rowSpan": 2 },
-      { "id": "query_rate", "title": "Query Rate", "type": "line", "expressions": ["latest(meter_banyandb_instance_query_rate{method='query'})"], "span": 4, "rowSpan": 2 },
-      { "id": "err_rate", "title": "Error Rate", "type": "line", "expressions": ["latest(meter_banyandb_instance_write_and_query_errors_rate)"], "span": 4, "rowSpan": 2 },
-      { "id": "memory", "title": "Total Memory (GB)", "type": "line", "unit": "GB", "expressions": ["latest(meter_banyandb_instance_total_memory/1024/1024/1024)"], "span": 4, "rowSpan": 2 },
-      { "id": "disk", "title": "Disk Usage (GB)", "type": "line", "unit": "GB", "expressions": ["latest(meter_banyandb_instance_disk_usage/1024/1024/1024)"], "span": 4, "rowSpan": 2 },
-      { "id": "cpu", "title": "CPU", "type": "line", "expressions": ["meter_banyandb_instance_cpu_usage/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "etcd", "title": "Etcd Operation Rate", "type": "line", "expressions": ["latest(meter_banyandb_instance_etcd_operation_rate)"], "span": 4, "rowSpan": 2 },
-      { "id": "rss", "title": "RSS Memory", "type": "line", "expressions": ["meter_banyandb_instance_rss_memory_usage/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "network", "title": "Network (KB/s)", "type": "line", "unit": "KB/s", "expressions": ["meter_banyandb_instance_network_usage_recv/1024", "meter_banyandb_instance_network_usage_sent/1024"], "expressionLabels": ["recv", "sent"], "span": 4, "rowSpan": 2 },
-      { "id": "totals", "title": "Total Data + Series", "type": "line", "expressions": ["meter_banyandb_instance_total_data", "meter_banyandb_instance_total_series"], "expressionLabels": ["data", "series"], "span": 6, "rowSpan": 2 },
-      { "id": "merge", "title": "Merge File Latency / Data / Partitions", "type": "line", "expressions": ["meter_banyandb_instance_merge_file_latency/1000", "meter_banyandb_instance_merge_file_data", "meter_banyandb_instance_merge_file_partitions"], "expressionLabels": ["latency", "data", "partitions"], "span": 6, "rowSpan": 2 },
-      { "id": "stream_write", "title": "Stream Write Rate", "type": "line", "expressions": ["meter_banyandb_instance_stream_write_rate"], "span": 4, "rowSpan": 2 },
-      { "id": "group_write", "title": "Group Write Rate", "type": "line", "expressions": ["meter_banyandb_instance_storage_write_rate/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "series_write", "title": "Series Write Rate", "type": "line", "expressions": ["meter_banyandb_instance_series_write_rate/1000"], "span": 4, "rowSpan": 2 },
-      { "id": "query_latency", "title": "Query Latency", "type": "line", "expressions": ["meter_banyandb_instance_query_latency/1000"], "span": 6, "rowSpan": 2 },
-      { "id": "term_search", "title": "Term Search Rate", "type": "line", "expressions": ["meter_banyandb_instance_term_search_rate/1000"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "write_rate",
+        "title": "Write Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_instance_write_rate)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "query_rate",
+        "title": "Query Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_instance_query_rate{method='query'})"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "err_rate",
+        "title": "Error Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_instance_write_and_query_errors_rate)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory",
+        "title": "Total Memory (GB)",
+        "type": "line",
+        "unit": "GB",
+        "expressions": [
+          "latest(meter_banyandb_instance_total_memory/1024/1024/1024)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "disk",
+        "title": "Disk Usage (GB)",
+        "type": "line",
+        "unit": "GB",
+        "expressions": [
+          "latest(meter_banyandb_instance_disk_usage/1024/1024/1024)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "cpu",
+        "title": "CPU",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_cpu_usage/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "etcd",
+        "title": "Etcd Operation Rate",
+        "type": "line",
+        "expressions": [
+          "latest(meter_banyandb_instance_etcd_operation_rate)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "rss",
+        "title": "RSS Memory",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_rss_memory_usage/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "network",
+        "title": "Network (KB/s)",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_banyandb_instance_network_usage_recv/1024",
+          "meter_banyandb_instance_network_usage_sent/1024"
+        ],
+        "expressionLabels": [
+          "recv",
+          "sent"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "totals",
+        "title": "Total Data + Series",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_total_data",
+          "meter_banyandb_instance_total_series"
+        ],
+        "expressionLabels": [
+          "data",
+          "series"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "merge",
+        "title": "Merge File Latency / Data / Partitions",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_merge_file_latency/1000",
+          "meter_banyandb_instance_merge_file_data",
+          "meter_banyandb_instance_merge_file_partitions"
+        ],
+        "expressionLabels": [
+          "latency",
+          "data",
+          "partitions"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "stream_write",
+        "title": "Stream Write Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_stream_write_rate"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "group_write",
+        "title": "Group Write Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_storage_write_rate/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "series_write",
+        "title": "Series Write Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_series_write_rate/1000"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "query_latency",
+        "title": "Query Latency",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_query_latency/1000"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "term_search",
+        "title": "Term Search Rate",
+        "type": "line",
+        "expressions": [
+          "meter_banyandb_instance_term_search_rate/1000"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

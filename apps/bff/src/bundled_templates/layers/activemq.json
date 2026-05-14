@@ -1,59 +1,416 @@
 {
   "key": "ACTIVEMQ",
   "alias": "ActiveMQ",
+  "group": "MQ",
   "color": "var(--sw-purple)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-activemq-monitoring/",
-  "aliases": { "services": "ActiveMQ clusters", "instances": "Brokers", "endpoints": "Destinations" },
-  "components": { "service": true, "instances": true, "endpoints": true, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "ActiveMQ clusters",
+    "instances": "Brokers",
+    "endpoints": "Destinations"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": true,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "enqueue",
     "columns": [
-      { "metric": "enqueue", "label": "Enqueue/s", "mqe": "meter_activemq_cluster_enqueue_rate", "aggregation": "avg" },
-      { "metric": "dequeue", "label": "Dequeue/s", "mqe": "meter_activemq_cluster_dequeue_rate", "aggregation": "avg" },
-      { "metric": "load", "label": "System Load", "mqe": "meter_activemq_cluster_system_load_average/10000", "aggregation": "avg" },
-      { "metric": "threads", "label": "Threads", "mqe": "meter_activemq_cluster_thread_count", "aggregation": "avg" }
+      {
+        "metric": "enqueue",
+        "label": "Enqueue/s",
+        "mqe": "meter_activemq_cluster_enqueue_rate",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "dequeue",
+        "label": "Dequeue/s",
+        "mqe": "meter_activemq_cluster_dequeue_rate",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "load",
+        "label": "System Load",
+        "mqe": "meter_activemq_cluster_system_load_average/10000",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "threads",
+        "label": "Threads",
+        "mqe": "meter_activemq_cluster_thread_count",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Throughput", "size": "auto", "metrics": [
-        { "id": "enqueue", "label": "Enqueue/s", "tip": "Messages enqueued per second.", "mqe": "meter_activemq_cluster_enqueue_rate", "aggregation": "avg" },
-        { "id": "dequeue", "label": "Dequeue/s", "tip": "Messages dequeued per second.", "mqe": "meter_activemq_cluster_dequeue_rate", "aggregation": "avg" },
-        { "id": "expired", "label": "Expired/s", "tip": "Messages that expired before consumption.", "mqe": "meter_activemq_cluster_expired_rate", "aggregation": "avg" }
-      ]}
+      {
+        "title": "Throughput",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "enqueue",
+            "label": "Enqueue/s",
+            "tip": "Messages enqueued per second.",
+            "mqe": "meter_activemq_cluster_enqueue_rate",
+            "aggregation": "avg"
+          },
+          {
+            "id": "dequeue",
+            "label": "Dequeue/s",
+            "tip": "Messages dequeued per second.",
+            "mqe": "meter_activemq_cluster_dequeue_rate",
+            "aggregation": "avg"
+          },
+          {
+            "id": "expired",
+            "label": "Expired/s",
+            "tip": "Messages that expired before consumption.",
+            "mqe": "meter_activemq_cluster_expired_rate",
+            "aggregation": "avg"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "load", "title": "System Load Average", "type": "line", "expressions": ["meter_activemq_cluster_system_load_average/10000"], "span": 3, "rowSpan": 2 },
-      { "id": "threads", "title": "Thread Count", "type": "line", "expressions": ["meter_activemq_cluster_thread_count"], "span": 3, "rowSpan": 2 },
-      { "id": "heap_used", "title": "Heap Used (MB)", "type": "line", "unit": "MB", "expressions": ["meter_activemq_cluster_heap_memory_usage_used/1024/1024"], "span": 3, "rowSpan": 2 },
-      { "id": "heap_max", "title": "Heap Max (MB)", "type": "line", "unit": "MB", "expressions": ["latest(aggregate_labels(meter_activemq_cluster_heap_memory_usage_max,sum))/1024/1024"], "span": 3, "rowSpan": 2 },
-      { "id": "enqueue_dequeue", "title": "Enqueue / Dequeue / Dispatch /s", "type": "line", "expressions": ["meter_activemq_cluster_enqueue_rate", "meter_activemq_cluster_dequeue_rate", "meter_activemq_cluster_dispatch_rate"], "expressionLabels": ["enqueue", "dequeue", "dispatch"], "span": 6, "rowSpan": 2 },
-      { "id": "expired_rate", "title": "Expired /s", "type": "line", "expressions": ["meter_activemq_cluster_expired_rate"], "span": 6, "rowSpan": 2 },
-      { "id": "enqueue_time", "title": "Enqueue Time", "type": "line", "unit": "s", "expressions": ["meter_activemq_cluster_average_enqueue_time/1000", "meter_activemq_cluster_max_enqueue_time/1000"], "expressionLabels": ["avg", "max"], "span": 6, "rowSpan": 2 },
-      { "id": "gc_counts", "title": "GC Counts (G1+Parallel)", "type": "line", "expressions": ["view_as_seq(meter_activemq_cluster_gc_g1_old_collection_count,meter_activemq_cluster_gc_parallel_old_collection_count)", "view_as_seq(meter_activemq_cluster_gc_g1_young_collection_count,meter_activemq_cluster_gc_parallel_young_collection_count)"], "expressionLabels": ["old", "young"], "span": 6, "rowSpan": 2 },
-      { "id": "gc_time", "title": "GC Time (ms)", "type": "line", "unit": "ms", "expressions": ["view_as_seq(meter_activemq_cluster_gc_g1_old_collection_time,meter_activemq_cluster_gc_parallel_old_collection_time)", "view_as_seq(meter_activemq_cluster_gc_g1_young_collection_time,meter_activemq_cluster_gc_parallel_young_collection_time)"], "expressionLabels": ["old", "young"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "load",
+        "title": "System Load Average",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_cluster_system_load_average/10000"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "threads",
+        "title": "Thread Count",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_cluster_thread_count"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "heap_used",
+        "title": "Heap Used (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_activemq_cluster_heap_memory_usage_used/1024/1024"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "heap_max",
+        "title": "Heap Max (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "latest(aggregate_labels(meter_activemq_cluster_heap_memory_usage_max,sum))/1024/1024"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "enqueue_dequeue",
+        "title": "Enqueue / Dequeue / Dispatch /s",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_cluster_enqueue_rate",
+          "meter_activemq_cluster_dequeue_rate",
+          "meter_activemq_cluster_dispatch_rate"
+        ],
+        "expressionLabels": [
+          "enqueue",
+          "dequeue",
+          "dispatch"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "expired_rate",
+        "title": "Expired /s",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_cluster_expired_rate"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "enqueue_time",
+        "title": "Enqueue Time",
+        "type": "line",
+        "unit": "s",
+        "expressions": [
+          "meter_activemq_cluster_average_enqueue_time/1000",
+          "meter_activemq_cluster_max_enqueue_time/1000"
+        ],
+        "expressionLabels": [
+          "avg",
+          "max"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "gc_counts",
+        "title": "GC Counts (G1+Parallel)",
+        "type": "line",
+        "expressions": [
+          "view_as_seq(meter_activemq_cluster_gc_g1_old_collection_count,meter_activemq_cluster_gc_parallel_old_collection_count)",
+          "view_as_seq(meter_activemq_cluster_gc_g1_young_collection_count,meter_activemq_cluster_gc_parallel_young_collection_count)"
+        ],
+        "expressionLabels": [
+          "old",
+          "young"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "gc_time",
+        "title": "GC Time (ms)",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "view_as_seq(meter_activemq_cluster_gc_g1_old_collection_time,meter_activemq_cluster_gc_parallel_old_collection_time)",
+          "view_as_seq(meter_activemq_cluster_gc_g1_young_collection_time,meter_activemq_cluster_gc_parallel_young_collection_time)"
+        ],
+        "expressionLabels": [
+          "old",
+          "young"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "slave", "title": "Slave Broker", "type": "line", "expressions": ["latest(meter_activemq_broker_state)"], "span": 3, "rowSpan": 2 },
-      { "id": "uptime", "title": "Uptime (hours)", "type": "line", "expressions": ["latest(meter_activemq_broker_uptime)/1000/60/60"], "span": 3, "rowSpan": 2 },
-      { "id": "conns", "title": "Connections", "type": "line", "expressions": ["meter_activemq_broker_current_connections"], "span": 3, "rowSpan": 2 },
-      { "id": "msg_size", "title": "Message Size (B)", "type": "line", "expressions": ["aggregate_labels(meter_activemq_broker_average_message_size,avg)", "aggregate_labels(meter_activemq_broker_max_message_size,max)"], "expressionLabels": ["avg", "max"], "span": 3, "rowSpan": 2 },
-      { "id": "producer_count", "title": "Producer Count", "type": "line", "expressions": ["aggregate_labels(meter_activemq_broker_producer_count,sum)", "latest(aggregate_labels(meter_activemq_broker_current_producer_count,sum))"], "expressionLabels": ["increased", "current"], "span": 4, "rowSpan": 2 },
-      { "id": "consumer_count", "title": "Consumer Count", "type": "line", "expressions": ["aggregate_labels(meter_activemq_broker_consumer_count,sum)", "latest(aggregate_labels(meter_activemq_broker_current_consumer_count,sum))"], "expressionLabels": ["increased", "current"], "span": 4, "rowSpan": 2 },
-      { "id": "eq_deq", "title": "Enqueue/Dequeue Count", "type": "line", "expressions": ["aggregate_labels(meter_activemq_broker_enqueue_count,sum)", "aggregate_labels(meter_activemq_broker_dequeue_count,sum)"], "expressionLabels": ["enqueue", "dequeue"], "span": 4, "rowSpan": 2 },
-      { "id": "eq_deq_rate", "title": "Enqueue/Dequeue Rate", "type": "line", "expressions": ["aggregate_labels(meter_activemq_broker_enqueue_rate,avg)", "aggregate_labels(meter_activemq_broker_dequeue_rate,avg)"], "expressionLabels": ["enqueue", "dequeue"], "span": 4, "rowSpan": 2 },
-      { "id": "memory_usage", "title": "Memory Usage (MB)", "type": "line", "unit": "MB", "expressions": ["aggregate_labels(meter_activemq_broker_memory_usage,sum)/1024/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "limits", "title": "Usage Limits (GB)", "type": "line", "unit": "GB", "expressions": ["aggregate_labels(meter_activemq_broker_memory_limit,sum)/1024/1024/1024", "aggregate_labels(meter_activemq_broker_store_limit,sum)/1024/1024/1024", "aggregate_labels(meter_activemq_broker_temp_limit,sum)/1024/1024/1024"], "expressionLabels": ["memory", "store", "temp"], "span": 4, "rowSpan": 2 }
+      {
+        "id": "slave",
+        "title": "Slave Broker",
+        "type": "line",
+        "expressions": [
+          "latest(meter_activemq_broker_state)"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "uptime",
+        "title": "Uptime (hours)",
+        "type": "line",
+        "expressions": [
+          "latest(meter_activemq_broker_uptime)/1000/60/60"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Connections",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_broker_current_connections"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "msg_size",
+        "title": "Message Size (B)",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_average_message_size,avg)",
+          "aggregate_labels(meter_activemq_broker_max_message_size,max)"
+        ],
+        "expressionLabels": [
+          "avg",
+          "max"
+        ],
+        "span": 3,
+        "rowSpan": 2
+      },
+      {
+        "id": "producer_count",
+        "title": "Producer Count",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_producer_count,sum)",
+          "latest(aggregate_labels(meter_activemq_broker_current_producer_count,sum))"
+        ],
+        "expressionLabels": [
+          "increased",
+          "current"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "consumer_count",
+        "title": "Consumer Count",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_consumer_count,sum)",
+          "latest(aggregate_labels(meter_activemq_broker_current_consumer_count,sum))"
+        ],
+        "expressionLabels": [
+          "increased",
+          "current"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "eq_deq",
+        "title": "Enqueue/Dequeue Count",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_enqueue_count,sum)",
+          "aggregate_labels(meter_activemq_broker_dequeue_count,sum)"
+        ],
+        "expressionLabels": [
+          "enqueue",
+          "dequeue"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "eq_deq_rate",
+        "title": "Enqueue/Dequeue Rate",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_enqueue_rate,avg)",
+          "aggregate_labels(meter_activemq_broker_dequeue_rate,avg)"
+        ],
+        "expressionLabels": [
+          "enqueue",
+          "dequeue"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory_usage",
+        "title": "Memory Usage (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_memory_usage,sum)/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "limits",
+        "title": "Usage Limits (GB)",
+        "type": "line",
+        "unit": "GB",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_memory_limit,sum)/1024/1024/1024",
+          "aggregate_labels(meter_activemq_broker_store_limit,sum)/1024/1024/1024",
+          "aggregate_labels(meter_activemq_broker_temp_limit,sum)/1024/1024/1024"
+        ],
+        "expressionLabels": [
+          "memory",
+          "store",
+          "temp"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "producer", "title": "Producer Count", "type": "line", "expressions": ["meter_activemq_destination_producer_count"], "span": 4, "rowSpan": 2 },
-      { "id": "consumer", "title": "Consumer Count", "type": "line", "expressions": ["meter_activemq_destination_consumer_count"], "span": 4, "rowSpan": 2 },
-      { "id": "queue_size", "title": "Queue Size", "type": "line", "expressions": ["meter_activemq_destination_queue_size"], "span": 4, "rowSpan": 2 },
-      { "id": "memory", "title": "Memory Usage (MB)", "type": "line", "unit": "MB", "expressions": ["meter_activemq_destination_memory_usage/1024/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "messages", "title": "Message Counts", "type": "line", "expressions": ["meter_activemq_destination_enqueue_count", "meter_activemq_destination_dequeue_count", "meter_activemq_destination_dispatch_count", "meter_activemq_destination_expired_count", "meter_activemq_destination_inflight_count"], "expressionLabels": ["enqueue", "dequeue", "dispatch", "expired", "inflight"], "span": 8, "rowSpan": 2 },
-      { "id": "enqueue_time", "title": "Enqueue Time (s)", "type": "line", "unit": "s", "expressions": ["meter_activemq_destination_average_enqueue_time/1000", "meter_activemq_destination_max_enqueue_time/1000"], "expressionLabels": ["avg", "max"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "producer",
+        "title": "Producer Count",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_destination_producer_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "consumer",
+        "title": "Consumer Count",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_destination_consumer_count"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "queue_size",
+        "title": "Queue Size",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_destination_queue_size"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "memory",
+        "title": "Memory Usage (MB)",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_activemq_destination_memory_usage/1024/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "messages",
+        "title": "Message Counts",
+        "type": "line",
+        "expressions": [
+          "meter_activemq_destination_enqueue_count",
+          "meter_activemq_destination_dequeue_count",
+          "meter_activemq_destination_dispatch_count",
+          "meter_activemq_destination_expired_count",
+          "meter_activemq_destination_inflight_count"
+        ],
+        "expressionLabels": [
+          "enqueue",
+          "dequeue",
+          "dispatch",
+          "expired",
+          "inflight"
+        ],
+        "span": 8,
+        "rowSpan": 2
+      },
+      {
+        "id": "enqueue_time",
+        "title": "Enqueue Time (s)",
+        "type": "line",
+        "unit": "s",
+        "expressions": [
+          "meter_activemq_destination_average_enqueue_time/1000",
+          "meter_activemq_destination_max_enqueue_time/1000"
+        ],
+        "expressionLabels": [
+          "avg",
+          "max"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ]
   }
 }

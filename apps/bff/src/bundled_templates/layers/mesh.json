@@ -1,6 +1,7 @@
 {
   "key": "MESH",
   "alias": "Istio Managed SVCs",
+  "group": "Istio",
   "color": "var(--sw-info)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/envoy/als_setting/",
   "aliases": {
@@ -21,10 +22,33 @@
   "layer-header": {
     "orderBy": "cpm",
     "columns": [
-      { "metric": "cpm", "label": "Traffic", "unit": "rpm", "mqe": "service_cpm", "aggregation": "sum" },
-      { "metric": "apdex", "label": "Apdex", "mqe": "service_apdex/10000", "aggregation": "avg" },
-      { "metric": "respTime", "label": "Latency", "unit": "ms", "mqe": "service_resp_time", "aggregation": "avg" },
-      { "metric": "err", "label": "Error Rate", "unit": "%", "mqe": "100 - service_sla/100", "aggregation": "avg" }
+      {
+        "metric": "cpm",
+        "label": "Traffic",
+        "unit": "rpm",
+        "mqe": "service_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "apdex",
+        "label": "Apdex",
+        "mqe": "service_apdex/10000",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "respTime",
+        "label": "Latency",
+        "unit": "ms",
+        "mqe": "service_resp_time",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "err",
+        "label": "Error Rate",
+        "unit": "%",
+        "mqe": "100 - service_sla/100",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
@@ -44,7 +68,7 @@
           {
             "id": "err",
             "label": "Error Rate",
-            "tip": "100 − mesh SLA. Calls with non-2xx response status from sidecar ALS.",
+            "tip": "100 \u2212 mesh SLA. Calls with non-2xx response status from sidecar ALS.",
             "mqe": "100 - service_sla/100",
             "unit": "%",
             "aggregation": "avg"
@@ -58,7 +82,7 @@
           {
             "id": "apdex",
             "label": "Apdex",
-            "tip": "User-satisfaction score on a 0 – 1 scale.",
+            "tip": "User-satisfaction score on a 0 \u2013 1 scale.",
             "mqe": "service_apdex/10000",
             "aggregation": "avg"
           }
@@ -78,8 +102,16 @@
           "top_n(endpoint_resp_time,20,des)",
           "top_n(endpoint_sla,20,asc)/100"
         ],
-        "expressionLabels": ["Traffic", "Slow", "Successful Rate"],
-        "expressionUnits": ["rpm", "ms", "%"],
+        "expressionLabels": [
+          "Traffic",
+          "Slow",
+          "Successful Rate"
+        ],
+        "expressionUnits": [
+          "rpm",
+          "ms",
+          "%"
+        ],
         "layerScope": true,
         "span": 3,
         "rowSpan": 4
@@ -90,7 +122,9 @@
         "tip": "Mesh-wide requests per minute observed by Envoy sidecars.",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["service_cpm"],
+        "expressions": [
+          "service_cpm"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -99,16 +133,20 @@
         "title": "Error Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["100 - service_sla/100"],
+        "expressions": [
+          "100 - service_sla/100"
+        ],
         "span": 3,
         "rowSpan": 2
       },
       {
         "id": "apdex_line",
         "title": "Apdex",
-        "tip": "User-satisfaction score on a 0 – 1 scale.",
+        "tip": "User-satisfaction score on a 0 \u2013 1 scale.",
         "type": "line",
-        "expressions": ["service_apdex/10000"],
+        "expressions": [
+          "service_apdex/10000"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -117,14 +155,16 @@
         "title": "Avg Response Time",
         "type": "line",
         "unit": "ms",
-        "expressions": ["service_resp_time"],
+        "expressions": [
+          "service_resp_time"
+        ],
         "span": 3,
         "rowSpan": 2
       },
       {
         "id": "percentile_line",
         "title": "Response Time Percentile",
-        "tip": "p50 / p75 / p90 / p95 / p99 latency — the tail of the response-time distribution.",
+        "tip": "p50 / p75 / p90 / p95 / p99 latency \u2014 the tail of the response-time distribution.",
         "type": "line",
         "unit": "ms",
         "expressions": [
@@ -136,14 +176,17 @@
       {
         "id": "throughput_line",
         "title": "Service Throughput",
-        "tip": "Bytes per minute through the sidecar — sent + received.",
+        "tip": "Bytes per minute through the sidecar \u2014 sent + received.",
         "type": "line",
         "unit": "B/min",
         "expressions": [
           "service_throughput_received",
           "service_throughput_sent"
         ],
-        "expressionLabels": ["received", "sent"],
+        "expressionLabels": [
+          "received",
+          "sent"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -157,7 +200,10 @@
           "service_sidecar_internal_req_latency_nanos",
           "service_sidecar_internal_resp_latency_nanos"
         ],
-        "expressionLabels": ["request", "response"],
+        "expressionLabels": [
+          "request",
+          "response"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -171,8 +217,16 @@
           "top_n(service_instance_resp_time,10,des)",
           "top_n(service_instance_sla,10,asc)/100"
         ],
-        "expressionLabels": ["Traffic", "Slow", "Successful Rate"],
-        "expressionUnits": ["rpm", "ms", "%"],
+        "expressionLabels": [
+          "Traffic",
+          "Slow",
+          "Successful Rate"
+        ],
+        "expressionUnits": [
+          "rpm",
+          "ms",
+          "%"
+        ],
         "span": 6,
         "rowSpan": 3
       },
@@ -186,8 +240,16 @@
           "top_n(endpoint_resp_time,10,des)",
           "top_n(endpoint_sla,10,asc)/100"
         ],
-        "expressionLabels": ["Traffic", "Slow", "Successful Rate"],
-        "expressionUnits": ["rpm", "ms", "%"],
+        "expressionLabels": [
+          "Traffic",
+          "Slow",
+          "Successful Rate"
+        ],
+        "expressionUnits": [
+          "rpm",
+          "ms",
+          "%"
+        ],
         "span": 6,
         "rowSpan": 3
       }
@@ -199,7 +261,9 @@
         "tip": "Calls per minute against the selected sidecar instance.",
         "type": "line",
         "unit": "calls / min",
-        "expressions": ["service_instance_cpm"],
+        "expressions": [
+          "service_instance_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -208,7 +272,9 @@
         "title": "Sidecar Latency",
         "type": "line",
         "unit": "ms",
-        "expressions": ["service_instance_resp_time"],
+        "expressions": [
+          "service_instance_resp_time"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -217,21 +283,26 @@
         "title": "Sidecar Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["service_instance_sla/100"],
+        "expressions": [
+          "service_instance_sla/100"
+        ],
         "span": 4,
         "rowSpan": 2
       },
       {
         "id": "instance_throughput",
         "title": "Sidecar Throughput",
-        "tip": "Bytes through the sidecar — received + sent.",
+        "tip": "Bytes through the sidecar \u2014 received + sent.",
         "type": "line",
         "unit": "B/min",
         "expressions": [
           "service_instance_throughput_received",
           "service_instance_throughput_sent"
         ],
-        "expressionLabels": ["received", "sent"],
+        "expressionLabels": [
+          "received",
+          "sent"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -244,7 +315,10 @@
           "service_instance_sidecar_internal_req_latency_nanos",
           "service_instance_sidecar_internal_resp_latency_nanos"
         ],
-        "expressionLabels": ["request", "response"],
+        "expressionLabels": [
+          "request",
+          "response"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -253,7 +327,9 @@
         "title": "Envoy Upstream Request Active",
         "tip": "In-flight upstream requests per cluster. Renders for Envoy-instrumented sidecars.",
         "type": "line",
-        "expressions": ["envoy_cluster_up_rq_active"],
+        "expressions": [
+          "envoy_cluster_up_rq_active"
+        ],
         "visibleWhen": "envoy_cluster_up_rq_active has value",
         "span": 4,
         "rowSpan": 2
@@ -263,7 +339,9 @@
         "title": "Envoy Upstream Request Increase",
         "tip": "Upstream requests added per minute.",
         "type": "line",
-        "expressions": ["envoy_cluster_up_rq_incr"],
+        "expressions": [
+          "envoy_cluster_up_rq_incr"
+        ],
         "visibleWhen": "envoy_cluster_up_rq_incr has value",
         "span": 4,
         "rowSpan": 2
@@ -271,9 +349,11 @@
       {
         "id": "envoy_up_rq_pending_active",
         "title": "Envoy Upstream Pending Active",
-        "tip": "Pending upstream requests — indicates connection-pool back-pressure.",
+        "tip": "Pending upstream requests \u2014 indicates connection-pool back-pressure.",
         "type": "line",
-        "expressions": ["envoy_cluster_up_rq_pending_active"],
+        "expressions": [
+          "envoy_cluster_up_rq_pending_active"
+        ],
         "visibleWhen": "envoy_cluster_up_rq_pending_active has value",
         "span": 4,
         "rowSpan": 2
@@ -282,7 +362,9 @@
         "id": "envoy_up_cx_active",
         "title": "Envoy Upstream Connection Active",
         "type": "line",
-        "expressions": ["envoy_cluster_up_cx_active"],
+        "expressions": [
+          "envoy_cluster_up_cx_active"
+        ],
         "visibleWhen": "envoy_cluster_up_cx_active has value",
         "span": 4,
         "rowSpan": 2
@@ -291,7 +373,9 @@
         "id": "envoy_up_cx_incr",
         "title": "Envoy Upstream Connection Increase",
         "type": "line",
-        "expressions": ["envoy_cluster_up_cx_incr"],
+        "expressions": [
+          "envoy_cluster_up_cx_incr"
+        ],
         "visibleWhen": "envoy_cluster_up_cx_incr has value",
         "span": 4,
         "rowSpan": 2
@@ -299,9 +383,11 @@
       {
         "id": "envoy_membership_healthy",
         "title": "Envoy Cluster Healthy Membership",
-        "tip": "Healthy upstream members per cluster — a non-trivial drop signals upstream churn.",
+        "tip": "Healthy upstream members per cluster \u2014 a non-trivial drop signals upstream churn.",
         "type": "line",
-        "expressions": ["envoy_cluster_membership_healthy"],
+        "expressions": [
+          "envoy_cluster_membership_healthy"
+        ],
         "visibleWhen": "envoy_cluster_membership_healthy has value",
         "span": 4,
         "rowSpan": 2
@@ -314,7 +400,10 @@
           "envoy_total_connections_used",
           "envoy_parent_connections_used"
         ],
-        "expressionLabels": ["total", "parent"],
+        "expressionLabels": [
+          "total",
+          "parent"
+        ],
         "visibleWhen": "envoy_total_connections_used has value",
         "span": 4,
         "rowSpan": 2
@@ -333,7 +422,14 @@
           "envoy_memory_physical_size/1024/1024",
           "envoy_memory_physical_size_max/1024/1024"
         ],
-        "expressionLabels": ["heap used", "heap max", "allocated", "allocated max", "physical", "physical max"],
+        "expressionLabels": [
+          "heap used",
+          "heap max",
+          "allocated",
+          "allocated max",
+          "physical",
+          "physical max"
+        ],
         "visibleWhen": "envoy_heap_memory_used has value",
         "span": 6,
         "rowSpan": 2
@@ -346,7 +442,10 @@
           "envoy_worker_threads",
           "envoy_worker_threads_max"
         ],
-        "expressionLabels": ["live", "max"],
+        "expressionLabels": [
+          "live",
+          "max"
+        ],
         "visibleWhen": "envoy_worker_threads has value",
         "span": 3,
         "rowSpan": 2
@@ -356,7 +455,9 @@
         "title": "Envoy Bug Failures",
         "tip": "Envoy's own assertion / bug counter. Should be zero in healthy clusters.",
         "type": "line",
-        "expressions": ["envoy_bug_failures"],
+        "expressions": [
+          "envoy_bug_failures"
+        ],
         "visibleWhen": "envoy_bug_failures has value",
         "span": 3,
         "rowSpan": 2
@@ -368,7 +469,9 @@
         "title": "Endpoint Traffic",
         "type": "line",
         "unit": "rpm",
-        "expressions": ["endpoint_cpm"],
+        "expressions": [
+          "endpoint_cpm"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -377,7 +480,9 @@
         "title": "Endpoint Avg Response Time",
         "type": "line",
         "unit": "ms",
-        "expressions": ["endpoint_resp_time"],
+        "expressions": [
+          "endpoint_resp_time"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -386,7 +491,9 @@
         "title": "Endpoint Success Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["endpoint_sla/100"],
+        "expressions": [
+          "endpoint_sla/100"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -411,7 +518,10 @@
           "endpoint_sidecar_internal_req_latency_nanos",
           "endpoint_sidecar_internal_resp_latency_nanos"
         ],
-        "expressionLabels": ["request", "response"],
+        "expressionLabels": [
+          "request",
+          "response"
+        ],
         "span": 12,
         "rowSpan": 2
       }
@@ -421,7 +531,14 @@
   },
   "topology": {
     "nodeMetrics": [
-      { "id": "cpm", "label": "RPM", "mqe": "service_cpm", "unit": "rpm", "role": "center", "aggregation": "avg" },
+      {
+        "id": "cpm",
+        "label": "RPM",
+        "mqe": "service_cpm",
+        "unit": "rpm",
+        "role": "center",
+        "aggregation": "avg"
+      },
       {
         "id": "sla",
         "label": "SLA",
@@ -437,19 +554,76 @@
           "danger": 5
         }
       },
-      { "id": "respTime", "label": "Latency", "mqe": "service_resp_time", "unit": "ms", "role": "secondary", "aggregation": "avg" }
+      {
+        "id": "respTime",
+        "label": "Latency",
+        "mqe": "service_resp_time",
+        "unit": "ms",
+        "role": "secondary",
+        "aggregation": "avg"
+      }
     ],
     "linkServerMetrics": [
-      { "id": "cpm", "label": "RPM", "mqe": "service_relation_server_cpm", "unit": "rpm", "role": "lineServer", "aggregation": "avg" },
-      { "id": "respTime", "label": "Avg response time", "mqe": "service_relation_server_resp_time", "unit": "ms", "aggregation": "avg" },
-      { "id": "p95", "label": "p95", "mqe": "service_relation_server_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
-      { "id": "sla", "label": "SLA", "mqe": "service_relation_server_call_sla/100", "unit": "%", "aggregation": "avg" }
+      {
+        "id": "cpm",
+        "label": "RPM",
+        "mqe": "service_relation_server_cpm",
+        "unit": "rpm",
+        "role": "lineServer",
+        "aggregation": "avg"
+      },
+      {
+        "id": "respTime",
+        "label": "Avg response time",
+        "mqe": "service_relation_server_resp_time",
+        "unit": "ms",
+        "aggregation": "avg"
+      },
+      {
+        "id": "p95",
+        "label": "p95",
+        "mqe": "service_relation_server_percentile{p='95'}",
+        "unit": "ms",
+        "aggregation": "avg"
+      },
+      {
+        "id": "sla",
+        "label": "SLA",
+        "mqe": "service_relation_server_call_sla/100",
+        "unit": "%",
+        "aggregation": "avg"
+      }
     ],
     "linkClientMetrics": [
-      { "id": "cpm", "label": "RPM", "mqe": "service_relation_client_cpm", "unit": "rpm", "role": "lineClient", "aggregation": "avg" },
-      { "id": "respTime", "label": "Avg response time", "mqe": "service_relation_client_resp_time", "unit": "ms", "aggregation": "avg" },
-      { "id": "p95", "label": "p95", "mqe": "service_relation_client_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
-      { "id": "sla", "label": "SLA", "mqe": "service_relation_client_call_sla/100", "unit": "%", "aggregation": "avg" }
+      {
+        "id": "cpm",
+        "label": "RPM",
+        "mqe": "service_relation_client_cpm",
+        "unit": "rpm",
+        "role": "lineClient",
+        "aggregation": "avg"
+      },
+      {
+        "id": "respTime",
+        "label": "Avg response time",
+        "mqe": "service_relation_client_resp_time",
+        "unit": "ms",
+        "aggregation": "avg"
+      },
+      {
+        "id": "p95",
+        "label": "p95",
+        "mqe": "service_relation_client_percentile{p='95'}",
+        "unit": "ms",
+        "aggregation": "avg"
+      },
+      {
+        "id": "sla",
+        "label": "SLA",
+        "mqe": "service_relation_client_call_sla/100",
+        "unit": "%",
+        "aggregation": "avg"
+      }
     ]
   }
 }

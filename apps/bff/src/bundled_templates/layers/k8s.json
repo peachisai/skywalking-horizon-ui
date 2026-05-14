@@ -1,6 +1,7 @@
 {
   "key": "K8S",
   "alias": "Kubernetes",
+  "group": "Kubernetes",
   "color": "var(--sw-info)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-k8s-monitoring/",
   "aliases": {
@@ -19,10 +20,30 @@
   "layer-header": {
     "orderBy": "pods",
     "columns": [
-      { "metric": "pods", "label": "Pods", "mqe": "k8s_cluster_pod_total", "aggregation": "sum" },
-      { "metric": "nodes", "label": "Nodes", "mqe": "k8s_cluster_node_total", "aggregation": "sum" },
-      { "metric": "namespaces", "label": "Namespaces", "mqe": "k8s_cluster_namespace_total", "aggregation": "sum" },
-      { "metric": "deployments", "label": "Deployments", "mqe": "k8s_cluster_deployment_total", "aggregation": "sum" }
+      {
+        "metric": "pods",
+        "label": "Pods",
+        "mqe": "k8s_cluster_pod_total",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "nodes",
+        "label": "Nodes",
+        "mqe": "k8s_cluster_node_total",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "namespaces",
+        "label": "Namespaces",
+        "mqe": "k8s_cluster_namespace_total",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "deployments",
+        "label": "Deployments",
+        "mqe": "k8s_cluster_deployment_total",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -31,9 +52,27 @@
         "title": "Capacity",
         "size": "auto",
         "metrics": [
-          { "id": "pods", "label": "Pods", "tip": "Total pods reported across the cluster.", "mqe": "k8s_cluster_pod_total", "aggregation": "sum" },
-          { "id": "nodes", "label": "Nodes", "tip": "Node count.", "mqe": "k8s_cluster_node_total", "aggregation": "sum" },
-          { "id": "services", "label": "Services", "tip": "K8s Service objects.", "mqe": "k8s_cluster_service_total", "aggregation": "sum" }
+          {
+            "id": "pods",
+            "label": "Pods",
+            "tip": "Total pods reported across the cluster.",
+            "mqe": "k8s_cluster_pod_total",
+            "aggregation": "sum"
+          },
+          {
+            "id": "nodes",
+            "label": "Nodes",
+            "tip": "Node count.",
+            "mqe": "k8s_cluster_node_total",
+            "aggregation": "sum"
+          },
+          {
+            "id": "services",
+            "label": "Services",
+            "tip": "K8s Service objects.",
+            "mqe": "k8s_cluster_service_total",
+            "aggregation": "sum"
+          }
         ]
       },
       {
@@ -43,7 +82,7 @@
           {
             "id": "podsNotRunning",
             "label": "Pods not running",
-            "tip": "Pods in any non-Running state — pending, failed, unknown.",
+            "tip": "Pods in any non-Running state \u2014 pending, failed, unknown.",
             "mqe": "latest(k8s_cluster_pod_status_not_running)",
             "aggregation": "sum"
           }
@@ -65,7 +104,12 @@
           "k8s_cluster_cpu_cores_requests",
           "k8s_cluster_cpu_cores_limits"
         ],
-        "expressionLabels": ["total", "allocatable", "requests", "limits"],
+        "expressionLabels": [
+          "total",
+          "allocatable",
+          "requests",
+          "limits"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -80,7 +124,12 @@
           "k8s_cluster_memory_requests/1024/1024/1024",
           "k8s_cluster_memory_limits/1024/1024/1024"
         ],
-        "expressionLabels": ["total", "allocatable", "requests", "limits"],
+        "expressionLabels": [
+          "total",
+          "allocatable",
+          "requests",
+          "limits"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -93,7 +142,10 @@
           "k8s_cluster_storage_total/1024/1024/1024",
           "k8s_cluster_storage_allocatable/1024/1024/1024"
         ],
-        "expressionLabels": ["total", "allocatable"],
+        "expressionLabels": [
+          "total",
+          "allocatable"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -101,8 +153,14 @@
         "id": "pod_totals",
         "title": "Pod / Container Totals",
         "type": "line",
-        "expressions": ["k8s_cluster_pod_total", "k8s_cluster_container_total"],
-        "expressionLabels": ["pods", "containers"],
+        "expressions": [
+          "k8s_cluster_pod_total",
+          "k8s_cluster_container_total"
+        ],
+        "expressionLabels": [
+          "pods",
+          "containers"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -115,7 +173,10 @@
           "latest(k8s_cluster_deployment_spec_replicas)",
           "latest(k8s_cluster_deployment_status)"
         ],
-        "expressionLabels": ["spec", "status"],
+        "expressionLabels": [
+          "spec",
+          "status"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -123,7 +184,9 @@
         "id": "pod_waiting",
         "title": "Pods Waiting",
         "type": "line",
-        "expressions": ["latest(k8s_cluster_pod_status_waiting)"],
+        "expressions": [
+          "latest(k8s_cluster_pod_status_waiting)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -131,7 +194,9 @@
         "id": "pod_not_running",
         "title": "Pods Not Running",
         "type": "line",
-        "expressions": ["latest(k8s_cluster_pod_status_not_running)"],
+        "expressions": [
+          "latest(k8s_cluster_pod_status_not_running)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -140,7 +205,9 @@
         "title": "Service Pod Status",
         "tip": "Aggregate health of pods backing K8s Service objects.",
         "type": "line",
-        "expressions": ["latest(k8s_cluster_service_pod_status)"],
+        "expressions": [
+          "latest(k8s_cluster_service_pod_status)"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -149,7 +216,9 @@
         "title": "Node Status",
         "tip": "Sum of node Ready states.",
         "type": "line",
-        "expressions": ["latest(k8s_cluster_node_status)"],
+        "expressions": [
+          "latest(k8s_cluster_node_status)"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -164,7 +233,12 @@
           "latest(k8s_cluster_statefulset_total)",
           "latest(k8s_cluster_daemonset_total)"
         ],
-        "expressionLabels": ["namespaces", "deployments", "statefulsets", "daemonsets"],
+        "expressionLabels": [
+          "namespaces",
+          "deployments",
+          "statefulsets",
+          "daemonsets"
+        ],
         "span": 4,
         "rowSpan": 2
       }
@@ -174,7 +248,9 @@
         "id": "node_status",
         "title": "Node Status",
         "type": "line",
-        "expressions": ["latest(k8s_node_node_status)"],
+        "expressions": [
+          "latest(k8s_node_node_status)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -182,7 +258,9 @@
         "id": "node_pod_total",
         "title": "Pods on Node",
         "type": "line",
-        "expressions": ["k8s_node_pod_total"],
+        "expressions": [
+          "k8s_node_pod_total"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -192,7 +270,9 @@
         "tip": "CPU usage in millicores.",
         "type": "line",
         "unit": "m",
-        "expressions": ["k8s_node_cpu_usage"],
+        "expressions": [
+          "k8s_node_cpu_usage"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -207,7 +287,12 @@
           "k8s_node_cpu_cores_requests",
           "k8s_node_cpu_cores_limits"
         ],
-        "expressionLabels": ["total", "allocatable", "requests", "limits"],
+        "expressionLabels": [
+          "total",
+          "allocatable",
+          "requests",
+          "limits"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -216,7 +301,9 @@
         "title": "Node Memory Usage",
         "type": "line",
         "unit": "Gi",
-        "expressions": ["k8s_node_memory_usage/1024/1024/1024"],
+        "expressions": [
+          "k8s_node_memory_usage/1024/1024/1024"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -231,7 +318,12 @@
           "k8s_node_memory_requests/1024/1024/1024",
           "k8s_node_memory_limits/1024/1024/1024"
         ],
-        "expressionLabels": ["total", "allocatable", "requests", "limits"],
+        "expressionLabels": [
+          "total",
+          "allocatable",
+          "requests",
+          "limits"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -244,7 +336,10 @@
           "k8s_node_network_receive/1024",
           "k8s_node_network_transmit/1024"
         ],
-        "expressionLabels": ["receive", "transmit"],
+        "expressionLabels": [
+          "receive",
+          "transmit"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -257,7 +352,10 @@
           "k8s_node_storage_total/1024/1024/1024",
           "k8s_node_storage_allocatable/1024/1024/1024"
         ],
-        "expressionLabels": ["total", "allocatable"],
+        "expressionLabels": [
+          "total",
+          "allocatable"
+        ],
         "span": 6,
         "rowSpan": 2
       }

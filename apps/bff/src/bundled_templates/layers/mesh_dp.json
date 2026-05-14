@@ -1,38 +1,194 @@
 {
   "key": "MESH_DP",
   "alias": "Istio Data Plane",
+  "group": "Istio",
   "color": "var(--sw-info)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/envoy/metrics_service_setting/",
-  "aliases": { "services": "Sidecar services", "instances": "Sidecars" },
-  "components": { "service": true, "instances": true, "endpoints": false, "topology": false, "traces": false, "logs": true, "ebpfProfiling": true },
+  "aliases": {
+    "services": "Sidecar services",
+    "instances": "Sidecars"
+  },
+  "components": {
+    "service": true,
+    "instances": true,
+    "endpoints": false,
+    "topology": false,
+    "traces": false,
+    "logs": true,
+    "ebpfProfiling": true
+  },
   "layer-header": {
     "orderBy": "conns",
     "columns": [
-      { "metric": "conns", "label": "Connections", "mqe": "avg(envoy_total_connections_used)", "aggregation": "avg" },
-      { "metric": "threads", "label": "Worker Threads", "mqe": "avg(envoy_worker_threads)", "aggregation": "avg" },
-      { "metric": "bugFail", "label": "Bug Failures", "mqe": "avg(envoy_bug_failures)", "aggregation": "avg" }
+      {
+        "metric": "conns",
+        "label": "Connections",
+        "mqe": "avg(envoy_total_connections_used)",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "threads",
+        "label": "Worker Threads",
+        "mqe": "avg(envoy_worker_threads)",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "bugFail",
+        "label": "Bug Failures",
+        "mqe": "avg(envoy_bug_failures)",
+        "aggregation": "avg"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Sidecar health", "size": "auto", "metrics": [
-        { "id": "conns", "label": "Connections", "tip": "Envoy connections used across sidecars.", "mqe": "avg(envoy_total_connections_used)", "aggregation": "avg" },
-        { "id": "bugFail", "label": "Bug Failures", "tip": "Envoy assertion / bug counter — should be 0 in healthy clusters.", "mqe": "avg(envoy_bug_failures)", "aggregation": "avg" }
-      ]}
+      {
+        "title": "Sidecar health",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "conns",
+            "label": "Connections",
+            "tip": "Envoy connections used across sidecars.",
+            "mqe": "avg(envoy_total_connections_used)",
+            "aggregation": "avg"
+          },
+          {
+            "id": "bugFail",
+            "label": "Bug Failures",
+            "tip": "Envoy assertion / bug counter \u2014 should be 0 in healthy clusters.",
+            "mqe": "avg(envoy_bug_failures)",
+            "aggregation": "avg"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "instance": [
-      { "id": "up_rq_active", "title": "Upstream Request Active", "type": "line", "expressions": ["envoy_cluster_up_rq_active"], "span": 4, "rowSpan": 2 },
-      { "id": "up_rq_pending", "title": "Upstream Request Pending Active", "type": "line", "expressions": ["envoy_cluster_up_rq_pending_active"], "span": 4, "rowSpan": 2 },
-      { "id": "up_rq_incr", "title": "Upstream Request Increase", "type": "line", "expressions": ["envoy_cluster_up_rq_incr"], "span": 4, "rowSpan": 2 },
-      { "id": "up_cx_active", "title": "Upstream Connection Active", "type": "line", "expressions": ["envoy_cluster_up_cx_active"], "span": 4, "rowSpan": 2 },
-      { "id": "up_cx_incr", "title": "Upstream Connection Increase", "type": "line", "expressions": ["envoy_cluster_up_cx_incr"], "span": 4, "rowSpan": 2 },
-      { "id": "membership", "title": "Membership Healthy", "type": "line", "expressions": ["envoy_cluster_membership_healthy"], "span": 4, "rowSpan": 2 },
-      { "id": "connections", "title": "Total Connections", "type": "line", "expressions": ["envoy_total_connections_used", "envoy_parent_connections_used"], "expressionLabels": ["total", "parent"], "span": 6, "rowSpan": 2 },
-      { "id": "concurrency", "title": "Worker Threads", "type": "line", "expressions": ["envoy_worker_threads", "envoy_worker_threads_max"], "expressionLabels": ["live", "max"], "span": 6, "rowSpan": 2 },
-      { "id": "heap_memory", "title": "Heap Memory (Bytes)", "type": "line", "expressions": ["envoy_heap_memory_used", "envoy_heap_memory_max_used", "envoy_memory_allocated", "envoy_memory_allocated_max", "envoy_memory_physical_size", "envoy_memory_physical_size_max"], "expressionLabels": ["heap used", "heap max", "allocated", "allocated max", "physical", "physical max"], "span": 12, "rowSpan": 2 },
-      { "id": "bug_failures", "title": "Bug Failures", "type": "line", "expressions": ["envoy_bug_failures"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "up_rq_active",
+        "title": "Upstream Request Active",
+        "type": "line",
+        "expressions": [
+          "envoy_cluster_up_rq_active"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "up_rq_pending",
+        "title": "Upstream Request Pending Active",
+        "type": "line",
+        "expressions": [
+          "envoy_cluster_up_rq_pending_active"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "up_rq_incr",
+        "title": "Upstream Request Increase",
+        "type": "line",
+        "expressions": [
+          "envoy_cluster_up_rq_incr"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "up_cx_active",
+        "title": "Upstream Connection Active",
+        "type": "line",
+        "expressions": [
+          "envoy_cluster_up_cx_active"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "up_cx_incr",
+        "title": "Upstream Connection Increase",
+        "type": "line",
+        "expressions": [
+          "envoy_cluster_up_cx_incr"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "membership",
+        "title": "Membership Healthy",
+        "type": "line",
+        "expressions": [
+          "envoy_cluster_membership_healthy"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "connections",
+        "title": "Total Connections",
+        "type": "line",
+        "expressions": [
+          "envoy_total_connections_used",
+          "envoy_parent_connections_used"
+        ],
+        "expressionLabels": [
+          "total",
+          "parent"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "concurrency",
+        "title": "Worker Threads",
+        "type": "line",
+        "expressions": [
+          "envoy_worker_threads",
+          "envoy_worker_threads_max"
+        ],
+        "expressionLabels": [
+          "live",
+          "max"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "heap_memory",
+        "title": "Heap Memory (Bytes)",
+        "type": "line",
+        "expressions": [
+          "envoy_heap_memory_used",
+          "envoy_heap_memory_max_used",
+          "envoy_memory_allocated",
+          "envoy_memory_allocated_max",
+          "envoy_memory_physical_size",
+          "envoy_memory_physical_size_max"
+        ],
+        "expressionLabels": [
+          "heap used",
+          "heap max",
+          "allocated",
+          "allocated max",
+          "physical",
+          "physical max"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      },
+      {
+        "id": "bug_failures",
+        "title": "Bug Failures",
+        "type": "line",
+        "expressions": [
+          "envoy_bug_failures"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ]
   }
 }

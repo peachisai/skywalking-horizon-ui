@@ -1,6 +1,7 @@
 {
   "key": "KONG",
   "alias": "Kong",
+  "group": "Gateways",
   "color": "var(--sw-ok)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-kong-monitoring/",
   "aliases": {
@@ -19,10 +20,30 @@
   "layer-header": {
     "orderBy": "rps",
     "columns": [
-      { "metric": "rps", "label": "RPS", "mqe": "aggregate_labels(meter_kong_service_http_requests,sum)", "aggregation": "sum" },
-      { "metric": "status200", "label": "200/s", "mqe": "aggregate_labels(meter_kong_service_http_status{code='200'}, sum)", "aggregation": "sum" },
-      { "metric": "status404", "label": "404/s", "mqe": "aggregate_labels(meter_kong_service_http_status{code='404'}, sum)", "aggregation": "sum" },
-      { "metric": "status500", "label": "500/s", "mqe": "aggregate_labels(meter_kong_service_http_status{code='500'}, sum)", "aggregation": "sum" }
+      {
+        "metric": "rps",
+        "label": "RPS",
+        "mqe": "aggregate_labels(meter_kong_service_http_requests,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "status200",
+        "label": "200/s",
+        "mqe": "aggregate_labels(meter_kong_service_http_status{code='200'}, sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "status404",
+        "label": "404/s",
+        "mqe": "aggregate_labels(meter_kong_service_http_status{code='404'}, sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "status500",
+        "label": "500/s",
+        "mqe": "aggregate_labels(meter_kong_service_http_status{code='500'}, sum)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -31,51 +52,319 @@
         "title": "Latency",
         "size": "auto",
         "metrics": [
-          { "id": "kongLatency", "label": "Kong Latency", "tip": "Time Kong itself spends per request, p50/p95.", "mqe": "aggregate_labels(meter_kong_service_kong_latency,avg(p))", "unit": "ms", "aggregation": "avg" },
-          { "id": "upstreamLatency", "label": "Upstream Latency", "tip": "Time waiting on the upstream service.", "mqe": "aggregate_labels(meter_kong_service_upstream_latency,avg(p))", "unit": "ms", "aggregation": "avg" }
+          {
+            "id": "kongLatency",
+            "label": "Kong Latency",
+            "tip": "Time Kong itself spends per request, p50/p95.",
+            "mqe": "aggregate_labels(meter_kong_service_kong_latency,avg(p))",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "upstreamLatency",
+            "label": "Upstream Latency",
+            "tip": "Time waiting on the upstream service.",
+            "mqe": "aggregate_labels(meter_kong_service_upstream_latency,avg(p))",
+            "unit": "ms",
+            "aggregation": "avg"
+          }
         ]
       },
       {
         "title": "Throughput",
         "size": "square",
         "metrics": [
-          { "id": "rps", "label": "RPS", "tip": "Requests per second through Kong.", "mqe": "aggregate_labels(meter_kong_service_http_requests,sum)", "aggregation": "sum" }
+          {
+            "id": "rps",
+            "label": "RPS",
+            "tip": "Requests per second through Kong.",
+            "mqe": "aggregate_labels(meter_kong_service_http_requests,sum)",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "rps", "title": "HTTP Request Trend", "type": "line", "expressions": ["aggregate_labels(meter_kong_service_http_requests,sum)"], "span": 4, "rowSpan": 2 },
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["aggregate_labels(meter_kong_service_http_status,sum(code))"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB/s", "expressions": ["aggregate_labels(meter_kong_service_http_bandwidth,sum(direction))/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "kong_latency", "title": "Kong Latency", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_kong_service_kong_latency,avg(p))"], "span": 4, "rowSpan": 2 },
-      { "id": "req_latency", "title": "Request Latency", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_kong_service_request_latency,avg(p))"], "span": 4, "rowSpan": 2 },
-      { "id": "upstream_latency", "title": "Upstream Latency", "type": "line", "unit": "ms", "expressions": ["aggregate_labels(meter_kong_service_upstream_latency,avg(p))"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "Nginx Connections", "type": "line", "expressions": ["aggregate_labels(meter_kong_service_nginx_connections_total,sum(state))"], "span": 6, "rowSpan": 2 },
-      { "id": "timers", "title": "Nginx Timers", "type": "line", "expressions": ["aggregate_labels(meter_kong_service_nginx_timers,sum(state))"], "span": 6, "rowSpan": 2 },
-      { "id": "datastore", "title": "Datastore Reachable", "type": "line", "expressions": ["latest(aggregate_labels(meter_kong_service_datastore_reachable,sum(service_instance_id)))"], "span": 6, "rowSpan": 2 },
-      { "id": "nginx_errors", "title": "Nginx Metric Errors", "type": "line", "expressions": ["latest(aggregate_labels(meter_kong_service_nginx_metric_errors_total,sum))"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "rps",
+        "title": "HTTP Request Trend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_http_requests,sum)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_http_status,sum(code))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_http_bandwidth,sum(direction))/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "kong_latency",
+        "title": "Kong Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_kong_latency,avg(p))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "req_latency",
+        "title": "Request Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_request_latency,avg(p))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "upstream_latency",
+        "title": "Upstream Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_upstream_latency,avg(p))"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Nginx Connections",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_nginx_connections_total,sum(state))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "timers",
+        "title": "Nginx Timers",
+        "type": "line",
+        "expressions": [
+          "aggregate_labels(meter_kong_service_nginx_timers,sum(state))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "datastore",
+        "title": "Datastore Reachable",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_kong_service_datastore_reachable,sum(service_instance_id)))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "nginx_errors",
+        "title": "Nginx Metric Errors",
+        "type": "line",
+        "expressions": [
+          "latest(aggregate_labels(meter_kong_service_nginx_metric_errors_total,sum))"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "instance": [
-      { "id": "rps", "title": "HTTP Request Trend", "type": "line", "expressions": ["meter_kong_instance_http_requests"], "span": 4, "rowSpan": 2 },
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["meter_kong_instance_http_status"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "HTTP Bandwidth", "type": "line", "unit": "KB/s", "expressions": ["meter_kong_instance_http_bandwidth/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "kong_latency", "title": "Kong Latency", "type": "line", "unit": "ms", "expressions": ["meter_kong_instance_kong_latency"], "span": 4, "rowSpan": 2 },
-      { "id": "req_latency", "title": "Request Latency", "type": "line", "unit": "ms", "expressions": ["meter_kong_instance_request_latency"], "span": 4, "rowSpan": 2 },
-      { "id": "upstream_latency", "title": "Upstream Latency", "type": "line", "unit": "ms", "expressions": ["meter_kong_instance_upstream_latency"], "span": 4, "rowSpan": 2 },
-      { "id": "datastore", "title": "Datastore Reachable", "type": "line", "expressions": ["latest(meter_kong_instance_datastore_reachable)"], "span": 4, "rowSpan": 2 },
-      { "id": "conns", "title": "Nginx Connections", "type": "line", "expressions": ["meter_kong_instance_nginx_connections_total"], "span": 4, "rowSpan": 2 },
-      { "id": "timers", "title": "Nginx Timers", "type": "line", "expressions": ["meter_kong_instance_nginx_timers"], "span": 4, "rowSpan": 2 },
-      { "id": "shared_mem", "title": "Shared Memory Usage", "type": "line", "unit": "%", "expressions": ["(meter_kong_instance_shared_dict_bytes*100)/meter_kong_instance_shared_dict_total_bytes"], "span": 6, "rowSpan": 2 },
-      { "id": "lua_vm", "title": "Worker Lua VM Usage", "type": "line", "unit": "MB", "expressions": ["meter_kong_instance_memory_workers_lua_vms_bytes/1024/1024"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "rps",
+        "title": "HTTP Request Trend",
+        "type": "line",
+        "expressions": [
+          "meter_kong_instance_http_requests"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "meter_kong_instance_http_status"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "HTTP Bandwidth",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_kong_instance_http_bandwidth/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "kong_latency",
+        "title": "Kong Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_kong_instance_kong_latency"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "req_latency",
+        "title": "Request Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_kong_instance_request_latency"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "upstream_latency",
+        "title": "Upstream Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_kong_instance_upstream_latency"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "datastore",
+        "title": "Datastore Reachable",
+        "type": "line",
+        "expressions": [
+          "latest(meter_kong_instance_datastore_reachable)"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "conns",
+        "title": "Nginx Connections",
+        "type": "line",
+        "expressions": [
+          "meter_kong_instance_nginx_connections_total"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "timers",
+        "title": "Nginx Timers",
+        "type": "line",
+        "expressions": [
+          "meter_kong_instance_nginx_timers"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "shared_mem",
+        "title": "Shared Memory Usage",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "(meter_kong_instance_shared_dict_bytes*100)/meter_kong_instance_shared_dict_total_bytes"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "lua_vm",
+        "title": "Worker Lua VM Usage",
+        "type": "line",
+        "unit": "MB",
+        "expressions": [
+          "meter_kong_instance_memory_workers_lua_vms_bytes/1024/1024"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "status", "title": "HTTP Status Trend", "type": "line", "expressions": ["meter_kong_endpoint_http_status"], "span": 4, "rowSpan": 2 },
-      { "id": "bandwidth", "title": "Total Bandwidth", "type": "line", "unit": "KB/s", "expressions": ["meter_kong_endpoint_http_bandwidth/1024"], "span": 4, "rowSpan": 2 },
-      { "id": "kong_latency", "title": "Kong Latency", "type": "line", "unit": "ms", "expressions": ["meter_kong_endpoint_kong_latency"], "span": 4, "rowSpan": 2 },
-      { "id": "req_latency", "title": "Request Latency", "type": "line", "unit": "ms", "expressions": ["meter_kong_endpoint_request_latency"], "span": 6, "rowSpan": 2 },
-      { "id": "upstream_latency", "title": "Upstream Latency", "type": "line", "unit": "ms", "expressions": ["meter_kong_endpoint_upstream_latency"], "span": 6, "rowSpan": 2 }
+      {
+        "id": "status",
+        "title": "HTTP Status Trend",
+        "type": "line",
+        "expressions": [
+          "meter_kong_endpoint_http_status"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "bandwidth",
+        "title": "Total Bandwidth",
+        "type": "line",
+        "unit": "KB/s",
+        "expressions": [
+          "meter_kong_endpoint_http_bandwidth/1024"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "kong_latency",
+        "title": "Kong Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_kong_endpoint_kong_latency"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "req_latency",
+        "title": "Request Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_kong_endpoint_request_latency"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "upstream_latency",
+        "title": "Upstream Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "meter_kong_endpoint_upstream_latency"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
     ]
   }
 }

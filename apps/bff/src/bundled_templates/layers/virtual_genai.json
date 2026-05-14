@@ -1,49 +1,290 @@
 {
   "key": "VIRTUAL_GENAI",
   "alias": "Virtual GenAI",
+  "group": "Virtual targets",
   "color": "var(--sw-pink)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/service-agent/virtual-genai/",
-  "aliases": { "services": "GenAI Providers", "endpoints": "Models" },
-  "components": { "service": true, "instances": false, "endpoints": true, "topology": false, "traces": false, "logs": false },
+  "aliases": {
+    "services": "GenAI Providers",
+    "endpoints": "Models"
+  },
+  "components": {
+    "service": true,
+    "instances": false,
+    "endpoints": true,
+    "topology": false,
+    "traces": false,
+    "logs": false
+  },
   "layer-header": {
     "orderBy": "cpm",
     "columns": [
-      { "metric": "cpm", "label": "RPM", "unit": "rpm", "mqe": "gen_ai_provider_cpm", "aggregation": "sum" },
-      { "metric": "respTime", "label": "Latency", "unit": "ms", "mqe": "gen_ai_provider_resp_time", "aggregation": "avg" },
-      { "metric": "sla", "label": "Success Rate", "unit": "%", "mqe": "gen_ai_provider_sla/100", "aggregation": "avg" },
-      { "metric": "outTokens", "label": "Output Tokens", "mqe": "latest(gen_ai_provider_output_tokens_sum)", "aggregation": "sum" }
+      {
+        "metric": "cpm",
+        "label": "RPM",
+        "unit": "rpm",
+        "mqe": "gen_ai_provider_cpm",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "respTime",
+        "label": "Latency",
+        "unit": "ms",
+        "mqe": "gen_ai_provider_resp_time",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "sla",
+        "label": "Success Rate",
+        "unit": "%",
+        "mqe": "gen_ai_provider_sla/100",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "outTokens",
+        "label": "Output Tokens",
+        "mqe": "latest(gen_ai_provider_output_tokens_sum)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
     "groups": [
-      { "title": "Latency & errors", "size": "auto", "metrics": [
-        { "id": "respTime", "label": "Avg Latency", "tip": "Avg call latency to the GenAI provider.", "mqe": "gen_ai_provider_resp_time", "unit": "ms", "aggregation": "avg" },
-        { "id": "err", "label": "Error Rate", "tip": "100 − provider SLA.", "mqe": "100 - gen_ai_provider_sla/100", "unit": "%", "aggregation": "avg" }
-      ]},
-      { "title": "Cost", "size": "square", "metrics": [
-        { "id": "totalCost", "label": "Total Estimated Cost", "tip": "Cumulative provider cost estimate.", "mqe": "latest(gen_ai_provider_total_estimated_cost)/1000000", "aggregation": "sum" }
-      ]}
+      {
+        "title": "Latency & errors",
+        "size": "auto",
+        "metrics": [
+          {
+            "id": "respTime",
+            "label": "Avg Latency",
+            "tip": "Avg call latency to the GenAI provider.",
+            "mqe": "gen_ai_provider_resp_time",
+            "unit": "ms",
+            "aggregation": "avg"
+          },
+          {
+            "id": "err",
+            "label": "Error Rate",
+            "tip": "100 \u2212 provider SLA.",
+            "mqe": "100 - gen_ai_provider_sla/100",
+            "unit": "%",
+            "aggregation": "avg"
+          }
+        ]
+      },
+      {
+        "title": "Cost",
+        "size": "square",
+        "metrics": [
+          {
+            "id": "totalCost",
+            "label": "Total Estimated Cost",
+            "tip": "Cumulative provider cost estimate.",
+            "mqe": "latest(gen_ai_provider_total_estimated_cost)/1000000",
+            "aggregation": "sum"
+          }
+        ]
+      }
     ]
   },
   "dashboards": {
     "service": [
-      { "id": "cpm", "title": "Calls / min", "type": "line", "unit": "rpm", "expressions": ["gen_ai_provider_cpm"], "span": 4, "rowSpan": 2 },
-      { "id": "resp_time", "title": "Avg Response Time", "type": "line", "unit": "ms", "expressions": ["gen_ai_provider_resp_time"], "span": 4, "rowSpan": 2 },
-      { "id": "sla", "title": "Success Rate", "type": "line", "unit": "%", "expressions": ["gen_ai_provider_sla/100"], "span": 4, "rowSpan": 2 },
-      { "id": "percentile", "title": "Latency Percentile", "type": "line", "unit": "ms", "expressions": ["gen_ai_provider_latency_percentile"], "span": 12, "rowSpan": 2 },
-      { "id": "input_tokens", "title": "Input Tokens", "type": "line", "expressions": ["latest(gen_ai_provider_input_tokens_sum)", "gen_ai_provider_input_tokens_avg"], "expressionLabels": ["sum", "avg"], "span": 6, "rowSpan": 2 },
-      { "id": "output_tokens", "title": "Output Tokens", "type": "line", "expressions": ["latest(gen_ai_provider_output_tokens_sum)", "gen_ai_provider_output_tokens_avg"], "expressionLabels": ["sum", "avg"], "span": 6, "rowSpan": 2 },
-      { "id": "cost", "title": "Estimated Cost", "type": "line", "expressions": ["latest(gen_ai_provider_total_estimated_cost)/1000000", "gen_ai_provider_avg_estimated_cost/1000000"], "expressionLabels": ["total", "avg"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "cpm",
+        "title": "Calls / min",
+        "type": "line",
+        "unit": "rpm",
+        "expressions": [
+          "gen_ai_provider_cpm"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "resp_time",
+        "title": "Avg Response Time",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "gen_ai_provider_resp_time"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "sla",
+        "title": "Success Rate",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "gen_ai_provider_sla/100"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "percentile",
+        "title": "Latency Percentile",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "gen_ai_provider_latency_percentile"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      },
+      {
+        "id": "input_tokens",
+        "title": "Input Tokens",
+        "type": "line",
+        "expressions": [
+          "latest(gen_ai_provider_input_tokens_sum)",
+          "gen_ai_provider_input_tokens_avg"
+        ],
+        "expressionLabels": [
+          "sum",
+          "avg"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "output_tokens",
+        "title": "Output Tokens",
+        "type": "line",
+        "expressions": [
+          "latest(gen_ai_provider_output_tokens_sum)",
+          "gen_ai_provider_output_tokens_avg"
+        ],
+        "expressionLabels": [
+          "sum",
+          "avg"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "cost",
+        "title": "Estimated Cost",
+        "type": "line",
+        "expressions": [
+          "latest(gen_ai_provider_total_estimated_cost)/1000000",
+          "gen_ai_provider_avg_estimated_cost/1000000"
+        ],
+        "expressionLabels": [
+          "total",
+          "avg"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ],
     "endpoint": [
-      { "id": "cpm", "title": "Calls / min", "type": "line", "unit": "rpm", "expressions": ["gen_ai_model_call_cpm"], "span": 4, "rowSpan": 2 },
-      { "id": "latency_avg", "title": "Avg Latency", "type": "line", "unit": "ms", "expressions": ["gen_ai_model_latency_avg"], "span": 4, "rowSpan": 2 },
-      { "id": "sla", "title": "Success Rate", "type": "line", "unit": "%", "expressions": ["gen_ai_model_sla/100"], "span": 4, "rowSpan": 2 },
-      { "id": "latency_percentile", "title": "Latency Percentile", "type": "line", "unit": "ms", "expressions": ["gen_ai_model_latency_percentile"], "span": 6, "rowSpan": 2 },
-      { "id": "ttft", "title": "TTFT", "type": "line", "unit": "ms", "expressions": ["gen_ai_model_ttft_avg", "gen_ai_model_ttft_percentile"], "expressionLabels": ["avg", "percentile"], "span": 6, "rowSpan": 2 },
-      { "id": "input_tokens", "title": "Input Tokens", "type": "line", "expressions": ["latest(gen_ai_model_input_tokens_sum)", "gen_ai_model_input_tokens_avg"], "expressionLabels": ["sum", "avg"], "span": 6, "rowSpan": 2 },
-      { "id": "output_tokens", "title": "Output Tokens", "type": "line", "expressions": ["latest(gen_ai_model_output_tokens_sum)", "gen_ai_model_output_tokens_avg"], "expressionLabels": ["sum", "avg"], "span": 6, "rowSpan": 2 },
-      { "id": "cost", "title": "Estimated Cost", "type": "line", "expressions": ["latest(gen_ai_model_total_estimated_cost)/1000000", "gen_ai_model_avg_estimated_cost/1000000"], "expressionLabels": ["total", "avg"], "span": 12, "rowSpan": 2 }
+      {
+        "id": "cpm",
+        "title": "Calls / min",
+        "type": "line",
+        "unit": "rpm",
+        "expressions": [
+          "gen_ai_model_call_cpm"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency_avg",
+        "title": "Avg Latency",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "gen_ai_model_latency_avg"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "sla",
+        "title": "Success Rate",
+        "type": "line",
+        "unit": "%",
+        "expressions": [
+          "gen_ai_model_sla/100"
+        ],
+        "span": 4,
+        "rowSpan": 2
+      },
+      {
+        "id": "latency_percentile",
+        "title": "Latency Percentile",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "gen_ai_model_latency_percentile"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "ttft",
+        "title": "TTFT",
+        "type": "line",
+        "unit": "ms",
+        "expressions": [
+          "gen_ai_model_ttft_avg",
+          "gen_ai_model_ttft_percentile"
+        ],
+        "expressionLabels": [
+          "avg",
+          "percentile"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "input_tokens",
+        "title": "Input Tokens",
+        "type": "line",
+        "expressions": [
+          "latest(gen_ai_model_input_tokens_sum)",
+          "gen_ai_model_input_tokens_avg"
+        ],
+        "expressionLabels": [
+          "sum",
+          "avg"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "output_tokens",
+        "title": "Output Tokens",
+        "type": "line",
+        "expressions": [
+          "latest(gen_ai_model_output_tokens_sum)",
+          "gen_ai_model_output_tokens_avg"
+        ],
+        "expressionLabels": [
+          "sum",
+          "avg"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "cost",
+        "title": "Estimated Cost",
+        "type": "line",
+        "expressions": [
+          "latest(gen_ai_model_total_estimated_cost)/1000000",
+          "gen_ai_model_avg_estimated_cost/1000000"
+        ],
+        "expressionLabels": [
+          "total",
+          "avg"
+        ],
+        "span": 12,
+        "rowSpan": 2
+      }
     ]
   }
 }

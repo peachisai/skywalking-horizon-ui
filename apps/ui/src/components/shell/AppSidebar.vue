@@ -15,7 +15,7 @@
   limitations under the License.
 -->
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import Icon, { type IconName } from '@/components/icons/Icon.vue';
 import logoSw from '@/assets/icons/logo-sw.svg?raw';
@@ -68,10 +68,60 @@ function toggleLayer(key: string): void {
   expandedLayer.value = expandedLayer.value === key ? null : key;
 }
 
+// Bucket the ordered layer list by the template's `group` field so the
+// sidebar renders a single section per group (Istio / Kubernetes / AWS
+// / …) instead of dumping every layer flat. Ungrouped layers (general,
+// browser) are surfaced first at the top. Group sections are
+// independently collapsible — clicking one toggles its open state.
+interface LayerGroup { kind: 'group'; label: string; layers: SidebarLayer[] }
+interface LayerSingle { kind: 'single'; layer: SidebarLayer }
+type SidebarEntry = LayerGroup | LayerSingle;
+const sidebarEntries = computed<SidebarEntry[]>(() => {
+  const out: SidebarEntry[] = [];
+  const groupBuckets = new Map<string, SidebarLayer[]>();
+  // Preserve the source order — first time we see a group, that's
+  // where its section lands in the sidebar.
+  for (const L of orderedLayers.value) {
+    if (L.group) {
+      if (!groupBuckets.has(L.group)) {
+        groupBuckets.set(L.group, []);
+        out.push({ kind: 'group', label: L.group, layers: groupBuckets.get(L.group)! });
+      }
+      groupBuckets.get(L.group)!.push(L);
+    } else {
+      out.push({ kind: 'single', layer: L });
+    }
+  }
+  return out;
+});
+const openGroups = ref<Set<string>>(new Set());
+function toggleGroup(label: string): void {
+  const next = new Set(openGroups.value);
+  if (next.has(label)) next.delete(label); else next.add(label);
+  openGroups.value = next;
+}
+function isGroupOpen(label: string): boolean { return openGroups.value.has(label); }
+
 const route = useRoute();
 function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(path + '/');
 }
+
+// Auto-open the group that contains the active layer so reload-on-URL
+// doesn't hide the user's current location behind a collapsed section.
+watch(
+  () => route.path,
+  () => {
+    const m = route.path.match(/^\/layer\/([^/]+)/);
+    if (!m) return;
+    const key = m[1];
+    const L = orderedLayers.value.find((l) => l.key === key);
+    if (L?.group && !openGroups.value.has(L.group)) {
+      openGroups.value = new Set([...openGroups.value, L.group]);
+    }
+  },
+  { immediate: true },
+);
 
 interface NavRow {
   icon: IconName;
@@ -174,118 +224,252 @@ const sections: NavSection[] = [
           set up a layer
         </RouterLink>
       </div>
-      <template v-for="L in orderedLayers" :key="L.key">
-        <!-- Single-feature layer (virtual_database, virtual_cache, etc.):
-             render as a direct link to the layer's Service page — no
-             expander, no children. -->
+      <template v-for="(E, ei) in sidebarEntries" :key="E.kind === 'group' ? `g:${E.label}` : `s:${E.layer.key}:${ei}`">
+        <!-- Grouped layers: collapsible section header + nested layer
+             rows. Group is identified by the layer template's `group`
+             field; expanding shows the same row UI as ungrouped layers. -->
+        <template v-if="E.kind === 'group'">
+          <div
+            class="layer-group"
+            :class="{ 'is-open': isGroupOpen(E.label) }"
+            @click="toggleGroup(E.label)"
+          >
+            <span class="layer-group-name">{{ E.label }}</span>
+            <span class="layer-group-count">{{ E.layers.length }}</span>
+            <span class="caret" :class="{ open: isGroupOpen(E.label) }">
+              <Icon name="caret" :size="10" />
+            </span>
+          </div>
+          <template v-if="isGroupOpen(E.label)">
+            <template v-for="L in E.layers" :key="`${E.label}::${L.key}`">
+              <!-- Same per-layer markup as the ungrouped path. -->
+              <RouterLink
+                v-if="isSingleFeatureLayer(L)"
+                :to="`/layer/${L.key}/service`"
+                class="layer-row direct in-group"
+                :class="{ 'is-active': isActive(`/layer/${L.key}`) }"
+              >
+                <span class="layer-dot" :style="{ background: L.color }" />
+                <span class="layer-name">{{ L.name }}</span>
+              </RouterLink>
+              <div
+                v-else
+                class="layer-row in-group"
+                :class="{ 'is-active': expandedLayer === L.key }"
+                @click="toggleLayer(L.key)"
+              >
+                <span class="layer-dot" :style="{ background: L.color }" />
+                <span class="layer-name" :style="{ fontWeight: expandedLayer === L.key ? 600 : 500 }">
+                  {{ L.name }}
+                </span>
+                <span class="caret" :class="{ open: expandedLayer === L.key }">
+                  <Icon name="caret" :size="10" />
+                </span>
+              </div>
+              <!-- Children of a multi-feature grouped layer slot in below
+                   the row, indented one level deeper than ungrouped layers'
+                   children so the visual hierarchy stays legible. -->
+              <div
+                v-if="!isSingleFeatureLayer(L) && expandedLayer === L.key"
+                class="layer-children in-group"
+              >
+                <RouterLink
+                  v-if="L.slots.services || L.caps.dashboards"
+                  :to="`/layer/${L.key}/service`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/service`) || route.path === `/layer/${L.key}` }"
+                >
+                  <Icon name="svc" /><span>Service</span>
+                  <span class="sw-badge" style="margin-left: auto">{{ L.serviceCount }}</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.slots.instances"
+                  :to="`/layer/${L.key}/instance`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/instance`) }"
+                >
+                  <Icon name="prof" /><span>{{ L.slots.instances }}</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.slots.endpoints"
+                  :to="`/layer/${L.key}/endpoint`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/endpoint`) }"
+                >
+                  <Icon name="ep" /><span>{{ L.slots.endpoints }}</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="hasTopology(L)"
+                  :to="`/layer/${L.key}/topology`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/topology`) }"
+                >
+                  <Icon name="topo" /><span>Topology</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.caps.endpointDependency"
+                  :to="`/layer/${L.key}/dependency`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/dependency`) }"
+                >
+                  <Icon name="ep" /><span>{{ L.slots.endpointDependency || 'Dependency' }}</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.caps.traces"
+                  :to="`/layer/${L.key}/trace`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/trace`) }"
+                >
+                  <Icon name="trace" /><span>Trace</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.caps.logs"
+                  :to="`/layer/${L.key}/logs`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/logs`) }"
+                >
+                  <Icon name="log" /><span>Logs</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.caps.traceProfiling"
+                  :to="`/layer/${L.key}/trace-profiling`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/trace-profiling`) }"
+                >
+                  <Icon name="prof" /><span>Trace Profiling</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.caps.ebpfProfiling"
+                  :to="`/layer/${L.key}/ebpf-profiling`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/ebpf-profiling`) }"
+                >
+                  <Icon name="prof" /><span>eBPF Profiling</span>
+                </RouterLink>
+                <RouterLink
+                  v-if="L.caps.asyncProfiling"
+                  :to="`/layer/${L.key}/async-profiling`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/async-profiling`) }"
+                >
+                  <Icon name="prof" /><span>Async Profiling</span>
+                </RouterLink>
+              </div>
+            </template>
+          </template>
+        </template>
+
+        <!-- Ungrouped single-feature layer: direct link. -->
         <RouterLink
-          v-if="isSingleFeatureLayer(L)"
-          :to="`/layer/${L.key}/service`"
+          v-else-if="isSingleFeatureLayer(E.layer)"
+          :to="`/layer/${E.layer.key}/service`"
           class="layer-row direct"
-          :class="{ 'is-active': isActive(`/layer/${L.key}`) }"
+          :class="{ 'is-active': isActive(`/layer/${E.layer.key}`) }"
         >
-          <span class="layer-dot" :style="{ background: L.color }" />
-          <span class="layer-name">{{ L.name }}</span>
+          <span class="layer-dot" :style="{ background: E.layer.color }" />
+          <span class="layer-name">{{ E.layer.name }}</span>
         </RouterLink>
 
-        <!-- Multi-feature layer: expander row + children. -->
+        <!-- Ungrouped multi-feature layer: expander row + children. -->
         <div
           v-else
           class="layer-row"
-          :class="{ 'is-active': expandedLayer === L.key }"
-          @click="toggleLayer(L.key)"
+          :class="{ 'is-active': expandedLayer === E.layer.key }"
+          @click="toggleLayer(E.layer.key)"
         >
-          <span class="layer-dot" :style="{ background: L.color }" />
-          <span class="layer-name" :style="{ fontWeight: expandedLayer === L.key ? 600 : 500 }">
-            {{ L.name }}
+          <span class="layer-dot" :style="{ background: E.layer.color }" />
+          <span class="layer-name" :style="{ fontWeight: expandedLayer === E.layer.key ? 600 : 500 }">
+            {{ E.layer.name }}
           </span>
-          <span class="caret" :class="{ open: expandedLayer === L.key }">
+          <span class="caret" :class="{ open: expandedLayer === E.layer.key }">
             <Icon name="caret" :size="10" />
           </span>
         </div>
-        <div v-if="!isSingleFeatureLayer(L) && expandedLayer === L.key" class="layer-children">
-          <!-- Service = the layer's primary landing page (widget grid).
-               This single entry replaces the old separate Services list
-               + Dashboards entries — they were the same page in concept. -->
+        <!-- Children for the ungrouped multi-feature path. The grouped
+             path renders its own children block above, indented one
+             level deeper. -->
+        <div
+          v-if="E.kind === 'single' && !isSingleFeatureLayer(E.layer) && expandedLayer === E.layer.key"
+          class="layer-children"
+        >
           <RouterLink
-            v-if="L.slots.services || L.caps.dashboards"
-            :to="`/layer/${L.key}/service`"
+            v-if="E.layer.slots.services || E.layer.caps.dashboards"
+            :to="`/layer/${E.layer.key}/service`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/service`) || route.path === `/layer/${L.key}` }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/service`) || route.path === `/layer/${E.layer.key}` }"
           >
             <Icon name="svc" /><span>Service</span>
-            <span class="sw-badge" style="margin-left: auto">{{ L.serviceCount }}</span>
+            <span class="sw-badge" style="margin-left: auto">{{ E.layer.serviceCount }}</span>
           </RouterLink>
           <RouterLink
-            v-if="L.slots.instances"
-            :to="`/layer/${L.key}/instance`"
+            v-if="E.layer.slots.instances"
+            :to="`/layer/${E.layer.key}/instance`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/instance`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/instance`) }"
           >
-            <Icon name="prof" /><span>{{ L.slots.instances }}</span>
+            <Icon name="prof" /><span>{{ E.layer.slots.instances }}</span>
           </RouterLink>
           <RouterLink
-            v-if="L.slots.endpoints"
-            :to="`/layer/${L.key}/endpoint`"
+            v-if="E.layer.slots.endpoints"
+            :to="`/layer/${E.layer.key}/endpoint`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/endpoint`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/endpoint`) }"
           >
-            <Icon name="ep" /><span>{{ L.slots.endpoints }}</span>
+            <Icon name="ep" /><span>{{ E.layer.slots.endpoints }}</span>
           </RouterLink>
-
           <RouterLink
-            v-if="hasTopology(L)"
-            :to="`/layer/${L.key}/topology`"
+            v-if="hasTopology(E.layer)"
+            :to="`/layer/${E.layer.key}/topology`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/topology`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/topology`) }"
           >
             <Icon name="topo" /><span>Topology</span>
           </RouterLink>
           <RouterLink
-            v-if="L.caps.endpointDependency"
-            :to="`/layer/${L.key}/dependency`"
+            v-if="E.layer.caps.endpointDependency"
+            :to="`/layer/${E.layer.key}/dependency`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/dependency`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/dependency`) }"
           >
-            <Icon name="ep" /><span>{{ L.slots.endpointDependency ?? `${L.slots.endpoints ?? 'Endpoint'} dependency` }}</span>
+            <Icon name="ep" /><span>{{ E.layer.slots.endpointDependency ?? `${E.layer.slots.endpoints ?? 'Endpoint'} dependency` }}</span>
           </RouterLink>
           <RouterLink
-            v-if="L.caps.traces"
-            :to="`/layer/${L.key}/trace`"
+            v-if="E.layer.caps.traces"
+            :to="`/layer/${E.layer.key}/trace`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/trace`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/trace`) }"
           >
             <Icon name="trace" /><span>Traces</span>
           </RouterLink>
           <RouterLink
-            v-if="L.caps.logs"
-            :to="`/layer/${L.key}/logs`"
+            v-if="E.layer.caps.logs"
+            :to="`/layer/${E.layer.key}/logs`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/logs`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/logs`) }"
           >
             <Icon name="log" /><span>Logs</span>
           </RouterLink>
           <RouterLink
-            v-if="L.caps.traceProfiling"
-            :to="`/layer/${L.key}/trace-profiling`"
+            v-if="E.layer.caps.traceProfiling"
+            :to="`/layer/${E.layer.key}/trace-profiling`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/trace-profiling`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/trace-profiling`) }"
           >
             <Icon name="flame" /><span>Trace Profiling</span>
           </RouterLink>
           <RouterLink
-            v-if="L.caps.ebpfProfiling"
-            :to="`/layer/${L.key}/ebpf-profiling`"
+            v-if="E.layer.caps.ebpfProfiling"
+            :to="`/layer/${E.layer.key}/ebpf-profiling`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/ebpf-profiling`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/ebpf-profiling`) }"
           >
             <Icon name="flame" /><span>eBPF Profiling</span>
           </RouterLink>
           <RouterLink
-            v-if="L.caps.asyncProfiling"
-            :to="`/layer/${L.key}/async-profiling`"
+            v-if="E.layer.caps.asyncProfiling"
+            :to="`/layer/${E.layer.key}/async-profiling`"
             class="sw-nav-item"
-            :class="{ 'is-active': isActive(`/layer/${L.key}/async-profiling`) }"
+            :class="{ 'is-active': isActive(`/layer/${E.layer.key}/async-profiling`) }"
           >
             <Icon name="flame" /><span>Async Profiling</span>
           </RouterLink>
@@ -419,6 +603,47 @@ const sections: NavSection[] = [
 }
 .layer-children .sw-nav-item {
   text-decoration: none;
+}
+/* Sidebar group header (e.g. "Istio", "Databases", "AWS"). Collapsible
+   section that buckets layer rows sharing the template's `group` field.
+   Visually quieter than a layer row — the layer rows beneath it stay
+   the primary affordance. */
+.layer-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 4px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sw-fg-3);
+  cursor: pointer;
+  user-select: none;
+}
+.layer-group:hover { color: var(--sw-fg-1); }
+.layer-group.is-open { color: var(--sw-fg-1); }
+.layer-group-name { flex: 1; min-width: 0; }
+.layer-group-count {
+  font-family: var(--sw-mono);
+  font-size: 9.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sw-fg-3);
+  background: var(--sw-bg-2);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+/* Layer rows nested inside a group section get a left indent + dashed
+   guide rule so the visual hierarchy reads at a glance. */
+.layer-row.in-group {
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px dashed var(--sw-line-2);
+}
+.layer-children.in-group {
+  margin-left: 28px;
 }
 .sw-nav-item {
   text-decoration: none;

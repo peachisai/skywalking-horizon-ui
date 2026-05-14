@@ -1,6 +1,7 @@
 {
   "key": "POSTGRESQL",
   "alias": "PostgreSQL",
+  "group": "Databases",
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-postgresql-monitoring/",
   "aliases": {
@@ -18,10 +19,31 @@
   "layer-header": {
     "orderBy": "fetched",
     "columns": [
-      { "metric": "fetched", "label": "Fetched / s", "mqe": "aggregate_labels(meter_pg_fetched_rows_rate,sum)", "aggregation": "sum" },
-      { "metric": "inserted", "label": "Inserted / s", "mqe": "aggregate_labels(meter_pg_inserted_rows_rate,sum)", "aggregation": "sum" },
-      { "metric": "cacheHit", "label": "Cache Hit", "unit": "%", "mqe": "aggregate_labels(meter_pg_cache_hit_rate,avg)", "aggregation": "avg" },
-      { "metric": "deadlocks", "label": "Deadlocks", "mqe": "aggregate_labels(meter_pg_deadlocks_rate,sum)", "aggregation": "sum" }
+      {
+        "metric": "fetched",
+        "label": "Fetched / s",
+        "mqe": "aggregate_labels(meter_pg_fetched_rows_rate,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "inserted",
+        "label": "Inserted / s",
+        "mqe": "aggregate_labels(meter_pg_inserted_rows_rate,sum)",
+        "aggregation": "sum"
+      },
+      {
+        "metric": "cacheHit",
+        "label": "Cache Hit",
+        "unit": "%",
+        "mqe": "aggregate_labels(meter_pg_cache_hit_rate,avg)",
+        "aggregation": "avg"
+      },
+      {
+        "metric": "deadlocks",
+        "label": "Deadlocks",
+        "mqe": "aggregate_labels(meter_pg_deadlocks_rate,sum)",
+        "aggregation": "sum"
+      }
     ]
   },
   "overview": {
@@ -30,16 +52,41 @@
         "title": "Health",
         "size": "auto",
         "metrics": [
-          { "id": "cacheHit", "label": "Cache Hit", "tip": "Buffer-cache hit ratio across the cluster.", "mqe": "aggregate_labels(meter_pg_cache_hit_rate,avg)", "unit": "%", "aggregation": "avg" },
-          { "id": "deadlocks", "label": "Deadlocks/s", "tip": "Detected deadlocks per second.", "mqe": "aggregate_labels(meter_pg_deadlocks_rate,sum)", "aggregation": "sum" },
-          { "id": "conflicts", "label": "Conflicts/s", "tip": "Recovery conflicts per second.", "mqe": "aggregate_labels(meter_pg_conflicts_rate,sum)", "aggregation": "sum" }
+          {
+            "id": "cacheHit",
+            "label": "Cache Hit",
+            "tip": "Buffer-cache hit ratio across the cluster.",
+            "mqe": "aggregate_labels(meter_pg_cache_hit_rate,avg)",
+            "unit": "%",
+            "aggregation": "avg"
+          },
+          {
+            "id": "deadlocks",
+            "label": "Deadlocks/s",
+            "tip": "Detected deadlocks per second.",
+            "mqe": "aggregate_labels(meter_pg_deadlocks_rate,sum)",
+            "aggregation": "sum"
+          },
+          {
+            "id": "conflicts",
+            "label": "Conflicts/s",
+            "tip": "Recovery conflicts per second.",
+            "mqe": "aggregate_labels(meter_pg_conflicts_rate,sum)",
+            "aggregation": "sum"
+          }
         ]
       },
       {
         "title": "Throughput",
         "size": "square",
         "metrics": [
-          { "id": "fetched", "label": "Fetched /s", "tip": "Rows fetched per second.", "mqe": "aggregate_labels(meter_pg_fetched_rows_rate,sum)", "aggregation": "sum" }
+          {
+            "id": "fetched",
+            "label": "Fetched /s",
+            "tip": "Rows fetched per second.",
+            "mqe": "aggregate_labels(meter_pg_fetched_rows_rate,sum)",
+            "aggregation": "sum"
+          }
         ]
       }
     ]
@@ -50,7 +97,9 @@
         "id": "rows_fetched",
         "title": "Fetched Rows / s",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_pg_fetched_rows_rate,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_pg_fetched_rows_rate,sum)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -58,7 +107,9 @@
         "id": "rows_inserted",
         "title": "Inserted Rows / s",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_pg_inserted_rows_rate,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_pg_inserted_rows_rate,sum)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -66,7 +117,9 @@
         "id": "rows_updated",
         "title": "Updated Rows / s",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_pg_updated_rows_rate,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_pg_updated_rows_rate,sum)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -74,7 +127,9 @@
         "id": "rows_deleted",
         "title": "Deleted Rows / s",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_pg_deleted_rows_rate,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_pg_deleted_rows_rate,sum)"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -82,7 +137,9 @@
         "id": "rows_returned",
         "title": "Returned Rows / s",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_pg_returned_rows_rate,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_pg_returned_rows_rate,sum)"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -90,7 +147,9 @@
         "id": "temp_files",
         "title": "Temporary Files / s",
         "type": "line",
-        "expressions": ["aggregate_labels(meter_pg_temporary_files_rate,sum)"],
+        "expressions": [
+          "aggregate_labels(meter_pg_temporary_files_rate,sum)"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -99,7 +158,9 @@
         "title": "Cache Hit Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["aggregate_labels(meter_pg_cache_hit_rate,avg)"],
+        "expressions": [
+          "aggregate_labels(meter_pg_cache_hit_rate,avg)"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -112,7 +173,10 @@
           "aggregate_labels(meter_pg_committed_transactions_rate,sum)",
           "aggregate_labels(meter_pg_rolled_back_transactions_rate,sum)"
         ],
-        "expressionLabels": ["committed", "rolled-back"],
+        "expressionLabels": [
+          "committed",
+          "rolled-back"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -124,7 +188,10 @@
           "aggregate_labels(meter_pg_conflicts_rate,sum)",
           "aggregate_labels(meter_pg_deadlocks_rate,sum)"
         ],
-        "expressionLabels": ["conflicts", "deadlocks"],
+        "expressionLabels": [
+          "conflicts",
+          "deadlocks"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -137,7 +204,11 @@
           "aggregate_labels(meter_pg_idle_sessions,sum)",
           "aggregate_labels(meter_pg_locks_count,sum)"
         ],
-        "expressionLabels": ["active", "idle", "locks"],
+        "expressionLabels": [
+          "active",
+          "idle",
+          "locks"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -153,7 +224,13 @@
           "aggregate_labels(meter_pg_buffers_alloc,sum)",
           "aggregate_labels(meter_pg_buffers_backend,sum)"
         ],
-        "expressionLabels": ["checkpoint", "clean", "backend fsync", "alloc", "backend"],
+        "expressionLabels": [
+          "checkpoint",
+          "clean",
+          "backend fsync",
+          "alloc",
+          "backend"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -167,7 +244,12 @@
           "aggregate_labels(meter_pg_checkpoint_write_time_rate,sum)",
           "aggregate_labels(meter_pg_checkpoint_sync_time_rate,sum)"
         ],
-        "expressionLabels": ["timed", "requested", "write time", "sync time"],
+        "expressionLabels": [
+          "timed",
+          "requested",
+          "write time",
+          "sync time"
+        ],
         "span": 12,
         "rowSpan": 2
       },
@@ -177,7 +259,9 @@
         "tip": "Top 20 slowest captured statements.",
         "type": "record",
         "unit": "ms",
-        "expressions": ["top_n(top_n_database_statement, 20, des)"],
+        "expressions": [
+          "top_n(top_n_database_statement, 20, des)"
+        ],
         "span": 12,
         "rowSpan": 4
       }
@@ -188,7 +272,9 @@
         "title": "Shared Buffers",
         "type": "line",
         "unit": "MB",
-        "expressions": ["latest(meter_pg_instance_shared_buffers)/1024/1024"],
+        "expressions": [
+          "latest(meter_pg_instance_shared_buffers)/1024/1024"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -197,7 +283,9 @@
         "title": "Effective Cache",
         "type": "line",
         "unit": "GB",
-        "expressions": ["latest(meter_pg_instance_effective_cache)/1024/1024/1024"],
+        "expressions": [
+          "latest(meter_pg_instance_effective_cache)/1024/1024/1024"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -206,7 +294,9 @@
         "title": "Work Mem",
         "type": "line",
         "unit": "MB",
-        "expressions": ["latest(meter_pg_instance_work_mem)/1024/1024"],
+        "expressions": [
+          "latest(meter_pg_instance_work_mem)/1024/1024"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -215,7 +305,9 @@
         "title": "Max WAL Size",
         "type": "line",
         "unit": "GB",
-        "expressions": ["latest(meter_pg_instance_max_wal_size)/1024/1024/1024"],
+        "expressions": [
+          "latest(meter_pg_instance_max_wal_size)/1024/1024/1024"
+        ],
         "span": 3,
         "rowSpan": 2
       },
@@ -223,7 +315,9 @@
         "id": "instance_fetched",
         "title": "Fetched Rows / s",
         "type": "line",
-        "expressions": ["meter_pg_instance_fetched_rows_rate"],
+        "expressions": [
+          "meter_pg_instance_fetched_rows_rate"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -231,7 +325,9 @@
         "id": "instance_inserted",
         "title": "Inserted Rows / s",
         "type": "line",
-        "expressions": ["meter_pg_instance_inserted_rows_rate"],
+        "expressions": [
+          "meter_pg_instance_inserted_rows_rate"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -240,7 +336,9 @@
         "title": "Cache Hit Rate",
         "type": "line",
         "unit": "%",
-        "expressions": ["meter_pg_instance_cache_hit_rate"],
+        "expressions": [
+          "meter_pg_instance_cache_hit_rate"
+        ],
         "span": 4,
         "rowSpan": 2
       },
@@ -253,7 +351,11 @@
           "meter_pg_instance_idle_sessions",
           "meter_pg_instance_locks_count"
         ],
-        "expressionLabels": ["active", "idle", "locks"],
+        "expressionLabels": [
+          "active",
+          "idle",
+          "locks"
+        ],
         "span": 6,
         "rowSpan": 2
       },
@@ -265,7 +367,10 @@
           "meter_pg_instance_conflicts_rate",
           "meter_pg_instance_deadlocks_rate"
         ],
-        "expressionLabels": ["conflicts", "deadlocks"],
+        "expressionLabels": [
+          "conflicts",
+          "deadlocks"
+        ],
         "span": 6,
         "rowSpan": 2
       }

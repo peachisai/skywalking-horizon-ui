@@ -825,7 +825,7 @@ function isVisible(
 }
 .w-head h4 {
   margin: 0;
-  font-size: 11.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--widget-accent, var(--sw-fg-0));
   letter-spacing: -0.01em;
@@ -834,7 +834,7 @@ function isVisible(
   text-overflow: ellipsis;
 }
 .w-head .unit {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--sw-fg-3);
   flex: 0 0 auto;
 }

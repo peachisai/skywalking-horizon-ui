@@ -167,6 +167,12 @@ export interface LayerTemplate {
   key: string;
   /** Display name override. */
   alias?: string;
+  /** Sidebar grouping label. Layers that share a `group` value collapse
+   *  under one expandable section in the sidebar — used to keep related
+   *  layers together (Istio Managed SVCs / Control Plane / Data Plane
+   *  → "Istio"; so11y_* → "Self-Observability"). Layers without a
+   *  group hang at the top level on their own. */
+  group?: string;
   /** Layer-dot color (CSS var or hex). */
   color?: string;
   /** Doc link surfaced as a chip on the layer page. */
