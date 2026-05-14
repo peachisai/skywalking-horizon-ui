@@ -206,17 +206,9 @@ const levelFacet = computed<Record<Level, number>>(() => {
   for (const r of logs.value) counts[levelOf(r)] += 1;
   return counts;
 });
-const serviceFacet = computed<Array<[string, number]>>(() => {
-  if (facets.value?.services && facets.value.services.length > 0) {
-    return facets.value.services.slice(0, 8).map((s) => [s.name, s.count]);
-  }
-  const map = new Map<string, number>();
-  for (const r of logs.value) {
-    const k = r.serviceName ?? '(none)';
-    map.set(k, (map.get(k) ?? 0) + 1);
-  }
-  return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-});
+// Service facet removed — the log query is already service-scoped
+// (the view is opened from /layer/<key>/logs with a specific service
+// selected), so a "top services" rail just repeats the title.
 
 // Since the level filter now goes to OAP, the visible logs already
 // reflect it — no client-side narrowing needed.
@@ -301,40 +293,32 @@ function jumpToTrace(traceId: string): void {
 
     <!-- Histogram + main stream -->
     <section class="lg-body sw-card">
-      <aside class="lg-facets">
-        <div class="facet-block">
-          <div class="facet-title">
-            Level
-            <span v-if="facets" class="facet-sample" :title="`window sample of ${facets.sampled} rows`">·{{ facets.sampled }}</span>
-          </div>
+      <div class="lg-main">
+        <!-- Top-of-table legend strip — one chip per level with the
+             in-window count when data exists. Clickable: toggles the
+             level filter. The service axis is intentionally absent
+             (this query is already service-scoped, so the service
+             dimension carries no information). -->
+        <div v-if="facets || logs.length > 0" class="lg-legend">
+          <span class="lg-legend-kicker">Levels</span>
           <button
             v-for="l in LEVEL_ORDER"
             :key="l"
             type="button"
-            class="facet-row"
+            class="lg-legend-chip"
             :class="{ on: selectedLevel === l, disabled: l === 'other' }"
             :disabled="l === 'other'"
             @click="toggleLevel(l)"
           >
             <span class="lvl-dot" :style="{ background: LEVEL_COLOR[l] }" />
-            <span class="facet-name">{{ l }}</span>
-            <span class="facet-count">{{ levelFacet[l] }}</span>
+            <span class="lg-legend-name">{{ l }}</span>
+            <span v-if="levelFacet[l] > 0" class="lg-legend-count">{{ levelFacet[l] }}</span>
           </button>
+          <span v-if="facets" class="lg-legend-sample" :title="`window sample of ${facets.sampled} rows`">
+            sample of {{ facets.sampled }}
+          </span>
         </div>
-        <div class="facet-block">
-          <div class="facet-title">Service (top 8)</div>
-          <div
-            v-for="[name, count] in serviceFacet"
-            :key="name"
-            class="facet-row svc-row"
-          >
-            <span class="facet-name mono">{{ name }}</span>
-            <span class="facet-count">{{ count }}</span>
-          </div>
-        </div>
-      </aside>
 
-      <div class="lg-main">
         <!-- Density bar -->
         <div class="lg-density" v-if="histogram.bins.length > 0">
           <div
@@ -484,68 +468,68 @@ function jumpToTrace(traceId: string): void {
 
 .lg-body {
   padding: 0;
-  display: grid;
-  grid-template-columns: 200px 1fr;
   min-height: 540px;
 }
-.lg-facets {
-  border-right: 1px solid var(--sw-line);
-  padding: 12px;
+/* Top-of-table level legend — chips sit above the density bar so the
+   level counts surface at the same scan line the user reads the
+   timeline. Clicking a chip filters the stream to that level. */
+.lg-legend {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--sw-line);
+  flex-wrap: wrap;
 }
-.facet-block {}
-.facet-title {
-  font-size: 9.5px;
+.lg-legend-kicker {
+  font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--sw-fg-3);
-  margin-bottom: 6px;
+  margin-right: 6px;
 }
-.facet-row {
-  display: flex;
+.lg-legend-chip {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 3px 6px;
-  background: transparent;
-  border: none;
-  border-radius: 3px;
+  gap: 6px;
+  padding: 3px 9px;
+  background: var(--sw-bg-2);
+  border: 1px solid var(--sw-line-2);
+  border-radius: 12px;
   color: var(--sw-fg-1);
   font: inherit;
-  font-size: 11px;
+  font-size: 11.5px;
   cursor: pointer;
-  text-align: left;
 }
-.facet-row.svc-row { cursor: default; }
-.facet-row:hover { background: var(--sw-bg-2); }
-.facet-row.on {
-  background: var(--sw-accent-soft);
+.lg-legend-chip:hover { color: var(--sw-fg-0); border-color: var(--sw-line); }
+.lg-legend-chip.on {
   color: var(--sw-accent-2);
+  background: var(--sw-accent-soft);
+  border-color: var(--sw-accent-line);
 }
-.facet-row.disabled { cursor: not-allowed; opacity: 0.55; }
-.facet-row.disabled:hover { background: transparent; }
-.facet-sample {
-  margin-left: 4px;
-  font-size: 9.5px;
+.lg-legend-chip.disabled { opacity: 0.45; cursor: not-allowed; }
+.lg-legend-name { text-transform: capitalize; }
+.lg-legend-count {
+  font-family: var(--sw-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sw-fg-2);
+  padding: 0 4px;
+  border-left: 1px solid var(--sw-line-2);
+  margin-left: 2px;
+}
+.lg-legend-chip.on .lg-legend-count { color: var(--sw-accent-2); border-color: var(--sw-accent-line); }
+.lg-legend-sample {
+  margin-left: auto;
+  font-size: 10.5px;
   color: var(--sw-fg-3);
   font-family: var(--sw-mono);
-  text-transform: none;
-  letter-spacing: 0;
 }
 .lvl-dot {
   width: 8px;
   height: 8px;
   border-radius: 2px;
   flex: 0 0 auto;
-}
-.facet-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.facet-name.mono { font-family: var(--sw-mono); font-size: 10.5px; }
-.facet-count {
-  font-family: var(--sw-mono);
-  color: var(--sw-fg-3);
-  font-size: 10.5px;
 }
 
 .lg-main {
@@ -696,7 +680,7 @@ function jumpToTrace(traceId: string): void {
 }
 
 @media (max-width: 1100px) {
-  .lg-body { grid-template-columns: 1fr; }
-  .lg-facets { border-right: none; border-bottom: 1px solid var(--sw-line); flex-direction: row; flex-wrap: wrap; }
+  .lg-legend { padding: 8px 10px; gap: 4px; }
+  .lg-legend-chip { padding: 2px 7px; font-size: 11px; }
 }
 </style>
