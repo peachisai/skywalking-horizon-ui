@@ -302,7 +302,17 @@ export function registerTopologyRoute(app: FastifyInstance, deps: TopologyRouteD
           }
           seedIds = matches.filter((m): m is { id: string; name: string; normal?: boolean | null } => m !== null).map((m) => m.id);
         } else {
-          seedIds = data.services.slice(0, 30).map((s) => s.id);
+          // Layer-overview topology — seed with EVERY service the layer
+          // exposes. Booster-ui does the same: it computes the topology
+          // off `selectorStore.services.map(d => d.id)`, no cap. The
+          // earlier 30-service cap was leftover from a per-node MQE
+          // batch-size worry, but the MQE step already chunks at 150
+          // fragments per query (see below), so a layer with hundreds
+          // of services scales fine.
+          seedIds = data.services.map((s) => s.id);
+          // Debug log so the response size is visible while we
+          // diagnose why layers with many services come back small.
+          console.log(`[topology] layer=${oapLayer} seed-services=${seedIds.length}`);
         }
       } catch (err) {
         return reply.send(
@@ -355,6 +365,12 @@ export function registerTopologyRoute(app: FastifyInstance, deps: TopologyRouteD
           ),
         );
       }
+
+      // (Disconnected services are dropped a few lines below — they
+      // don't belong on a topology map. The earlier "fill them in as
+      // standalone nodes" pass was reverted after a closer look at
+      // booster-ui's demo, which only renders connected nodes too.)
+      console.log(`[topology] layer=${oapLayer} returned-nodes=${nodes.size} edges=${calls.size}`);
 
       // ── Per-node MQE. Builds fragments off the layer's
       // `topology.nodeMetrics`. Synthetic nodes (User / external) are
@@ -485,17 +501,23 @@ export function registerTopologyRoute(app: FastifyInstance, deps: TopologyRouteD
         }
       }
 
-      // ── Build response. Per operator direction: nodes with zero
-      // real metric values (after resolution) are dropped. This keeps
-      // ghost services off the graph when OAP returns a row but no
-      // data populated yet. Synthetic nodes (User / external) are
-      // kept so the graph still has its entry/exit anchors.
-      function hasAnyValue(r: Record<string, number | null>): boolean {
-        for (const v of Object.values(r)) if (v !== null) return true;
-        return false;
+      // ── Build response. Connected nodes only — a service with zero
+      // edges in the duration window doesn't belong on the topology
+      // map; it's a "service" not a "topology participant". This
+      // matches booster-ui's demo at
+      // https://demo.skywalking.apache.org/Service-Mesh/Services and
+      // /Kubernetes/Service: the canvas only renders nodes that are
+      // endpoints of at least one call edge. We keep idle-but-still-
+      // connected nodes (their metrics may be null on the windowed
+      // sample, but they still take part in the topology graph).
+      const connectedNodeIds = new Set<string>();
+      for (const c of calls.values()) {
+        connectedNodeIds.add(c.source);
+        connectedNodeIds.add(c.target);
       }
       const liveNodes: TopologyNode[] = [];
       for (const n of nodes.values()) {
+        if (!connectedNodeIds.has(n.id)) continue;
         const m = nodeMetricVals.get(n.id) ?? {};
         // Pad with explicit nulls so every metric id is present in the
         // wire shape — UI binds by id, an absent key would look the
@@ -503,12 +525,6 @@ export function registerTopologyRoute(app: FastifyInstance, deps: TopologyRouteD
         const filled: Record<string, number | null> = {};
         for (const def of topoCfg.nodeMetrics) {
           filled[def.id] = m[def.id] ?? null;
-        }
-        if (n.isReal && !hasAnyValue(filled)) {
-          // No data — drop. Per user direction: "if can't read data we
-          // could ignore". Synthetic User/external nodes survive
-          // because they have no metric scope to begin with.
-          continue;
         }
         liveNodes.push({
           id: n.id,

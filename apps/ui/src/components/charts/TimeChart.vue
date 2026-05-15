@@ -124,7 +124,17 @@ function buildOption(): echarts.EChartsCoreOption {
       // widget card's overflow:hidden. Otherwise the tooltip cuts off
       // at the card edge whenever a chart sits near the boundary.
       appendToBody: true,
-      confine: false,
+      // Containerless trigger needs `confine: true` so the popup
+      // sticks to the viewport edges when there are many series — the
+      // `extraCssText` cap below limits the inner height + adds
+      // scroll so labeled metrics with dozens of series (Envoy
+      // membership health per cluster, K8s pod_status per pod) don't
+      // overflow past the screen. Without these two, the bottom rows
+      // of the tooltip vanish off-screen.
+      confine: true,
+      extraCssText:
+        'max-height: 60vh; overflow-y: auto; max-width: 360px; ' +
+        'box-shadow: 0 8px 24px rgba(0,0,0,0.45);',
       valueFormatter: (v: unknown) =>
         typeof v === 'number' && Number.isFinite(v)
           ? `${formatVal(v)}${props.unit ? ` ${props.unit}` : ''}`

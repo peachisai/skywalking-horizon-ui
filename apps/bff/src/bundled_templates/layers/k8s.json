@@ -368,5 +368,8 @@
         "rowSpan": 2
       }
     ]
+  },
+  "traces": {
+    "source": "zipkin"
   }
 }

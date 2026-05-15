@@ -27,7 +27,7 @@
 -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { RouterLink, RouterView, useRoute } from 'vue-router';
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import type { LayerDef } from '@skywalking-horizon-ui/api-client';
 import Icon from '@/components/icons/Icon.vue';
 import Sparkline from '@/components/charts/Sparkline.vue';
@@ -35,19 +35,65 @@ import LayerServiceSelector from './LayerServiceSelector.vue';
 import { metricMeta } from '@/composables/metricCatalog';
 import { colorForMetric } from '@/composables/metricColor';
 import { useLayerLanding } from '@/composables/useLayerLanding';
-import { useLayers } from '@/composables/useLayers';
+import { useLayers, firstLayerTab } from '@/composables/useLayers';
 import { useSelectedService } from '@/composables/useSelectedService';
 import { useSetupStore } from '@/stores/setup';
 import { fmtMetric } from '@/utils/formatters';
 import { parseServiceName } from '@/utils/serviceName';
 
 const route = useRoute();
+const router = useRouter();
 const layerKey = computed(() => String(route.params.layerKey ?? ''));
 const { layers } = useLayers();
 const layer = computed<LayerDef | null>(() => {
   const found = layers.value.find((l) => l.key === layerKey.value);
   return found ?? null;
 });
+
+// Auto-redirect when the URL targets a sub-route the layer doesn't
+// support — e.g. `/layer/mesh_dp/service` on a layer with
+// `components.service: false`. Without this the operator lands on an
+// empty "No widgets defined" page even though the layer DOES have
+// other tabs (Instance / Logs / …). Fires once per change so the
+// browser-back button works as expected.
+//
+// Matrix of route segments that need the layer cap to be present:
+//   service     ⇒ caps.dashboards
+//   instance    ⇒ slots.instances
+//   endpoint    ⇒ slots.endpoints
+//   topology    ⇒ caps.serviceMap | caps.instanceTopology | caps.processTopology
+//   dependency  ⇒ caps.endpointDependency
+//   trace       ⇒ caps.traces
+//   logs        ⇒ caps.logs
+//   *-profiling ⇒ caps.*Profiling
+const SCOPE_CAP_PREDICATE: Record<string, (L: LayerDef) => boolean> = {
+  service: (L) => Boolean(L.caps?.dashboards),
+  instance: (L) => Boolean(L.slots?.instances),
+  endpoint: (L) => Boolean(L.slots?.endpoints),
+  topology: (L) => Boolean(L.caps?.serviceMap || L.caps?.instanceTopology || L.caps?.processTopology),
+  dependency: (L) => Boolean(L.caps?.endpointDependency),
+  trace: (L) => Boolean(L.caps?.traces),
+  logs: (L) => Boolean(L.caps?.logs),
+  'trace-profiling': (L) => Boolean(L.caps?.traceProfiling),
+  'ebpf-profiling': (L) => Boolean(L.caps?.ebpfProfiling),
+  'async-profiling': (L) => Boolean(L.caps?.asyncProfiling),
+};
+watch(
+  [() => route.path, layer],
+  ([path, L]) => {
+    if (!L) return;
+    const m = path.match(/^\/layer\/[^/]+\/([^/?]+)/);
+    if (!m) return;
+    const scope = m[1];
+    const predicate = SCOPE_CAP_PREDICATE[scope];
+    if (!predicate) return; // unknown scope — let the router resolve
+    if (predicate(L)) return; // layer supports this scope, nothing to do
+    const fallback = firstLayerTab(L);
+    if (fallback === scope) return; // already at the best fallback
+    void router.replace({ path: `/layer/${L.key}/${fallback}`, query: route.query });
+  },
+  { immediate: true },
+);
 const store = useSetupStore();
 const cfg = computed(() => {
   if (!layer.value) return null;
@@ -305,6 +351,7 @@ const serviceKpis = computed<HeaderKpi[]>(() => {
       :columns="selectorColumns"
       :selected-id="selectedId"
       :accent="layer.color"
+      :naming-rule="layer.naming ?? null"
       @select="pickService"
     />
 

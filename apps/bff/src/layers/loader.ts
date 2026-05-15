@@ -39,12 +39,13 @@ import type {
   DashboardScope,
   DashboardWidget,
   EndpointDependencyConfig,
+  ServiceNamingRule,
   TopologyConfig,
   TopologyMetricDef,
   TracesConfig,
 } from '@skywalking-horizon-ui/api-client';
 
-export type { TopologyConfig, EndpointDependencyConfig, TopologyMetricDef, TracesConfig };
+export type { TopologyConfig, EndpointDependencyConfig, TopologyMetricDef, TracesConfig, ServiceNamingRule };
 
 export interface LayerComponentFlags {
   service?: boolean;
@@ -212,6 +213,10 @@ export interface LayerTemplate {
    *  along with every query — useful for layers whose logs are always
    *  filtered by `logger=` or `source=`. */
   log?: LogConfig;
+  /** Service-name parsing rule. Surfaced verbatim on the menu response
+   *  so the UI can derive `{ display, group }` per service and cluster
+   *  topology nodes by group. */
+  naming?: ServiceNamingRule;
 }
 
 export interface LogConfig {

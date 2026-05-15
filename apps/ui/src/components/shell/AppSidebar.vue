@@ -67,7 +67,21 @@ function isSingleFeatureLayer(L: SidebarLayer): boolean {
 // doesn't look closed on first visit.
 const expandedLayer = ref<string | null>(null);
 function toggleLayer(key: string): void {
-  expandedLayer.value = expandedLayer.value === key ? null : key;
+  const wasExpanded = expandedLayer.value === key;
+  expandedLayer.value = wasExpanded ? null : key;
+  // Opening a layer (transition closed → open) also navigates to its
+  // first available sub-tab so the operator lands on actionable
+  // content. Collapsing is purely a section close (no nav). Skip when
+  // the route is already on this layer — we'd be navigating to the
+  // same place. This matches the group toggle's behaviour.
+  if (!wasExpanded) {
+    const L = orderedLayers.value.find((l) => l.key === key);
+    if (!L) return;
+    const target = `/layer/${L.key}/${firstLayerTab(L)}`;
+    if (route.path === target) return;
+    if (route.path.startsWith(`/layer/${L.key}/`)) return;
+    void router.push(target);
+  }
 }
 
 // Bucket the ordered layer list by the template's `group` field so the

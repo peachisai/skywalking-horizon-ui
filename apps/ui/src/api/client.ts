@@ -38,7 +38,28 @@ import type {
   TraceQueryState,
   TraceSource,
   TracesConfig,
+  ZipkinTraceListResponse,
+  ZipkinTraceDetailResponse,
 } from '@skywalking-horizon-ui/api-client';
+
+/** Query shape for `/api/zipkin/traces`. Mirrors the Zipkin v2 REST
+ *  params Zipkin's UI uses — all optional, `endTs` defaults to now and
+ *  `lookback` to 30 min (ms) server-side. */
+export interface ZipkinTraceQuery {
+  serviceName?: string;
+  remoteServiceName?: string;
+  spanName?: string;
+  annotationQuery?: string;
+  /** microseconds */
+  minDuration?: number;
+  /** microseconds */
+  maxDuration?: number;
+  /** ms since epoch */
+  endTs?: number;
+  /** ms */
+  lookback?: number;
+  limit?: number;
+}
 
 export type {
   MenuResponse,
@@ -438,6 +459,34 @@ export class BffClient {
       'GET',
       `/api/log-tags/values?key=${encodeURIComponent(key)}&windowMinutes=${windowMinutes}`,
     );
+  }
+
+  // ── Zipkin trace endpoints (proxied to OAP's ZipkinQueryHandler) ──
+  /** List services known to OAP's Zipkin store. */
+  zipkinServices(): Promise<string[]> {
+    return this.request('GET', '/api/zipkin/services');
+  }
+  /** List span names for a Zipkin service. */
+  zipkinSpans(serviceName: string): Promise<string[]> {
+    return this.request('GET', `/api/zipkin/spans?serviceName=${encodeURIComponent(serviceName)}`);
+  }
+  /** List remote (peer) services seen by a Zipkin service. */
+  zipkinRemoteServices(serviceName: string): Promise<string[]> {
+    return this.request('GET', `/api/zipkin/remote-services?serviceName=${encodeURIComponent(serviceName)}`);
+  }
+  /** Search Zipkin traces. Mirrors Zipkin v2 `/api/v2/traces`. */
+  zipkinTraces(q: ZipkinTraceQuery = {}): Promise<ZipkinTraceListResponse> {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) {
+      if (v === undefined || v === null || v === '') continue;
+      params.set(k, String(v));
+    }
+    const qs = params.toString();
+    return this.request<ZipkinTraceListResponse>('GET', `/api/zipkin/traces${qs ? '?' + qs : ''}`);
+  }
+  /** Fetch a single Zipkin trace by id. */
+  zipkinTrace(traceId: string): Promise<ZipkinTraceDetailResponse> {
+    return this.request<ZipkinTraceDetailResponse>('GET', `/api/zipkin/trace/${encodeURIComponent(traceId)}`);
   }
 
   /** List active instances for a service. The per-layer Instance

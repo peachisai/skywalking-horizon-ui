@@ -198,84 +198,75 @@
     ],
     "instance": [
       {
-        "id": "slave",
-        "title": "Slave Broker",
-        "type": "line",
+        "id": "connections_card",
+        "title": "Connections",
+        "tip": "Current TCP/JMS connections to this broker.",
+        "type": "card",
+        "unit": "conns",
         "expressions": [
-          "latest(meter_activemq_broker_state)"
+          "latest(meter_activemq_broker_current_connections)"
         ],
         "span": 3,
-        "rowSpan": 2
+        "rowSpan": 1,
+        "format": "int"
       },
       {
-        "id": "uptime",
-        "title": "Uptime (hours)",
-        "type": "line",
+        "id": "producer_count_card",
+        "title": "Producer Count",
+        "tip": "Active producer sessions on this broker.",
+        "type": "card",
+        "unit": "producers",
+        "expressions": [
+          "latest(aggregate_labels(meter_activemq_broker_current_producer_count,sum))"
+        ],
+        "span": 3,
+        "rowSpan": 1,
+        "format": "int"
+      },
+      {
+        "id": "consumer_count_card",
+        "title": "Consumer Count",
+        "tip": "Active consumer sessions on this broker.",
+        "type": "card",
+        "unit": "consumers",
+        "expressions": [
+          "latest(aggregate_labels(meter_activemq_broker_current_consumer_count,sum))"
+        ],
+        "span": 3,
+        "rowSpan": 1,
+        "format": "int"
+      },
+      {
+        "id": "uptime_card",
+        "title": "Uptime",
+        "tip": "Broker uptime in hours since the last restart.",
+        "type": "card",
+        "unit": "h",
         "expressions": [
           "latest(meter_activemq_broker_uptime)/1000/60/60"
         ],
         "span": 3,
-        "rowSpan": 2
+        "rowSpan": 1,
+        "format": "decimal"
       },
       {
-        "id": "conns",
-        "title": "Connections",
+        "id": "connections_line",
+        "title": "Connections (trend)",
         "type": "line",
+        "unit": "conns",
         "expressions": [
           "meter_activemq_broker_current_connections"
         ],
-        "span": 3,
-        "rowSpan": 2
-      },
-      {
-        "id": "msg_size",
-        "title": "Message Size (B)",
-        "type": "line",
-        "expressions": [
-          "aggregate_labels(meter_activemq_broker_average_message_size,avg)",
-          "aggregate_labels(meter_activemq_broker_max_message_size,max)"
-        ],
-        "expressionLabels": [
-          "avg",
-          "max"
-        ],
-        "span": 3,
-        "rowSpan": 2
-      },
-      {
-        "id": "producer_count",
-        "title": "Producer Count",
-        "type": "line",
-        "expressions": [
-          "aggregate_labels(meter_activemq_broker_producer_count,sum)",
-          "latest(aggregate_labels(meter_activemq_broker_current_producer_count,sum))"
-        ],
-        "expressionLabels": [
-          "increased",
-          "current"
-        ],
         "span": 4,
-        "rowSpan": 2
+        "rowSpan": 2,
+        "format": "int"
       },
       {
-        "id": "consumer_count",
-        "title": "Consumer Count",
+        "id": "enqueue_dequeue_line",
+        "title": "Enqueue / Dequeue Count",
+        "tip": "Per-minute enqueue + dequeue across destinations on this broker.",
         "type": "line",
-        "expressions": [
-          "aggregate_labels(meter_activemq_broker_consumer_count,sum)",
-          "latest(aggregate_labels(meter_activemq_broker_current_consumer_count,sum))"
-        ],
-        "expressionLabels": [
-          "increased",
-          "current"
-        ],
-        "span": 4,
-        "rowSpan": 2
-      },
-      {
-        "id": "eq_deq",
-        "title": "Enqueue/Dequeue Count",
-        "type": "line",
+        "unit": "/min",
         "expressions": [
           "aggregate_labels(meter_activemq_broker_enqueue_count,sum)",
           "aggregate_labels(meter_activemq_broker_dequeue_count,sum)"
@@ -285,26 +276,31 @@
           "dequeue"
         ],
         "span": 4,
-        "rowSpan": 2
+        "rowSpan": 2,
+        "format": "int"
       },
       {
-        "id": "eq_deq_rate",
-        "title": "Enqueue/Dequeue Rate",
+        "id": "producer_consumer_inc_line",
+        "title": "Producer / Consumer Increase",
+        "tip": "New producer + consumer sessions opened per minute.",
         "type": "line",
+        "unit": "/min",
         "expressions": [
-          "aggregate_labels(meter_activemq_broker_enqueue_rate,avg)",
-          "aggregate_labels(meter_activemq_broker_dequeue_rate,avg)"
+          "aggregate_labels(meter_activemq_broker_producer_count,sum)",
+          "aggregate_labels(meter_activemq_broker_consumer_count,sum)"
         ],
         "expressionLabels": [
-          "enqueue",
-          "dequeue"
+          "new producers",
+          "new consumers"
         ],
         "span": 4,
-        "rowSpan": 2
+        "rowSpan": 2,
+        "format": "int"
       },
       {
-        "id": "memory_usage",
-        "title": "Memory Usage (MB)",
+        "id": "memory_usage_line",
+        "title": "Memory Usage",
+        "tip": "Aggregate memory usage across destinations (MB).",
         "type": "line",
         "unit": "MB",
         "expressions": [
@@ -314,22 +310,29 @@
         "rowSpan": 2
       },
       {
-        "id": "limits",
-        "title": "Usage Limits (GB)",
+        "id": "memory_limit_line",
+        "title": "Memory Limit",
+        "tip": "Configured memory ceiling across destinations (GB).",
         "type": "line",
         "unit": "GB",
         "expressions": [
-          "aggregate_labels(meter_activemq_broker_memory_limit,sum)/1024/1024/1024",
-          "aggregate_labels(meter_activemq_broker_store_limit,sum)/1024/1024/1024",
-          "aggregate_labels(meter_activemq_broker_temp_limit,sum)/1024/1024/1024"
-        ],
-        "expressionLabels": [
-          "memory",
-          "store",
-          "temp"
+          "aggregate_labels(meter_activemq_broker_memory_limit,sum)/1024/1024/1024"
         ],
         "span": 4,
         "rowSpan": 2
+      },
+      {
+        "id": "message_size_line",
+        "title": "Avg Message Size",
+        "tip": "Average message size across destinations.",
+        "type": "line",
+        "unit": "bytes",
+        "expressions": [
+          "aggregate_labels(meter_activemq_broker_average_message_size,avg)"
+        ],
+        "span": 4,
+        "rowSpan": 2,
+        "format": "int"
       }
     ],
     "endpoint": [

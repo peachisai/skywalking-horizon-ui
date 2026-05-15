@@ -87,6 +87,19 @@ const serviceName = computed<string | null>(() => {
   const match = rows.find((r) => r.serviceId === selectedId.value);
   return match?.serviceName ?? null;
 });
+/**
+ * Service handle used for downstream picker queries (instance list,
+ * endpoint list, dashboard widgets). The landing route resolves
+ * `selectedId` → `serviceName` once its row sample arrives, which can
+ * take a moment on first paint. The BFF picker / dashboard routes
+ * accept either a name OR an id, so we fire those queries with
+ * `selectedId` immediately and let `serviceName` overtake when ready.
+ * Avoids the "instance list empty for a beat after landing" hiccup
+ * the operator reported.
+ */
+const serviceHandle = computed<string | null>(
+  () => serviceName.value ?? selectedId.value ?? null,
+);
 
 // Dev-only escape hatch: appending `?mockTop=10` to the page URL pads
 // every TopList result to N synthetic rows. Helps operators verify
@@ -107,7 +120,7 @@ const { config, isLoading: configLoading } = useLayerDashboardConfig(layerKey, s
 const { selectedInstance, setSelectedInstance } = useSelectedInstance();
 const { instances: instanceList, isFetching: instancesLoading } = useLayerInstances(
   layerKey,
-  serviceName,
+  serviceHandle,
 );
 /** Track which row's attributes panel is open. Mutually exclusive —
  *  expanding one collapses the previous so the list stays compact. */
@@ -173,7 +186,7 @@ function clearEndpointSearch(): void {
 }
 const { endpoints: endpointList, isFetching: endpointsLoading } = useLayerEndpoints(
   layerKey,
-  serviceName,
+  serviceHandle,
   endpointQuery,
   endpointLimit,
 );

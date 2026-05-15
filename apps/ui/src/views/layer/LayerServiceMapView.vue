@@ -65,7 +65,10 @@ import { useLayerLanding } from '@/composables/useLayerLanding';
 import { useLayers } from '@/composables/useLayers';
 import { useSetupStore } from '@/stores/setup';
 import { fmtMetric } from '@/utils/formatters';
-import { parseServiceName, serviceBaseName } from '@/utils/serviceName';
+import {
+  resolveServiceIdentity,
+  type ServiceIdentity,
+} from '@/utils/serviceName';
 import Sparkline from '@/components/charts/Sparkline.vue';
 import { isUserNode } from '@/composables/useTopologyIcons';
 
@@ -82,6 +85,15 @@ const safeLayer = computed<LayerDef>(() => layer.value ?? {
   key: layerKey.value, name: layerKey.value, color: 'var(--sw-fg-2)',
   serviceCount: -1, active: false, level: null, slots: {}, caps: {},
 });
+// Per-layer service-name parsing rule (k8s/mesh ⇒ namespace, generic ⇒
+// legacy `::`). `identity()` is the single read-side helper: every
+// display site goes through it so the chip alias + group value stay
+// consistent across the focus picker, node label, detail panels, and
+// the group bounding box.
+const namingRule = computed(() => layer.value?.naming ?? null);
+function identity(name: string | null | undefined): ServiceIdentity {
+  return resolveServiceIdentity(name, namingRule.value);
+}
 const safeCfg = computed(() => {
   if (!layer.value) return { priority: 99, topN: 5, orderBy: 'cpm', columns: [], style: 'table' as const };
   return store.ensure(layer.value.key, {
@@ -111,21 +123,24 @@ const serviceName = computed<string | null>(() =>
   focusServiceNames.value.length === 0 ? null : focusServiceNames.value.join(','),
 );
 
-// Service-list rows grouped by `<group>::` prefix so the search panel
-// can render "agent" / "mesh" / "" sections.
-interface GroupedRow { group: string | null; name: string; id: string }
+// Service-list rows grouped by the layer-resolved group value (k8s/mesh
+// ⇒ namespace; generic ⇒ legacy `::` prefix). The search panel renders
+// one section per group; the section heading shows the alias·value
+// (e.g. `namespace · sample`).
+interface GroupedRow { group: string | null; name: string; id: string; raw: string }
 const groupedRows = computed<Map<string, GroupedRow[]>>(() => {
   const map = new Map<string, GroupedRow[]>();
   const term = focusSearch.value.trim().toLowerCase();
   for (const r of landingRows.value) {
-    const { group, base } = parseServiceName(r.serviceName);
+    const id = identity(r.serviceName);
     if (term && !r.serviceName.toLowerCase().includes(term)) continue;
-    const key = group ?? '';
+    const key = id.group ?? '';
     if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push({ group, name: base, id: r.serviceId });
+    map.get(key)!.push({ group: id.group, name: id.display, id: r.serviceId, raw: r.serviceName });
   }
   return map;
 });
+const groupAliasLabel = computed<string>(() => namingRule.value?.alias ?? 'group');
 
 // Defensive truncate for long node labels — preserves the head + an
 // ellipsis so cluster IDs that share a long prefix still distinguish.
@@ -380,23 +395,146 @@ function computeBoosterLevels(
   }
   return merged;
 }
-const layoutNodes = computed<LayoutNode[]>(() => {
+// Sentinel encoding for the group key — `null` (ungrouped) gets pinned
+// to a stable string so it can serve as a Map key alongside named
+// groups. Decoded back on the read side.
+const UNGROUPED = ' __ungrouped__';
+function gkeyEnc(k: string | null): string { return k ?? UNGROUPED; }
+function gkeyDec(s: string): string | null { return s === UNGROUPED ? null : s; }
+
+/**
+ * One namespace / group bucket inside the topology canvas. Each bucket
+ * runs its own internal BFS column layout (mirroring the legacy single-
+ * graph layout) and is positioned into a row of bucket regions whose
+ * order is decided by an inter-group BFS over the cross-bucket calls.
+ */
+interface GroupBucket {
+  key: string | null;
+  alias: string | null;
+  nodes: LayoutNode[];        // intra-bucket BFS-ordered nodes with `layerIdx`
+  cols: number;               // internal BFS columns
+  maxRowsPerCol: number;      // tallest column in this bucket
+  rect: { x: number; y: number; w: number; h: number };
+}
+
+// Group bounding-box paddings. Top padding is bigger so the alias chip
+// (`namespace · sample`) has room to live above the inner column area.
+const GROUP_PAD_X = 36;
+const GROUP_PAD_TOP = 38;
+const GROUP_PAD_BOTTOM = 28;
+const GROUP_GAP_X = 80;
+
+/**
+ * Two-level layout: bucket by the layer-resolved group, BFS each
+ * bucket internally, then BFS the inter-bucket call graph to decide
+ * the bucket order along the X axis. Returns the buckets in render
+ * order with each bucket's rect already positioned.
+ *
+ * Ungrouped nodes (no `naming` rule match, or synthetic User /
+ * external nodes whose name has no group component) collapse into a
+ * single "null-key" bucket that renders WITHOUT a bounding box — it
+ * preserves the look of layers that don't configure a naming rule.
+ */
+const groupBuckets = computed<GroupBucket[]>(() => {
   const all = nodes.value;
   if (all.length === 0) return [];
-  const levels = computeBoosterLevels(calls.value, all, []);
-  const out: LayoutNode[] = [];
-  levels.forEach((lvl, idx) => {
-    for (const n of lvl) out.push({ ...n, layerIdx: idx });
-  });
-  // Truly-isolated nodes that never got BFS'd (no edges at all,
-  // booster's pool is empty by recursion but ours may still have
-  // them if `nodes` and `calls` disagree). Tuck them on as an extra
-  // rightmost column so they don't drop off the canvas.
-  const seen = new Set(out.map((n) => n.id));
-  const orphanIdx = levels.length;
+  // 1. Bucket nodes by resolved group key.
+  const byGroup = new Map<string, TopologyNode[]>();
   for (const n of all) {
-    if (!seen.has(n.id)) out.push({ ...n, layerIdx: orphanIdx });
+    const id = identity(n.name);
+    const k = gkeyEnc(id.group);
+    if (!byGroup.has(k)) byGroup.set(k, []);
+    byGroup.get(k)!.push(n);
   }
+  // 2. Run BFS on the inter-group meta-graph to decide bucket order.
+  //    Each group becomes a meta-node; cross-group calls become meta-
+  //    edges. `computeBoosterLevels` is reused with synthesised
+  //    TopologyNode / TopologyCall shells.
+  const groupOfId = new Map<string, string>();
+  for (const n of all) groupOfId.set(n.id, gkeyEnc(identity(n.name).group));
+  const interGroupCalls: TopologyCall[] = [];
+  for (const c of calls.value) {
+    const s = groupOfId.get(c.source);
+    const t = groupOfId.get(c.target);
+    if (s === undefined || t === undefined) continue;
+    if (s === t) continue;
+    interGroupCalls.push({
+      id: `${s}->${t}`,
+      source: s,
+      target: t,
+      detectPoints: [],
+      serverMetrics: {}, clientMetrics: {},
+      serverMetricSeries: {}, clientMetricSeries: {},
+      serverCpm: null, serverRespTime: null,
+      clientCpm: null, clientRespTime: null,
+    });
+  }
+  const groupKeys = [...byGroup.keys()];
+  const metaNodes: TopologyNode[] = groupKeys.map((k) => ({
+    id: k, name: k === UNGROUPED ? '' : k,
+    type: null, isReal: true, layers: [],
+    metrics: {}, cpm: null, respTime: null, sla: null,
+  }));
+  const metaLevels = computeBoosterLevels(interGroupCalls, metaNodes, []);
+  const ordered: string[] = [];
+  for (const level of metaLevels) for (const n of level) ordered.push(n.id);
+  // Any groups missed by BFS (no inter-group edges) are tacked on the
+  // end in deterministic order so the canvas doesn't drop them.
+  for (const k of groupKeys) if (!ordered.includes(k)) ordered.push(k);
+  // 3. Internal BFS per bucket — restrict the call graph to the
+  //    bucket's own ids so the seed-pick + traversal don't leak.
+  const buckets: GroupBucket[] = [];
+  for (const k of ordered) {
+    const groupNodes = byGroup.get(k) ?? [];
+    if (groupNodes.length === 0) continue;
+    const ids = new Set(groupNodes.map((n) => n.id));
+    const internalCalls = calls.value.filter((c) => ids.has(c.source) && ids.has(c.target));
+    const levels = computeBoosterLevels(internalCalls, groupNodes, []);
+    const lay: LayoutNode[] = [];
+    levels.forEach((lvl, idx) => {
+      for (const n of lvl) lay.push({ ...n, layerIdx: idx });
+    });
+    // Tuck in any nodes the internal BFS missed (isolated nodes that
+    // only have cross-group edges) so they still render.
+    const seen = new Set(lay.map((n) => n.id));
+    const orphanCol = levels.length;
+    for (const n of groupNodes) {
+      if (!seen.has(n.id)) lay.push({ ...n, layerIdx: orphanCol });
+    }
+    const cols = Math.max(1, lay.reduce((m, n) => Math.max(m, n.layerIdx), -1) + 1);
+    const rowsByCol = new Map<number, number>();
+    for (const n of lay) rowsByCol.set(n.layerIdx, (rowsByCol.get(n.layerIdx) ?? 0) + 1);
+    const maxRowsPerCol = Math.max(1, ...rowsByCol.values());
+    buckets.push({
+      key: gkeyDec(k),
+      alias: namingRule.value?.alias ?? (gkeyDec(k) ? 'group' : null),
+      nodes: lay,
+      cols,
+      maxRowsPerCol,
+      rect: { x: 0, y: 0, w: 0, h: 0 },
+    });
+  }
+  // 4. Position bucket rects left-to-right. Each bucket's width =
+  //    internal-cols * COL_GAP + horizontal padding; its height =
+  //    tallest-col * ROW_GAP + top/bottom padding.
+  let cursorX = 40;
+  for (const b of buckets) {
+    const innerW = b.cols * COL_GAP;
+    const innerH = b.maxRowsPerCol * ROW_GAP;
+    const w = innerW + GROUP_PAD_X * 2;
+    const h = innerH + GROUP_PAD_TOP + GROUP_PAD_BOTTOM;
+    b.rect = { x: cursorX, y: 60, w, h };
+    cursorX += w + GROUP_GAP_X;
+  }
+  return buckets;
+});
+
+// `layoutNodes` survives only as the flat list the rest of the view
+// (drag, selection, edges) reads. Order doesn't matter for them; the
+// per-bucket geometry is read off `groupBuckets`.
+const layoutNodes = computed<LayoutNode[]>(() => {
+  const out: LayoutNode[] = [];
+  for (const b of groupBuckets.value) for (const n of b.nodes) out.push(n);
   return out;
 });
 
@@ -404,35 +542,7 @@ const layoutNodes = computed<LayoutNode[]>(() => {
 // important. The line is constant-weight; direction is conveyed by an
 // animated dashed flow on every edge.)
 
-const NODES_PER_LAYER = 12;
-interface LayerColumn {
-  index: number;
-  label: string;
-  visible: LayoutNode[];
-  hidden: number;
-}
-const layerColumns = computed<LayerColumn[]>(() => {
-  // Booster-ui's algorithm already returned levels in the right order
-  // (seed in level 0, then BFS-expansion). We just preserve that order
-  // and cap each column at NODES_PER_LAYER. No barycentric reorder, no
-  // metric sort, no User-pin — the seed-driven BFS naturally puts the
-  // dominant chain at the top row of each column.
-  const byLayer = new Map<number, LayoutNode[]>();
-  for (const n of layoutNodes.value) {
-    if (!byLayer.has(n.layerIdx)) byLayer.set(n.layerIdx, []);
-    byLayer.get(n.layerIdx)!.push(n);
-  }
-  const indices = [...byLayer.keys()].sort((a, b) => a - b);
-  return indices.map((i) => {
-    const all = byLayer.get(i)!;
-    const visible = all.slice(0, NODES_PER_LAYER);
-    const hidden = Math.max(0, all.length - NODES_PER_LAYER);
-    const label = i === 0 ? 'L0 · Entry' : `L${i} · Tier ${i}`;
-    return { index: i, label, visible, hidden };
-  });
-});
-
-// ── SVG layout math (circles).
+// ── SVG layout math (circles + group bounding boxes).
 /**
  * Node geometry — radius drives the cube/icon size and the column
  * spacing. Sized smaller than the design's r=42 so a chain reads
@@ -446,10 +556,17 @@ const COL_GAP = 220;
 // `agent::songs`) has more breathing room and the diagonal calls
 // reach a clearly distinct row instead of crowding the spine.
 const ROW_GAP = Math.round((NODE_R * 2 + 90) * 1.2);
-const W = computed(() => Math.max(820, layerColumns.value.length * COL_GAP + 80));
+const W = computed(() => {
+  const b = groupBuckets.value;
+  if (b.length === 0) return 820;
+  const last = b[b.length - 1];
+  return Math.max(820, last.rect.x + last.rect.w + 40);
+});
 const H = computed(() => {
-  const maxNodes = Math.max(1, ...layerColumns.value.map((c) => c.visible.length));
-  return 90 + maxNodes * ROW_GAP + 40;
+  const b = groupBuckets.value;
+  if (b.length === 0) return 360;
+  const tallest = Math.max(...b.map((x) => x.rect.y + x.rect.h));
+  return tallest + 60;
 });
 
 /**
@@ -488,13 +605,24 @@ watch(
 
 const nodePos = computed<Map<string, Pos>>(() => {
   const map = new Map<string, Pos>();
-  layerColumns.value.forEach((col, colIdx) => {
-    const cx = 40 + colIdx * COL_GAP + NODE_R + 4;
-    col.visible.forEach((n, rowIdx) => {
-      const cy = 110 + rowIdx * ROW_GAP + NODE_R;
-      map.set(n.id, { cx, cy });
-    });
-  });
+  for (const b of groupBuckets.value) {
+    // Bucket-local column buckets — needed to place each node at its
+    // row index *within its column*. The internal BFS already assigns
+    // each node a `layerIdx`; the row is the node's position in the
+    // column-bucket order, mirroring the legacy single-graph layout.
+    const byCol = new Map<number, LayoutNode[]>();
+    for (const n of b.nodes) {
+      if (!byCol.has(n.layerIdx)) byCol.set(n.layerIdx, []);
+      byCol.get(n.layerIdx)!.push(n);
+    }
+    for (const [colIdx, list] of byCol) {
+      const cx = b.rect.x + GROUP_PAD_X + colIdx * COL_GAP + NODE_R + 4;
+      list.forEach((n, rowIdx) => {
+        const cy = b.rect.y + GROUP_PAD_TOP + rowIdx * ROW_GAP + NODE_R;
+        map.set(n.id, { cx, cy });
+      });
+    }
+  }
   // Drag overrides win — but only when the node is still in the
   // visible set, so a stale id from a previous layer doesn't bleed.
   for (const [id, p] of dragOverrides.value) {
@@ -506,9 +634,6 @@ const visibleCalls = computed<TopologyCall[]>(() => {
   const ids = new Set(nodePos.value.keys());
   return calls.value.filter((c) => ids.has(c.source) && ids.has(c.target));
 });
-const elidedTotal = computed(() =>
-  layerColumns.value.reduce((acc, c) => acc + c.hidden, 0),
-);
 
 /**
  * Resolve the 4-band colour for a node from the ring-metric value.
@@ -972,7 +1097,7 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
         <span v-if="focusServiceNames.length === 0" class="for-svc">layer overview · all services</span>
         <span v-else class="for-svc">
           focused on
-          <b>{{ focusServiceNames.length === 1 ? serviceBaseName(focusServiceNames[0]) : `${focusServiceNames.length} services` }}</b>
+          <b>{{ focusServiceNames.length === 1 ? identity(focusServiceNames[0]).display : `${focusServiceNames.length} services` }}</b>
         </span>
         <span v-if="isFetching" class="hint">refreshing…</span>
       </div>
@@ -1008,16 +1133,19 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
                 <span class="focus-aside">{{ landingRows.length }} total</span>
               </button>
               <template v-for="[gkey, rows] in groupedRows" :key="gkey">
-                <div v-if="gkey" class="focus-group-head">{{ gkey }}</div>
+                <div v-if="gkey" class="focus-group-head">
+                  <span class="focus-group-alias">{{ groupAliasLabel }}</span>
+                  <span class="focus-group-val">{{ gkey }}</span>
+                </div>
                 <button
                   v-for="r in rows"
                   :key="r.id"
                   class="focus-row"
-                  :class="{ selected: focusServiceNames.includes((r.group ? r.group + '::' : '') + r.name) }"
+                  :class="{ selected: focusServiceNames.includes(r.raw) }"
                   type="button"
-                  @click="toggleService((r.group ? r.group + '::' : '') + r.name)"
+                  @click="toggleService(r.raw)"
                 >
-                  <span class="focus-check">{{ focusServiceNames.includes((r.group ? r.group + '::' : '') + r.name) ? '●' : '○' }}</span>
+                  <span class="focus-check">{{ focusServiceNames.includes(r.raw) ? '●' : '○' }}</span>
                   <span class="focus-name">{{ r.name }}</span>
                 </button>
               </template>
@@ -1069,11 +1197,60 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
             <!-- Soft radial glow behind the chain — pure decoration. -->
             <rect :width="W" :height="H" fill="url(#sm-bg-glow)" />
 
-            <!-- Row-baseline guides were dropped — they assumed strict
-                 columns, but the honeycomb stagger (odd columns shifted
-                 down by half a row) makes the dashed lines look broken.
-                 The animated edges + node halos carry enough visual
-                 anchoring on their own. -->
+            <!-- Group bounding boxes — one rounded-rect per namespace /
+                 group with a dashed border + an alias·value chip
+                 anchored top-left. Rendered BENEATH edges so cross-
+                 group calls visually cross the box boundary. The
+                 implicit "no-group" bucket (synthetic User / external)
+                 renders no box. -->
+            <g class="sm-group-layer">
+              <template v-for="b in groupBuckets" :key="b.key ?? '__none__'">
+                <g v-if="b.key" :transform="`translate(${b.rect.x}, ${b.rect.y})`">
+                  <rect
+                    :width="b.rect.w"
+                    :height="b.rect.h"
+                    rx="14"
+                    ry="14"
+                    fill="var(--sw-bg-1)"
+                    fill-opacity="0.35"
+                    stroke="var(--sw-line-2)"
+                    stroke-width="1"
+                    stroke-dasharray="4 5"
+                  />
+                  <!-- alias chip top-left, inset by the same horizontal
+                       padding as the node columns. -->
+                  <g transform="translate(14, 18)">
+                    <rect
+                      x="0"
+                      y="-12"
+                      :width="Math.max(80, (b.alias ?? '').length * 6 + (b.key ?? '').length * 7 + 24)"
+                      height="20"
+                      rx="10"
+                      ry="10"
+                      fill="var(--sw-bg-0)"
+                      stroke="var(--sw-accent-line)"
+                      stroke-width="1"
+                    />
+                    <text
+                      x="10"
+                      y="2"
+                      fill="var(--sw-fg-3)"
+                      font-size="10"
+                      font-family="var(--sw-mono)"
+                      font-weight="500"
+                    >{{ b.alias }} ·</text>
+                    <text
+                      :x="10 + (b.alias?.length ?? 0) * 6 + 12"
+                      y="2"
+                      fill="var(--sw-accent-2)"
+                      font-size="11"
+                      font-family="var(--sw-mono)"
+                      font-weight="700"
+                    >{{ b.key }}</text>
+                  </g>
+                </g>
+              </template>
+            </g>
 
             <g
               v-for="c in visibleCalls"
@@ -1104,25 +1281,29 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
                 stroke-linecap="round"
                 style="pointer-events: none"
               />
-              <!-- Direction overlay: a dashed stroke that scrolls along
-                   the path from source → target. Same stroke colour but
-                   higher-frequency dashes so the motion reads even on
-                   dense graphs without competing with the base line. -->
+              <!-- Direction overlay: short dot-like dashes that drift
+                   from source → target. Spacing + speed are tuned for
+                   readability — earlier the dashes were dense (6-on /
+                   10-off, 1.2s) and read as a fast-scrolling solid
+                   line. Now they're discrete particles (4-on / 28-off,
+                   3s) so the eye can track a single dot along the
+                   path. Stroke is slightly thicker + round-capped so
+                   each dot reads as a circle rather than a tick. -->
               <path
                 :d="callPathD(c)"
                 fill="none"
                 :stroke="selectedCallId === c.id ? 'var(--sw-accent-2)' : 'var(--sw-accent)'"
-                :stroke-width="selectedCallId === c.id ? 3.2 : 1.8"
+                :stroke-width="selectedCallId === c.id ? 4 : 3"
                 stroke-linecap="round"
-                stroke-dasharray="6 10"
-                opacity="0.9"
+                stroke-dasharray="4 28"
+                opacity="0.95"
                 style="pointer-events: none"
               >
                 <animate
                   attributeName="stroke-dashoffset"
-                  from="16"
+                  from="32"
                   to="0"
-                  dur="1.2s"
+                  dur="3s"
                   repeatCount="indefinite"
                 />
               </path>
@@ -1317,7 +1498,7 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
                 font-family="var(--sw-mono)"
                 :font-weight="selectedNodeId === n.id ? 700 : 600"
               >
-                {{ truncateLabel(serviceBaseName(n.name), 22) }}
+                {{ truncateLabel(identity(n.name).display, 22) }}
               </text>
               <!-- Latency (secondary metric) below the name. No label
                    — the unit chip disambiguates from RPM. Hidden when
@@ -1368,9 +1549,6 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
             <span class="lg-aside">direction shown by flow animation</span>
           </div>
         </div>
-        <div v-if="elidedTotal > 0" class="cap-chip">
-          {{ elidedTotal }} node{{ elidedTotal === 1 ? '' : 's' }} elided across columns
-        </div>
       </div>
 
       <!-- Right sidebar — node panel on top, edge panel underneath.
@@ -1384,9 +1562,12 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
       <article v-if="selectedNode" class="sm-panel">
         <header class="sp-head">
           <div class="sp-id">
-            <div class="sp-mono">{{ selectedNode.name }}</div>
+            <div class="sp-mono">{{ identity(selectedNode.name).display }}</div>
             <div class="sp-tags">
-              <span v-if="parseServiceName(selectedNode.name).group" class="sw-tag accent">{{ parseServiceName(selectedNode.name).group }}</span>
+              <span v-if="identity(selectedNode.name).group" class="sw-tag accent">
+                <span class="tag-alias">{{ identity(selectedNode.name).alias }}</span>
+                <span class="tag-val">{{ identity(selectedNode.name).group }}</span>
+              </span>
               <span v-for="l in selectedNode.layers" :key="l" class="sw-tag">{{ l }}</span>
               <span v-if="!selectedNode.isReal" class="sw-tag">virtual</span>
             </div>
@@ -1406,7 +1587,11 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
           <ul class="sp-list">
             <li v-for="u in upstream" :key="u.id">
               <span class="sp-pulse" :style="{ color: ringColor(u) }">●</span>
-              <span class="sp-mono small">{{ u.name }}</span>
+              <span v-if="identity(u.name).group" class="sw-tag accent tiny">
+                <span class="tag-alias">{{ identity(u.name).alias }}</span>
+                <span class="tag-val">{{ identity(u.name).group }}</span>
+              </span>
+              <span class="sp-mono small">{{ identity(u.name).display }}</span>
               <span class="sp-cpm">{{ fmtWithUnit(nodeVal(u, centerDef), centerDef?.unit) }}</span>
             </li>
             <li v-if="upstream.length === 0" class="sp-empty">no upstream callers in window</li>
@@ -1417,7 +1602,11 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
           <ul class="sp-list">
             <li v-for="d in downstream" :key="d.id">
               <span class="sp-pulse" :style="{ color: ringColor(d) }">●</span>
-              <span class="sp-mono small">{{ d.name }}</span>
+              <span v-if="identity(d.name).group" class="sw-tag accent tiny">
+                <span class="tag-alias">{{ identity(d.name).alias }}</span>
+                <span class="tag-val">{{ identity(d.name).group }}</span>
+              </span>
+              <span class="sp-mono small">{{ identity(d.name).display }}</span>
               <span class="sp-cpm">{{ fmtWithUnit(nodeVal(d, secondaryDef), secondaryDef?.unit) }}</span>
             </li>
             <li v-if="downstream.length === 0" class="sp-empty">no downstream deps in window</li>
@@ -1444,9 +1633,21 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
         <header class="sp-head">
           <div class="sp-id">
             <div class="sp-edge-row">
-              <span class="sp-mono small">{{ selectedCallSource.name }}</span>
+              <span class="sp-svc">
+                <span v-if="identity(selectedCallSource.name).group" class="sw-tag accent tiny">
+                  <span class="tag-alias">{{ identity(selectedCallSource.name).alias }}</span>
+                  <span class="tag-val">{{ identity(selectedCallSource.name).group }}</span>
+                </span>
+                <span class="sp-mono small">{{ identity(selectedCallSource.name).display }}</span>
+              </span>
               <span class="sp-edge-arrow">→</span>
-              <span class="sp-mono small">{{ selectedCallTarget.name }}</span>
+              <span class="sp-svc">
+                <span v-if="identity(selectedCallTarget.name).group" class="sw-tag accent tiny">
+                  <span class="tag-alias">{{ identity(selectedCallTarget.name).alias }}</span>
+                  <span class="tag-val">{{ identity(selectedCallTarget.name).group }}</span>
+                </span>
+                <span class="sp-mono small">{{ identity(selectedCallTarget.name).display }}</span>
+              </span>
             </div>
             <div class="sp-tags">
               <span class="sw-tag">{{ selectedCall.detectPoints.join(' · ') || 'relation' }}</span>
@@ -1701,6 +1902,17 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
   text-transform: uppercase;
   color: var(--sw-fg-3);
   padding: 6px 8px 4px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.focus-group-alias { color: var(--sw-fg-3); }
+.focus-group-alias::after { content: '·'; margin-left: 4px; color: var(--sw-fg-3); }
+.focus-group-val {
+  color: var(--sw-accent-2);
+  font-family: var(--sw-mono);
+  text-transform: none;
+  letter-spacing: 0;
 }
 .focus-row {
   display: flex;
@@ -1850,11 +2062,34 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 .sp-edge-arrow {
   color: var(--sw-fg-3);
   font-size: 11px;
 }
+.sp-svc {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.sw-tag.tiny {
+  font-size: 9.5px;
+  padding: 0 5px;
+  line-height: 14px;
+  height: 14px;
+}
+/* `<alias · value>` chip layout — used by node / edge / list / group
+   bounding-box title rows so the dimension label (e.g. `namespace`)
+   reads as a subdued prefix and the value pops in accent colour. */
+.sw-tag .tag-alias {
+  opacity: 0.7;
+  font-weight: 500;
+  margin-right: 4px;
+}
+.sw-tag .tag-alias::after { content: '·'; margin-left: 4px; }
+.sw-tag .tag-val { font-family: var(--sw-mono); font-weight: 600; }
 /* Edge line-metric cards. One card per metric, two sparkline cells
    per card (client | server). The pair grid stays 1:1 even when
    only one side has data — the empty side renders a full-width cell

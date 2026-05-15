@@ -7,6 +7,12 @@
   "aliases": {
     "services": "Control Planes"
   },
+  "naming": {
+    "pattern": "^(?<service>[^.]+)\\.(?<namespace>[^.]+)(?:\\..*)?$",
+    "displayGroup": "service",
+    "valueGroup": "namespace",
+    "alias": "namespace"
+  },
   "components": {
     "service": true,
     "instances": false,
@@ -226,5 +232,8 @@
         "rowSpan": 2
       }
     ]
+  },
+  "traces": {
+    "source": "zipkin"
   }
 }

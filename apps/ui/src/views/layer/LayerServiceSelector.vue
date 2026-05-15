@@ -28,7 +28,8 @@ import type { LandingColumn, LandingServiceRow } from '@skywalking-horizon-ui/ap
 import { metricMeta } from '@/composables/metricCatalog';
 import { statusForMetrics, thresholdColor } from '@/composables/metricColor';
 import { fmtMetric } from '@/utils/formatters';
-import { parseServiceName } from '@/utils/serviceName';
+import { resolveServiceIdentity } from '@/utils/serviceName';
+import type { ServiceNamingRule } from '@skywalking-horizon-ui/api-client';
 
 const props = withDefaults(
   defineProps<{
@@ -37,12 +38,20 @@ const props = withDefaults(
     selectedId: string | null;
     accent?: string;
     pageSize?: number;
+    /** Per-layer service-name parsing rule. When supplied, rows render
+     *  `<alias · value>` chip + display label; when null, falls back to
+     *  the legacy `<group>::base` parser. */
+    namingRule?: ServiceNamingRule | null;
   }>(),
   {
     accent: 'var(--sw-accent)',
     pageSize: 8,
+    namingRule: null,
   },
 );
+function identity(name: string | null | undefined) {
+  return resolveServiceIdentity(name, props.namingRule);
+}
 const emit = defineEmits<{ (e: 'select', id: string): void }>();
 
 const filter = ref('');
@@ -102,8 +111,11 @@ function colorForStatus(s: 'ok' | 'warn' | 'err'): string {
         >
           <td class="svc-col" :title="row.serviceName">
             <span class="pulse" :style="{ background: colorForStatus(statusForMetrics(row.metrics)) }" />
-            <span v-if="parseServiceName(row.serviceName).group" class="group-chip">{{ parseServiceName(row.serviceName).group }}</span>
-            <span class="name-text">{{ row.shortName || parseServiceName(row.serviceName).base }}</span>
+            <span v-if="identity(row.serviceName).group" class="group-chip">
+              <span class="chip-alias">{{ identity(row.serviceName).alias }}</span>
+              <span class="chip-val">{{ identity(row.serviceName).group }}</span>
+            </span>
+            <span class="name-text">{{ row.shortName || identity(row.serviceName).display }}</span>
           </td>
           <td
             v-for="c in columns"
@@ -253,7 +265,9 @@ function colorForStatus(s: 'ok' | 'warn' | 'err'): string {
    compact tag so the base name is the first thing the eye lands on.
    Trims `agent::rating` → [agent] rating, etc. */
 .group-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   margin-right: 6px;
   padding: 1px 6px;
   background: var(--sw-bg-2);
@@ -266,6 +280,9 @@ function colorForStatus(s: 'ok' | 'warn' | 'err'): string {
   text-transform: uppercase;
   vertical-align: middle;
 }
+.group-chip .chip-alias { opacity: 0.7; font-weight: 500; }
+.group-chip .chip-alias::after { content: '·'; margin: 0 2px; }
+.group-chip .chip-val { font-family: var(--sw-mono); text-transform: none; letter-spacing: 0; }
 .row.active .group-chip {
   color: var(--sw-accent-2);
   border-color: var(--sw-accent-line);

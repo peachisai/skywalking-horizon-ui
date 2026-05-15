@@ -50,6 +50,14 @@ const oapSchema = z
       })
       .strict()
       .default({}),
+    // OAP's Zipkin REST endpoint (the `ZipkinQueryHandler`). Defaults
+    // to `<statusUrl-host>:9412/zipkin` per the upstream Armeria
+    // binding, but operators commonly proxy it under the same host as
+    // GraphQL (`<host>/zipkin/...`). Set explicitly when the demo /
+    // production OAP serves Zipkin from a non-standard origin. Used
+    // by the Zipkin trace viewer for mesh / k8s layers whose traces
+    // flow as Zipkin-format spans (Envoy ALS, rover).
+    zipkinUrl: z.string().url().default('http://127.0.0.1:9412/zipkin'),
   })
   .strict();
 

@@ -657,6 +657,16 @@ export function registerDashboardRoute(app: FastifyInstance, deps: DashboardRout
       .strict()
       .optional(),
     widgets: z.array(widgetSchema).max(40).optional(),
+    naming: z
+      .object({
+        pattern: z.string().min(1),
+        flags: z.string().optional(),
+        displayGroup: z.string().optional(),
+        valueGroup: z.string().optional(),
+        alias: z.string().min(1),
+      })
+      .strict()
+      .optional(),
   });
 
   app.post(

@@ -25,6 +25,12 @@ oap:
     - http://127.0.0.1:17128
   # OAP query/status host (port 12800 by default; GraphQL + /status/*).
   statusUrl: http://127.0.0.1:12800
+  # OAP's Zipkin v2 REST host. Defaults to a standalone port (9412 +
+  # /zipkin) per the upstream Armeria binding. When OAP is configured
+  # to share the GraphQL port (typical for the demo / k8s deploys),
+  # use `<statusUrl>/zipkin` instead. Used by the Zipkin-source trace
+  # views on mesh / k8s layers.
+  zipkinUrl: http://127.0.0.1:9412/zipkin
   timeoutMs: 15000
   # Optional basic-auth credentials for outbound OAP calls (GraphQL,
   # /status, Zipkin /api/v2/*). The public demo at

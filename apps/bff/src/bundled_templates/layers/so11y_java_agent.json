@@ -21,14 +21,29 @@
     "columns": [
       {
         "metric": "created",
-        "label": "Tracing/min",
-        "mqe": "aggregate_labels(meter_java_agent_created_tracing_context_count,sum)",
-        "aggregation": "sum"
+        "label": "Created RPM",
+        "mqe": "sum(aggregate_labels(meter_java_agent_created_tracing_context_count,sum))",
+        "aggregation": "sum",
+        "unit": "rpm"
+      },
+      {
+        "metric": "finished",
+        "label": "Finished RPM",
+        "mqe": "sum(aggregate_labels(meter_java_agent_finished_tracing_context_count,sum))",
+        "aggregation": "sum",
+        "unit": "rpm"
       },
       {
         "metric": "ignored",
-        "label": "Ignored/min",
-        "mqe": "aggregate_labels(meter_java_agent_created_ignored_context_count,sum)",
+        "label": "Ignored RPM",
+        "mqe": "sum(aggregate_labels(meter_java_agent_created_ignored_context_count,sum))",
+        "aggregation": "sum",
+        "unit": "rpm"
+      },
+      {
+        "metric": "leaked",
+        "label": "Leaks",
+        "mqe": "sum(meter_java_agent_possible_leaked_context_count)",
         "aggregation": "sum"
       }
     ]
@@ -36,21 +51,22 @@
   "overview": {
     "groups": [
       {
-        "title": "Agent throughput",
+        "title": "Tracing context",
         "size": "auto",
         "metrics": [
           {
             "id": "created",
-            "label": "Tracing/min",
-            "tip": "Tracing contexts created per minute (sum across instances).",
-            "mqe": "aggregate_labels(meter_java_agent_created_tracing_context_count,sum)",
+            "label": "Created",
+            "tip": "Tracing contexts created across all Java agents in this service per minute.",
+            "mqe": "sum(aggregate_labels(meter_java_agent_created_tracing_context_count,sum))",
+            "unit": "rpm",
             "aggregation": "sum"
           },
           {
-            "id": "ignored",
-            "label": "Ignored/min",
-            "tip": "Ignored contexts created per minute.",
-            "mqe": "aggregate_labels(meter_java_agent_created_ignored_context_count,sum)",
+            "id": "leaked",
+            "label": "Leaks",
+            "tip": "Possible leaked contexts \u2014 non-zero indicates instrumentation drift.",
+            "mqe": "sum(meter_java_agent_possible_leaked_context_count)",
             "aggregation": "sum"
           }
         ]

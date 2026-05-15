@@ -49,6 +49,7 @@ import { useSelectedEndpoint } from '@/composables/useSelectedEndpoint';
 import { useSelectedService } from '@/composables/useSelectedService';
 import { useSetupStore } from '@/stores/setup';
 import { fmtMetric } from '@/utils/formatters';
+import { resolveServiceIdentity, type ServiceIdentity } from '@/utils/serviceName';
 import { watch } from 'vue';
 import Sparkline from '@/components/charts/Sparkline.vue';
 
@@ -72,6 +73,13 @@ const safeCfg = computed(() => {
     slots: layer.value.slots, caps: layer.value.caps, metrics: layer.value.metrics, overview: layer.value.overview,
   }).landing;
 });
+// Layer-aware identity resolver — mirrors the topology view. Endpoint
+// dependency nodes carry a `serviceName` field; we render it through
+// the rule so k8s/mesh endpoints get a namespace chip.
+const namingRule = computed(() => layer.value?.naming ?? null);
+function identity(name: string | null | undefined): ServiceIdentity {
+  return resolveServiceIdentity(name, namingRule.value);
+}
 const landing = useLayerLanding(safeLayer, safeCfg);
 const serviceName = computed<string | null>(() => {
   const rows = landing.data.value?.sampledRows ?? landing.rows.value ?? [];
@@ -638,7 +646,14 @@ function edgeRowCrosshair(rowId: string): number | null {
     <section class="ep-picker sw-card">
       <header class="picker-head">
         <span class="kicker">API dependency</span>
-        <span v-if="serviceName" class="for-svc">on <b>{{ serviceName }}</b></span>
+        <span v-if="serviceName" class="for-svc">
+          on
+          <span v-if="identity(serviceName).group" class="sw-tag accent tiny inline-tag">
+            <span class="tag-alias">{{ identity(serviceName).alias }}</span>
+            <span class="tag-val">{{ identity(serviceName).group }}</span>
+          </span>
+          <b>{{ identity(serviceName).display }}</b>
+        </span>
         <span v-if="isFetching" class="hint">refreshing…</span>
       </header>
       <div v-if="!serviceName" class="empty inline">
@@ -886,7 +901,7 @@ function edgeRowCrosshair(rowId: string): number | null {
               font-family="var(--sw-mono)"
             >
               <title>{{ n.serviceName }}</title>
-              {{ n.serviceName.length > 26 ? n.serviceName.slice(0, 24) + '…' : n.serviceName }}
+              {{ identity(n.serviceName).display.length > 26 ? identity(n.serviceName).display.slice(0, 24) + '…' : identity(n.serviceName).display }}
             </text>
             <!-- Row 2: API (endpoint) name — the headline. -->
             <text
@@ -987,7 +1002,11 @@ function edgeRowCrosshair(rowId: string): number | null {
         <header class="ed-head">
           <div class="ed-id">
             <div class="ed-kind-row">
-              <span class="ed-svc">{{ selectedNode.serviceName }}</span>
+              <span v-if="identity(selectedNode.serviceName).group" class="sw-tag accent tiny">
+                <span class="tag-alias">{{ identity(selectedNode.serviceName).alias }}</span>
+                <span class="tag-val">{{ identity(selectedNode.serviceName).group }}</span>
+              </span>
+              <span class="ed-svc">{{ identity(selectedNode.serviceName).display }}</span>
               <span v-if="selectedNode.id === focusedId" class="sw-tag accent">focus</span>
             </div>
             <div class="ed-name">{{ selectedNode.name }}</div>
@@ -1124,8 +1143,17 @@ function edgeRowCrosshair(rowId: string): number | null {
   color: var(--sw-accent);
   font-weight: 600;
 }
-.for-svc { font-size: 11px; color: var(--sw-fg-3); }
+.for-svc { font-size: 11px; color: var(--sw-fg-3); display: inline-flex; align-items: center; gap: 6px; }
 .for-svc b { color: var(--sw-fg-1); font-family: var(--sw-mono); font-weight: 500; }
+.sw-tag.tiny {
+  font-size: 9.5px;
+  padding: 0 5px;
+  line-height: 14px;
+  height: 14px;
+}
+.sw-tag .tag-alias { opacity: 0.7; font-weight: 500; margin-right: 4px; }
+.sw-tag .tag-alias::after { content: '·'; margin-left: 4px; }
+.sw-tag .tag-val { font-family: var(--sw-mono); font-weight: 600; }
 .hint { font-size: 10.5px; color: var(--sw-fg-3); margin-left: auto; }
 .ep-controls {
   display: flex;

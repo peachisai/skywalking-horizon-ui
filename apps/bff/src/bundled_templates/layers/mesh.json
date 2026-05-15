@@ -9,6 +9,12 @@
     "instances": "Sidecars",
     "endpoints": "Endpoints"
   },
+  "naming": {
+    "pattern": "^(?<service>[^.]+)\\.(?<namespace>[^.]+)(?:\\..*)?$",
+    "displayGroup": "service",
+    "valueGroup": "namespace",
+    "alias": "namespace"
+  },
   "components": {
     "service": true,
     "instances": true,
@@ -625,5 +631,8 @@
         "aggregation": "avg"
       }
     ]
+  },
+  "traces": {
+    "source": "zipkin"
   }
 }

@@ -20,27 +20,28 @@
     "columns": [
       {
         "metric": "conns",
-        "label": "gRPC Conns",
-        "mqe": "satellite_service_grpc_connect_count",
+        "label": "Connections",
+        "mqe": "sum(satellite_service_grpc_connect_count)",
         "aggregation": "sum"
       },
       {
         "metric": "cpu",
-        "label": "CPU %",
+        "label": "CPU",
         "unit": "%",
-        "mqe": "satellite_service_server_cpu_utilization",
+        "mqe": "avg(satellite_service_server_cpu_utilization)",
         "aggregation": "avg"
       },
       {
         "metric": "queueUsed",
-        "label": "Queue Used",
-        "mqe": "satellite_service_queue_used_count",
+        "label": "Queue used",
+        "mqe": "sum(satellite_service_queue_used_count)",
         "aggregation": "sum"
       },
       {
         "metric": "recvEvents",
-        "label": "Recv Events",
-        "mqe": "satellite_service_receive_event_count",
+        "label": "Events",
+        "unit": "/min",
+        "mqe": "sum(satellite_service_receive_event_count)",
         "aggregation": "sum"
       }
     ]

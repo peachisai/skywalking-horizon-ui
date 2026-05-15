@@ -21,26 +21,29 @@
     "columns": [
       {
         "metric": "cpu",
-        "label": "CPU %",
+        "label": "Avg CPU",
         "unit": "%",
         "mqe": "avg(meter_oap_instance_cpu_percentage)",
         "aggregation": "avg"
       },
       {
         "metric": "persist",
-        "label": "Persist/min",
+        "label": "Persist",
+        "unit": "/min",
         "mqe": "sum(meter_oap_instance_persistence_execute_count)",
         "aggregation": "sum"
       },
       {
         "metric": "graphql",
-        "label": "GraphQL/min",
+        "label": "GraphQL",
+        "unit": "/min",
         "mqe": "sum(meter_oap_instance_graphql_query_count)",
         "aggregation": "sum"
       },
       {
         "metric": "graphqlErr",
-        "label": "GraphQL Err",
+        "label": "GraphQL err",
+        "unit": "/min",
         "mqe": "sum(meter_oap_instance_graphql_query_error_count)",
         "aggregation": "sum"
       }

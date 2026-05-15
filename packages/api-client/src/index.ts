@@ -27,6 +27,7 @@ export type {
   MenuResponse,
   OverviewGroup,
   OverviewMetric,
+  ServiceNamingRule,
 } from './menu.js';
 export type {
   AggregationKind,
@@ -93,6 +94,26 @@ export type {
   LogFacetsResponse,
 } from './logs.js';
 export type { OapInfo } from './oap-info.js';
+export type {
+  ProfileTask,
+  ProfileTaskLog,
+  ProfileTaskListResponse,
+  ProfileTaskLogsResponse,
+  ProfileSpan,
+  ProfileSpanRef,
+  ProfileSpanTag,
+  ProfileSpanLog,
+  ProfileSpanLogData,
+  ProfileSegment,
+  ProfileSegmentsResponse,
+  ProfileAnalyzationElement,
+  ProfileAnalyzationTree,
+  ProfileAnalyzationResponse,
+  ProfileTimeRange,
+  ProfileAnalyzeQuery,
+  ProfileTaskCreationRequest,
+  ProfileTaskCreationResponse,
+} from './profile.js';
 export type {
   OverviewWidgetType,
   OverviewWidget,

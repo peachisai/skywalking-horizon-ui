@@ -98,6 +98,40 @@ export interface LayerHeaderConfig {
 export type LayerMetricsConfig = LayerHeaderConfig;
 
 /**
+ * Per-layer service-name parsing rule. Some layers (k8s, mesh, cilium)
+ * encode a grouping dimension into the service name itself:
+ *
+ *   - `songs.sample`     → display: `songs`,    group: `sample` (k8s/mesh ⇒ namespace)
+ *   - `agent::checkout`  → display: `checkout`, group: `agent`  (generic ⇒ group)
+ *
+ * The rule is a named-capture regex evaluated against the raw service
+ * name. `display` is what UI surfaces as the service label; `group` is
+ * the value used for clustering nodes in topology. `alias` is the
+ * human-readable category label for that group (`namespace`, `group`,
+ * `tenant`, `fleet`, …) and shows up next to the value in chips and
+ * group bounding boxes.
+ *
+ * When the regex doesn't match a given name, the UI falls back to the
+ * legacy `<group>::<base>` parser, then to "no group".
+ */
+export interface ServiceNamingRule {
+  /** JavaScript regex source. MUST contain named groups for both
+   *  `display` and `group` (the names below override the captures). */
+  pattern: string;
+  /** Flags passed to `new RegExp(pattern, flags)`. Default `''`. */
+  flags?: string;
+  /** Named-capture group name that yields the displayable service
+   *  label. Defaults to `'service'`. */
+  displayGroup?: string;
+  /** Named-capture group name that yields the group/namespace value.
+   *  Defaults to `'group'`. */
+  valueGroup?: string;
+  /** Human label for the dimension (e.g. `namespace`, `group`,
+   *  `tenant`). Surfaced as a chip prefix and group-box title. */
+  alias: string;
+}
+
+/**
  * One self-contained metric on the Overview tile. Each carries its own
  * MQE expression + label + presentation hints; the Overview tile does
  * NOT cross-reference the per-layer header columns any more.
@@ -210,6 +244,10 @@ export interface LayerDef {
    *  agent-traced layers carry per-service logs. Drives the UI scope +
    *  the BFF query filter ride-along. */
   log?: LogConfig;
+  /** Per-layer service-name parsing rule. When present, the UI runs
+   *  every service name through this regex to derive `{ display, group }`
+   *  and clusters topology nodes by group. Absent ⇒ legacy `::` parser. */
+  naming?: ServiceNamingRule;
 }
 
 export interface LogConfig {

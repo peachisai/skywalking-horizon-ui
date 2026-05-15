@@ -195,6 +195,7 @@ function deriveLayer(
       metrics: tpl.metrics,
       overview: tpl.overview,
       log: tpl.log,
+      naming: tpl.naming,
     };
   }
   const def = LAYER_DEFAULTS[rawKey] ?? DEFAULT_FOR_UNKNOWN_LAYER;
@@ -299,16 +300,27 @@ export function registerMenuRoute(app: FastifyInstance, deps: MenuRouteDeps): vo
         ordered.push(k);
       }
 
-      const layers = ordered.map((key) =>
-        deriveLayer(
-          key,
-          activeCanonical.has(key),
-          levelByCanonical.has(key) ? (levelByCanonical.get(key) ?? null) : null,
-          countByCanonical.get(key) ?? (activeCanonical.has(key) ? 0 : -1),
-          normalByCanonical.get(key) ?? null,
-          raw.items,
-        ),
-      );
+      // Layers we deliberately drop from the sidebar even when OAP
+      // surfaces them. BanyanDB is OAP's storage backend — it shows
+      // up as a Layer in `getMenuItems`, but the operator monitors it
+      // via the OAP self-observability dashboard (CPU / memory / GC
+      // metrics there cover the storage node too). Keeping it as a
+      // standalone Databases-ish row was confusing per operator
+      // feedback. Add more keys here if other internal-only layers
+      // need the same treatment.
+      const HIDDEN_LAYERS = new Set(['BANYANDB']);
+      const layers = ordered
+        .filter((key) => !HIDDEN_LAYERS.has(key))
+        .map((key) =>
+          deriveLayer(
+            key,
+            activeCanonical.has(key),
+            levelByCanonical.has(key) ? (levelByCanonical.get(key) ?? null) : null,
+            countByCanonical.get(key) ?? (activeCanonical.has(key) ? 0 : -1),
+            normalByCanonical.get(key) ?? null,
+            raw.items,
+          ),
+        );
 
       const body: MenuResponse = {
         layers,

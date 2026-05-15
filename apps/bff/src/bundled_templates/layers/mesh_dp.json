@@ -8,6 +8,12 @@
     "services": "Sidecar services",
     "instances": "Sidecars"
   },
+  "naming": {
+    "pattern": "^(?<service>[^.]+)\\.(?<namespace>[^.]+)(?:\\..*)?$",
+    "displayGroup": "service",
+    "valueGroup": "namespace",
+    "alias": "namespace"
+  },
   "components": {
     "service": false,
     "instances": true,
@@ -222,5 +228,8 @@
         "format": "int"
       }
     ]
+  },
+  "traces": {
+    "source": "zipkin"
   }
 }
