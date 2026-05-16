@@ -27,7 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function bootstrap(): Promise<void> {
     bootstrapping.value = true;
     try {
-      user.value = await bffClient.me();
+      user.value = await bffClient.session.me();
     } catch {
       user.value = null;
     } finally {
@@ -38,7 +38,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username: string, password: string): Promise<boolean> {
     loginError.value = null;
     try {
-      user.value = await bffClient.login(username, password);
+      user.value = await bffClient.session.login(username, password);
       return true;
     } catch (err) {
       if (err instanceof BffApiError && err.status === 401) {
@@ -53,7 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout(): Promise<void> {
     try {
-      await bffClient.logout();
+      await bffClient.session.logout();
     } catch {
       // swallow — even if logout fails we clear local state
     }

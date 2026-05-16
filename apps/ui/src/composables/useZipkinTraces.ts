@@ -82,7 +82,7 @@ export function useLayerZipkinTraces(params: ZipkinTracesParams) {
         lookback: params.lookback.value,
         limit: params.limit.value,
       };
-      return bffClient.zipkinTraces(body);
+      return bffClient.zipkin.traces(body);
     },
     enabled,
     staleTime: 15_000,
@@ -100,7 +100,7 @@ export function useLayerZipkinTraces(params: ZipkinTracesParams) {
 export function useZipkinTrace(traceId: Ref<string | null>) {
   const q = useQuery<ZipkinTraceDetailResponse>({
     queryKey: ['zipkin-trace', traceId],
-    queryFn: () => bffClient.zipkinTrace(traceId.value!),
+    queryFn: () => bffClient.zipkin.trace(traceId.value!),
     enabled: computed(() => Boolean(traceId.value)),
     staleTime: 60_000,
   });

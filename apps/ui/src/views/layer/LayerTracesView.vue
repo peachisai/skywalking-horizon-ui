@@ -250,7 +250,7 @@ const tagValueOptions = ref<string[]>([]);
 const tagValueKey = ref<string>('');
 async function loadTagKeys(): Promise<void> {
   try {
-    const res = await bffClient.traceTagKeys(windowMinutes.value === -1 ? 30 : windowMinutes.value);
+    const res = await bffClient.trace.tagKeys(windowMinutes.value === -1 ? 30 : windowMinutes.value);
     tagKeyOptions.value = res.keys ?? [];
   } catch { /* noop — autocomplete is best-effort */ }
 }
@@ -258,7 +258,7 @@ async function loadTagValues(key: string): Promise<void> {
   if (!key || key === tagValueKey.value) return;
   tagValueKey.value = key;
   try {
-    const res = await bffClient.traceTagValues(key, windowMinutes.value === -1 ? 30 : windowMinutes.value);
+    const res = await bffClient.trace.tagValues(key, windowMinutes.value === -1 ? 30 : windowMinutes.value);
     tagValueOptions.value = res.values ?? [];
   } catch { /* noop */ }
 }

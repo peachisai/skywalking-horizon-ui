@@ -103,7 +103,7 @@ const { availableLayers } = useLayers();
 
 const servicesQuery = useQuery({
   queryKey: computed(() => ['alarms/services', draft.value.layer]),
-  queryFn: () => bff.alarmsServices(draft.value.layer),
+  queryFn: () => bff.alarms.services(draft.value.layer),
   enabled: computed(() => draft.value.layer.length > 0),
   staleTime: 30_000,
 });
@@ -117,7 +117,7 @@ const serviceOptions = computed<string[]>(
  * needs the cascade to populate as they pick. */
 const instancesQuery = useQuery({
   queryKey: computed(() => ['alarms/instances', draft.value.layer, draft.value.service]),
-  queryFn: () => bffClient.layerInstances(draft.value.layer, draft.value.service),
+  queryFn: () => bffClient.layer.instances(draft.value.layer, draft.value.service),
   enabled: computed(() => draft.value.layer.length > 0 && draft.value.service.length > 0),
   staleTime: 30_000,
 });
@@ -129,7 +129,7 @@ const endpointsQuery = useQuery({
   queryKey: computed(() => ['alarms/endpoints', draft.value.layer, draft.value.service]),
   // Empty query string returns the top-N most-trafficked endpoints —
   // good enough as a starter list; operator can type to filter.
-  queryFn: () => bffClient.layerEndpoints(draft.value.layer, draft.value.service, '', 50),
+  queryFn: () => bffClient.layer.endpoints(draft.value.layer, draft.value.service, '', 50),
   enabled: computed(() => draft.value.layer.length > 0 && draft.value.service.length > 0),
   staleTime: 30_000,
 });
@@ -210,7 +210,7 @@ const alarmsQuery = useQuery({
     applied.value.endpoint,
   ]),
   queryFn: (): Promise<AlarmsResponse> =>
-    bff.alarms({
+    bff.alarms.list({
       startTime: startTime.value,
       endTime: endTime.value,
       // Conservative pageSize — some OAP storage backends throw on
@@ -266,7 +266,7 @@ function splitIntoChunks(start: number, end: number, chunkMs: number): Array<{ s
 }
 
 async function fetchTrafficChunk(s: number, e: number): Promise<void> {
-  const resp = await bff.alarmsTraffic(s, e);
+  const resp = await bff.alarms.traffic(s, e);
   for (const series of resp.series) {
     let cached = trafficCache.value.get(series.layerKey);
     if (!cached) {

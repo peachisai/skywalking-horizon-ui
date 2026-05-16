@@ -30,7 +30,7 @@ import { bffClient } from '@/api/client';
 export function useOapInfo() {
   const q = useQuery({
     queryKey: ['oap-info'],
-    queryFn: () => bffClient.oapInfo(),
+    queryFn: () => bffClient.menu.oapInfo(),
     staleTime: 20_000,
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,

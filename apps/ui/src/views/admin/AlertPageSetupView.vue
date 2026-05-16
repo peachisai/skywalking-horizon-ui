@@ -48,7 +48,7 @@ const KNOWN_LAYERS: ReadonlyArray<{ key: string; label: string; defaultMqe: stri
 
 const q = useQuery({
   queryKey: ['alarms/config'],
-  queryFn: (): Promise<AlarmsConfig> => bff.alarmsConfig(),
+  queryFn: (): Promise<AlarmsConfig> => bff.alarms.config(),
   staleTime: Infinity,
 });
 
@@ -109,7 +109,7 @@ async function onSave(): Promise<void> {
   }
   saving.value = true;
   try {
-    const saved = await bff.saveAlarmsConfig({ trafficLayers: clean });
+    const saved = await bff.alarms.saveConfig({ trafficLayers: clean });
     draft.value = saved.trafficLayers.map((l) => ({ ...l }));
     setFlash(`saved · ${saved.trafficLayers.length} layer${saved.trafficLayers.length === 1 ? '' : 's'}`);
   } catch (err) {

@@ -82,7 +82,7 @@ async function refreshTasks(): Promise<void> {
   if (!serviceId.value) return;
   tasksLoading.value = true;
   try {
-    const resp = await bffClient.layerAsyncTasks(layerKey.value, serviceId.value);
+    const resp = await bffClient.asyncProfile.tasks(layerKey.value, serviceId.value);
     if (!resp.reachable && resp.error) tasksError.value = resp.error;
     tasks.value = resp.tasks ?? [];
     currentTask.value = tasks.value[0] ?? null;
@@ -113,7 +113,7 @@ async function runAnalyze(): Promise<void> {
   analyzeError.value = null;
   analyzeLoading.value = true;
   try {
-    const resp = await bffClient.asyncAnalyze({
+    const resp = await bffClient.asyncProfile.analyze({
       taskId: currentTask.value.id,
       instanceIds: selectedInstances.value,
       eventType: eventType.value,
@@ -170,7 +170,7 @@ async function submitNewTask(): Promise<void> {
   }
   newTaskError.value = null;
   try {
-    const resp = await bffClient.createAsyncProfilingTask(layerKey.value, {
+    const resp = await bffClient.asyncProfile.create(layerKey.value, {
       serviceId: serviceId.value,
       serviceInstanceIds: newTask.instances,
       duration: Number(newTask.duration),

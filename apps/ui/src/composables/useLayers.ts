@@ -31,7 +31,7 @@ import { bffClient } from '@/api/client';
 export function useLayers() {
   const q = useQuery({
     queryKey: ['menu'],
-    queryFn: () => bffClient.menu(),
+    queryFn: () => bffClient.menu.get(),
     staleTime: 30_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,

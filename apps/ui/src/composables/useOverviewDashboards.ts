@@ -34,7 +34,7 @@ import { useLayers } from './useLayers';
 export function useOverviewDashboards() {
   const q = useQuery({
     queryKey: ['overview-dashboards'],
-    queryFn: () => bffClient.overviewDashboards(),
+    queryFn: () => bffClient.overview.list(),
     staleTime: 60_000,
     refetchOnWindowFocus: true,
   });

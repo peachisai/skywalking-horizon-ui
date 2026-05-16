@@ -159,7 +159,7 @@ async function expandNode(node: EndpointDependencyNode, dir: 'upstream' | 'downs
   if (expansions.value.has(key) || expansionsLoading.value.has(key)) return;
   expansionsLoading.value.add(key);
   try {
-    const resp = await bffClient.layerEndpointDependency(
+    const resp = await bffClient.layer.endpointDependency(
       layerKey.value,
       node.serviceName,
       node.name,

@@ -80,7 +80,7 @@ export function useLayerTraces(layerKey: Ref<string>, params: TraceListParams) {
       params.customEnd,
     ],
     queryFn: () =>
-      bffClient.layerTraces(layerKey.value, {
+      bffClient.trace.list(layerKey.value, {
         source: params.source.value,
         ...(params.service.value ? { service: params.service.value } : {}),
         ...(params.instanceId.value ? { instanceId: params.instanceId.value } : {}),
@@ -116,7 +116,7 @@ export function useLayerTraces(layerKey: Ref<string>, params: TraceListParams) {
 export function useTraceDetail(traceId: Ref<string | null>, source: Ref<'native' | 'zipkin'>) {
   const q = useQuery<TraceDetailResponse>({
     queryKey: ['trace-detail', traceId, source],
-    queryFn: () => bffClient.traceDetail(traceId.value!, source.value),
+    queryFn: () => bffClient.trace.detail(traceId.value!, source.value),
     enabled: computed(() => !!traceId.value),
     staleTime: 60_000,
   });

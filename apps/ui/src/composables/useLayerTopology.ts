@@ -34,7 +34,7 @@ export function useLayerTopology(
   const q = useQuery({
     queryKey: ['layer-topology', layerKey, service, depth],
     queryFn: () =>
-      bffClient.layerTopology(layerKey.value, service.value ?? undefined, depth.value),
+      bffClient.layer.topology(layerKey.value, service.value ?? undefined, depth.value),
     enabled: computed(() => layerKey.value.length > 0),
     staleTime: 30_000,
   });

@@ -89,13 +89,13 @@ watch(
 
 const filesQuery = useQuery({
   queryKey: ['debug-oal/files'],
-  queryFn: async () => bff.oalFiles(),
+  queryFn: async () => bff.dsl.oalFiles(),
 });
 const files = computed<string[]>(() => filesQuery.data.value?.files ?? []);
 
 const sourcesQuery = useQuery({
   queryKey: ['debug-oal/rules'],
-  queryFn: async (): Promise<OalRulesResponse> => bff.oalSources(),
+  queryFn: async (): Promise<OalRulesResponse> => bff.dsl.oalSources(),
 });
 const sources = computed(() => sourcesQuery.data.value?.sources ?? []);
 

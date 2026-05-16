@@ -103,12 +103,12 @@ watch(
 // the catalogue, so the merge keeps the dropdown populated.
 const listQuery = useQuery({
   queryKey: ['debug-lal/list'],
-  queryFn: async (): Promise<ListEnvelope> => bff.catalogList('lal'),
+  queryFn: async (): Promise<ListEnvelope> => bff.dsl.catalogList('lal'),
 });
 
 const bundledQuery = useQuery({
   queryKey: ['debug-lal/bundled'],
-  queryFn: async (): Promise<BundledEntry[]> => bff.catalogBundled('lal', false),
+  queryFn: async (): Promise<BundledEntry[]> => bff.dsl.catalogBundled('lal', false),
 });
 
 const fileNames = computed<string[]>(() => {
@@ -126,7 +126,7 @@ const ruleContentQuery = useQuery({
   queryKey: computed(() => ['debug-lal/content', selectedFile.value]),
   queryFn: async (): Promise<string | null> => {
     if (!selectedFile.value) return null;
-    const got = await bff.getRule({ catalog: 'lal', name: selectedFile.value });
+    const got = await bff.dsl.getRule({ catalog: 'lal', name: selectedFile.value });
     return got?.content ?? null;
   },
   enabled: computed(() => selectedFile.value !== ''),

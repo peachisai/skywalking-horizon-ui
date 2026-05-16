@@ -57,7 +57,7 @@ const selectedListEntry = computed(
 
 const detailQuery = useQuery({
   queryKey: ['overview-dashboard-detail', selectedId],
-  queryFn: () => bffClient.overviewDashboard(selectedId.value),
+  queryFn: () => bffClient.overview.get(selectedId.value),
   enabled: computed(() => selectedId.value.length > 0),
   staleTime: 60_000,
 });

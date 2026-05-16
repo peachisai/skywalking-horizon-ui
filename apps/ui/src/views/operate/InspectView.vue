@@ -145,7 +145,7 @@ function applyPreset(p: Preset): void {
  *  Falls back to the browser's offset if OAP is unreachable. */
 const serverTimeQuery = useQuery({
   queryKey: ['inspect', 'server-time'],
-  queryFn: () => bff.inspectServerTime(),
+  queryFn: () => bff.inspect.serverTime(),
   staleTime: 5 * 60_000,
   refetchOnWindowFocus: false,
 });
@@ -261,7 +261,7 @@ function signedMins(min: number): string {
 const queryClient = useQueryClient();
 const catalogQuery = useQuery({
   queryKey: ['inspect', 'catalog'],
-  queryFn: () => bff.inspectCatalog(),
+  queryFn: () => bff.inspect.catalog(),
   staleTime: 30_000,
   refetchOnWindowFocus: false,
 });
@@ -286,7 +286,7 @@ const inspectNotEnabled = computed(() => {
 
 const mqeTargetQuery = useQuery({
   queryKey: ['inspect', 'mqe-target'],
-  queryFn: () => bff.inspectMqeTarget(),
+  queryFn: () => bff.inspect.mqeTarget(),
   staleTime: 60_000,
   refetchOnWindowFocus: false,
 });
@@ -708,7 +708,7 @@ async function resolveEntitiesFor(w: Widget): Promise<void> {
   }
   w.error = null;
   try {
-    const res: EntitiesResponse = await bff.inspectEntities({
+    const res: EntitiesResponse = await bff.inspect.entities({
       metric: w.metric.name,
       start: startForServer.value,
       end: endForServer.value,
@@ -749,7 +749,7 @@ async function execWidget(w: Widget): Promise<void> {
   const targets = widgetAllEntities(w).filter((e) => w.selectedIds.has(e.entityId));
   try {
     const calls = targets.map((e) =>
-      bff.inspectExec({
+      bff.inspect.exec({
         expression: w.metric.name,
         entity: e.mqeEntity,
         duration: { start: startForServer.value, end: endForServer.value, step: step.value },
@@ -944,9 +944,9 @@ async function refreshEverything() {
    *    These imperative calls return fresh data; vue-query state is
    *    refreshed in step 2. */
   await Promise.all([
-    bff.inspectCatalog(true),
-    bff.inspectMqeTarget(true),
-    bff.inspectServerTime(true),
+    bff.inspect.catalog(true),
+    bff.inspect.mqeTarget(true),
+    bff.inspect.serverTime(true),
   ]);
   /* 2. Invalidate every vue-query under the `inspect` prefix —
    *    catalog / mqe-target / server-time all re-pull. */

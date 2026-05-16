@@ -51,7 +51,7 @@ const listQuery = useQuery({
   queryKey: computed(() => ['catalog/list', catalog.value]),
   queryFn: async (): Promise<ListEnvelope | null> => {
     if (!catalog.value) return null;
-    return bff.catalogList(catalog.value);
+    return bff.dsl.catalogList(catalog.value);
   },
   enabled: computed(() => catalog.value !== null),
 });
@@ -62,7 +62,7 @@ const bundledQuery = useQuery({
     if (!catalog.value) return null;
     // withContent=false — we only need the names + hashes for the
     // catalog grid; the editor pulls full YAML on click.
-    return bff.catalogBundled(catalog.value, false);
+    return bff.dsl.catalogBundled(catalog.value, false);
   },
   enabled: computed(() => catalog.value !== null),
 });

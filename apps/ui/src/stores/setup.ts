@@ -249,7 +249,7 @@ export const useSetupStore = defineStore('setup', () => {
     loading.value = true;
     lastError.value = null;
     try {
-      const res = await bffClient.loadSetup();
+      const res = await bffClient.setup.load();
       applyServerSnapshot(res.layers);
       bootstrapped.value = true;
     } catch (err) {
@@ -367,7 +367,7 @@ export const useSetupStore = defineStore('setup', () => {
       // Strip layers that match defaults exactly? Keep all touched layers
       // for now — server stores them sparse but client sends the full set.
       const payload = JSON.parse(JSON.stringify(configs)) as Record<string, LayerConfig>;
-      const res = await bffClient.saveSetup({ layers: payload });
+      const res = await bffClient.setup.save({ layers: payload });
       applyServerSnapshot(res.layers);
     } catch (err) {
       lastError.value = err instanceof Error ? err.message : 'save failed';

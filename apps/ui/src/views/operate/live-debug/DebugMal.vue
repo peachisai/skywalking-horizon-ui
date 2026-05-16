@@ -102,13 +102,13 @@ watch(
 const listQueries = MAL_CATALOGS.map((catalog) =>
   useQuery({
     queryKey: ['debug-mal/list', catalog],
-    queryFn: async (): Promise<ListEnvelope> => bff.catalogList(catalog),
+    queryFn: async (): Promise<ListEnvelope> => bff.dsl.catalogList(catalog),
   }),
 );
 const bundledQueries = MAL_CATALOGS.map((catalog) =>
   useQuery({
     queryKey: ['debug-mal/bundled', catalog],
-    queryFn: async (): Promise<BundledEntry[]> => bff.catalogBundled(catalog, false),
+    queryFn: async (): Promise<BundledEntry[]> => bff.dsl.catalogBundled(catalog, false),
   }),
 );
 
@@ -159,7 +159,7 @@ const ruleContentQuery = useQuery({
   queryFn: async (): Promise<string | null> => {
     const r = selectedRule.value;
     if (!r) return null;
-    const got = await bff.getRule({ catalog: r.catalog, name: r.name });
+    const got = await bff.dsl.getRule({ catalog: r.catalog, name: r.name });
     return got?.content ?? null;
   },
   enabled: computed(() => selectedRule.value !== null),

@@ -29,7 +29,7 @@ import { bffClient } from '@/api/client';
 export function useLayerInstances(layerKey: Ref<string>, service: Ref<string | null>) {
   const q = useQuery({
     queryKey: ['layer-instances', layerKey, service],
-    queryFn: () => bffClient.layerInstances(layerKey.value, service.value ?? ''),
+    queryFn: () => bffClient.layer.instances(layerKey.value, service.value ?? ''),
     enabled: computed(() => layerKey.value.length > 0 && !!service.value),
     staleTime: 30_000,
   });

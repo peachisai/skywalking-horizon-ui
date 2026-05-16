@@ -276,7 +276,7 @@ const tagValueOptions = ref<string[]>([]);
 const tagValueKey = ref<string>('');
 async function loadTagKeys(): Promise<void> {
   try {
-    const res = await bffClient.logTagKeys(30);
+    const res = await bffClient.log.tagKeys(30);
     tagKeyOptions.value = res.keys ?? [];
   } catch { /* autocomplete is best-effort */ }
 }
@@ -284,7 +284,7 @@ async function loadTagValues(key: string): Promise<void> {
   if (!key || key === tagValueKey.value) return;
   tagValueKey.value = key;
   try {
-    const res = await bffClient.logTagValues(key, 30);
+    const res = await bffClient.log.tagValues(key, 30);
     tagValueOptions.value = res.values ?? [];
   } catch { /* noop */ }
 }

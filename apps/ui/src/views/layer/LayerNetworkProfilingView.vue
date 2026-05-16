@@ -83,7 +83,7 @@ async function refreshTasks(): Promise<void> {
   if (!serviceId.value && !selectedInstanceId.value) return;
   tasksLoading.value = true;
   try {
-    const resp = await bffClient.layerNetworkTasks(layerKey.value, {
+    const resp = await bffClient.networkProfile.tasks(layerKey.value, {
       service: serviceId.value ?? undefined,
       serviceInstance: selectedInstanceId.value ?? undefined,
     });
@@ -112,7 +112,7 @@ async function loadTopology(): Promise<void> {
   if (!selectedInstanceId.value) return;
   topologyLoading.value = true;
   try {
-    const resp = await bffClient.ebpfNetworkTopology(
+    const resp = await bffClient.networkProfile.topology(
       selectedInstanceId.value,
       windowMinutes.value,
     );
@@ -133,7 +133,7 @@ async function keepAlive(): Promise<void> {
   if (!currentTask.value) return;
   aliveStatus.value = null;
   try {
-    const resp = await bffClient.keepAliveNetworkProfilingTask(currentTask.value.taskId);
+    const resp = await bffClient.networkProfile.keepAlive(currentTask.value.taskId);
     aliveStatus.value = resp.status;
   } catch {
     aliveStatus.value = false;
@@ -159,7 +159,7 @@ async function submitNewTask(): Promise<void> {
   }
   newTaskError.value = null;
   try {
-    const resp = await bffClient.createNetworkProfilingTask({
+    const resp = await bffClient.networkProfile.create({
       instanceId: selectedInstanceId.value,
       samplings: samplings.value,
     });

@@ -48,7 +48,7 @@ export function useLayerLanding(
 
   const q = useQuery({
     queryKey: ['layer-landing', layerKey, cfgHash],
-    queryFn: () => bffClient.layerLanding(layerKey.value, cfg.value),
+    queryFn: () => bffClient.layer.landing(layerKey.value, cfg.value),
     staleTime: 45_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,

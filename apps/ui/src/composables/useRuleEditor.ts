@@ -71,7 +71,7 @@ export function useRuleEditor(opts: UseRuleEditorOptions) {
     loading.value = true;
     loadError.value = null;
     try {
-      const r = await client.getRule({
+      const r = await client.dsl.getRule({
         catalog: opts.catalog.value,
         name: opts.name.value,
       });
@@ -90,7 +90,7 @@ export function useRuleEditor(opts: UseRuleEditorOptions) {
   async function fetchBundled(): Promise<RuleResponse | null> {
     if (!opts.catalog.value || !opts.name.value) return null;
     try {
-      return await client.getRule({
+      return await client.dsl.getRule({
         catalog: opts.catalog.value,
         name: opts.name.value,
         source: 'bundled',
@@ -113,7 +113,7 @@ export function useRuleEditor(opts: UseRuleEditorOptions) {
     }
     saving.value = true;
     try {
-      const result = await client.saveRule({
+      const result = await client.dsl.saveRule({
         catalog: opts.catalog.value,
         name: opts.name.value,
         body: buffer.value,
@@ -142,7 +142,7 @@ export function useRuleEditor(opts: UseRuleEditorOptions) {
     }
     saving.value = true;
     try {
-      const result = await client.inactivateRule(opts.catalog.value, opts.name.value);
+      const result = await client.dsl.inactivateRule(opts.catalog.value, opts.name.value);
       lastApplyStatus.value = result.applyStatus;
       await load();
       return { kind: 'ok', result };
@@ -159,7 +159,7 @@ export function useRuleEditor(opts: UseRuleEditorOptions) {
     }
     saving.value = true;
     try {
-      const result = await client.deleteRule(opts.catalog.value, opts.name.value, mode);
+      const result = await client.dsl.deleteRule(opts.catalog.value, opts.name.value, mode);
       lastApplyStatus.value = result.applyStatus;
       return { kind: 'ok', result };
     } catch (err) {

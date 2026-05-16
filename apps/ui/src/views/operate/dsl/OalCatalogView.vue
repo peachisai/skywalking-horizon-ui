@@ -71,7 +71,7 @@ const fileError = ref<string | null>(null);
 
 const filesQuery = useQuery({
   queryKey: ['oal/files'],
-  queryFn: async () => bff.oalFiles(),
+  queryFn: async () => bff.dsl.oalFiles(),
 });
 
 const files = computed<string[]>(() => filesQuery.data.value?.files ?? []);
@@ -84,7 +84,7 @@ watch(
     if (!name) return;
     fileLoading.value = true;
     try {
-      fileContent.value = await bff.oalFileContent(name);
+      fileContent.value = await bff.dsl.oalFileContent(name);
       if (fileContent.value === null) fileError.value = 'file not found';
     } catch (err) {
       fileError.value = err instanceof Error ? err.message : String(err);

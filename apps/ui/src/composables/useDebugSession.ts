@@ -164,7 +164,7 @@ export function useDebugSession(widget: DebugWidgetKey): UseDebugSessionResult {
     const id = sessionId.value;
     if (!id) return;
     try {
-      const got = await bff.debugSession(id);
+      const got = await bff.liveDebug.session(id);
       if (gen !== pollGeneration) return;
       pollFailures = 0;
       if (got === null) {
@@ -208,7 +208,7 @@ export function useDebugSession(widget: DebugWidgetKey): UseDebugSessionResult {
     priorCleanup.value = null;
 
     try {
-      const r = await bff.debugStart({ clientId, ...args });
+      const r = await bff.liveDebug.start({ clientId, ...args });
       sessionId.value = r.sessionId;
       peerAcks.value = r.peers ?? [];
       installed.value = r.installed ?? null;
@@ -254,12 +254,12 @@ export function useDebugSession(widget: DebugWidgetKey): UseDebugSessionResult {
       return;
     }
     try {
-      await bff.debugStop(id);
+      await bff.liveDebug.stop(id);
       state.value = 'stopped';
       // Refresh once so the post-stop "not_local" status surfaces in
       // the UI.
       try {
-        const after = await bff.debugSession(id);
+        const after = await bff.liveDebug.session(id);
         if (after !== null) session.value = after;
       } catch {
         // ignore — stop already succeeded.

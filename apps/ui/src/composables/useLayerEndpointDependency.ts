@@ -34,7 +34,7 @@ export function useLayerEndpointDependency(
   const q = useQuery({
     queryKey: ['layer-endpoint-dependency', layerKey, service, endpoint],
     queryFn: () =>
-      bffClient.layerEndpointDependency(
+      bffClient.layer.endpointDependency(
         layerKey.value,
         service.value ?? '',
         endpoint.value ?? '',

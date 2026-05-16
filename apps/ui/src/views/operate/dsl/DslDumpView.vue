@@ -25,10 +25,10 @@ import AdminFeatureWarning from '@/components/shell/AdminFeatureWarning.vue';
 const auth = useAuthStore();
 
 function dumpAll(): void {
-  bff.triggerDump();
+  bff.dsl.triggerDump();
 }
 function dumpCatalog(c: Catalog): void {
-  bff.triggerDump(c);
+  bff.dsl.triggerDump(c);
 }
 </script>
 

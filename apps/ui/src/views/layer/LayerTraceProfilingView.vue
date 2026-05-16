@@ -143,7 +143,7 @@ async function refreshTasks(): Promise<void> {
   }
   tasksLoading.value = true;
   try {
-    const resp = await bffClient.layerProfileTasks(layerKey.value, selectedId.value);
+    const resp = await bffClient.profile.tasks(layerKey.value, selectedId.value);
     if (!resp.reachable && resp.error) tasksError.value = resp.error;
     tasks.value = resp.tasks ?? [];
     if (tasks.value.length) {
@@ -170,7 +170,7 @@ async function pickTask(t: ProfileTask): Promise<void> {
   segmentsLoading.value = true;
   segmentsError.value = null;
   try {
-    const resp = await bffClient.profileTaskSegments(t.id);
+    const resp = await bffClient.profile.segments(t.id);
     if (!resp.reachable && resp.error) segmentsError.value = resp.error;
     segments.value = resp.segments ?? [];
     if (segments.value.length) {
@@ -198,7 +198,7 @@ async function openTaskDetail(t: ProfileTask, ev: Event): Promise<void> {
   taskDetailFor.value = t;
   taskDetailLogs.value = [];
   try {
-    const resp = await bffClient.profileTaskLogs(t.id);
+    const resp = await bffClient.profile.logs(t.id);
     taskDetailLogs.value = resp.logs ?? [];
   } catch {
     taskDetailLogs.value = [];
@@ -245,7 +245,7 @@ async function runAnalyze(): Promise<void> {
       segmentId: span.segmentId,
       timeRange: tr,
     }));
-    const resp = await bffClient.profileAnalyze(queries);
+    const resp = await bffClient.profile.analyze(queries);
     if (resp.tip) {
       analyzeMessage.value = resp.tip;
       analyzeTrees.value = [];
@@ -294,7 +294,7 @@ async function submitNewTask(): Promise<void> {
   try {
     const startTime =
       newTask.monitorTime === 'now' ? Date.now() : newTask.monitorTimeAt.getTime();
-    const resp = await bffClient.createProfileTask(layerKey.value, {
+    const resp = await bffClient.profile.create(layerKey.value, {
       serviceId: selectedId.value,
       endpointName: newTask.endpointName,
       startTime,

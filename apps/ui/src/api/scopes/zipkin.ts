@@ -1,0 +1,72 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import type {
+  ZipkinTraceDetailResponse,
+  ZipkinTraceListResponse,
+} from '@skywalking-horizon-ui/api-client';
+import type { BffClient, ZipkinTraceQuery } from '../client';
+
+/** `bff.zipkin` — Zipkin v2 REST passthrough (services / spans / traces
+ *  / annotation-autocomplete). Used by mesh-layer trace views that
+ *  consume Envoy-emitted Zipkin spans instead of SW-native segments. */
+export class ZipkinApi {
+  constructor(private readonly bff: BffClient) {}
+
+  services(): Promise<string[]> {
+    return this.bff.request('GET', '/api/zipkin/services');
+  }
+  spans(serviceName: string): Promise<string[]> {
+    return this.bff.request(
+      'GET',
+      `/api/zipkin/spans?serviceName=${encodeURIComponent(serviceName)}`,
+    );
+  }
+  remoteServices(serviceName: string): Promise<string[]> {
+    return this.bff.request(
+      'GET',
+      `/api/zipkin/remote-services?serviceName=${encodeURIComponent(serviceName)}`,
+    );
+  }
+  traces(q: ZipkinTraceQuery = {}): Promise<ZipkinTraceListResponse> {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) {
+      if (v === undefined || v === null || v === '') continue;
+      params.set(k, String(v));
+    }
+    const qs = params.toString();
+    return this.bff.request<ZipkinTraceListResponse>(
+      'GET',
+      `/api/zipkin/traces${qs ? '?' + qs : ''}`,
+    );
+  }
+  trace(traceId: string): Promise<ZipkinTraceDetailResponse> {
+    return this.bff.request<ZipkinTraceDetailResponse>(
+      'GET',
+      `/api/zipkin/trace/${encodeURIComponent(traceId)}`,
+    );
+  }
+  autocompleteKeys(): Promise<string[]> {
+    return this.bff.request<string[]>('GET', '/api/zipkin/autocomplete/keys');
+  }
+  autocompleteValues(key: string): Promise<string[]> {
+    return this.bff.request<string[]>(
+      'GET',
+      `/api/zipkin/autocomplete/values?key=${encodeURIComponent(key)}`,
+    );
+  }
+}

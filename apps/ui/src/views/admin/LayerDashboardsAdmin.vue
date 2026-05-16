@@ -93,7 +93,7 @@ async function loadAll(): Promise<void> {
   isLoading.value = true;
   error.value = null;
   try {
-    const res = await bffClient.adminLayerTemplates();
+    const res = await bffClient.layerTemplates.list();
     templates.value = res.templates;
     // Hydrate from `?layer=&scope=` first; fall back to the first
     // template only when the URL doesn't pin a layer. This preserves
@@ -451,7 +451,7 @@ async function save(): Promise<void> {
   isSaving.value = true;
   saveMsg.value = null;
   try {
-    const res = await bffClient.saveLayerTemplate(draft.template);
+    const res = await bffClient.layerTemplates.save(draft.template);
     // Splice the returned template back into the list so subsequent
     // dirty diffs are against the persisted state.
     const idx = templates.value.findIndex((t) => t.key === selectedKey.value);

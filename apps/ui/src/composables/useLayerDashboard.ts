@@ -35,7 +35,7 @@ import { bffClient } from '@/api/client';
 export function useLayerDashboardConfig(layerKey: Ref<string>, scope?: Ref<string>) {
   const q = useQuery({
     queryKey: ['dashboard-config', layerKey, scope ?? computed(() => 'service')],
-    queryFn: () => bffClient.dashboardConfig(layerKey.value, scope?.value),
+    queryFn: () => bffClient.layer.dashboardConfig(layerKey.value, scope?.value),
     enabled: computed(() => layerKey.value.length > 0),
     staleTime: 5 * 60_000,
   });
@@ -89,7 +89,7 @@ export function useLayerDashboard(
       entityRefs.endpoint ?? computed(() => null),
     ],
     queryFn: () =>
-      bffClient.dashboard(
+      bffClient.layer.dashboard(
         layerKey.value,
         {
           ...(service.value ? { service: service.value } : {}),

@@ -197,7 +197,7 @@ export const PILOT_SUMMARY_KPIS: ReadonlyArray<{
 export function useOverviewDashboard(idRef: Ref<string>) {
   const dash = useQuery({
     queryKey: ['overview-dashboard', idRef],
-    queryFn: () => bffClient.overviewDashboard(idRef.value),
+    queryFn: () => bffClient.overview.get(idRef.value),
     enabled: computed(() => Boolean(idRef.value)),
     staleTime: 60_000,
   });
@@ -230,7 +230,7 @@ export function useOverviewDashboard(idRef: Ref<string>) {
               unit: r.unit,
             })),
           };
-          return bffClient.layerLanding(layer, cfg).then((res) => ({
+          return bffClient.layer.landing(layer, cfg).then((res) => ({
             layer,
             reqs,
             aggregates: res.aggregates,

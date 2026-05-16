@@ -182,7 +182,7 @@ watch(layerKey, () => {
 // Best-effort: a failed fetch leaves the input as plain text.
 async function loadServiceOptions(): Promise<void> {
   try {
-    const res = await bffClient.zipkinServices();
+    const res = await bffClient.zipkin.services();
     // De-duplicate (OAP sometimes returns the same name twice).
     zipkinServiceOptions.value = Array.from(new Set(Array.isArray(res) ? res : []));
   } catch { /* noop */ }
@@ -206,11 +206,11 @@ async function loadAutocomplete(svc: string): Promise<void> {
     return;
   }
   try {
-    const sp = await bffClient.zipkinSpans(svc);
+    const sp = await bffClient.zipkin.spans(svc);
     spanNameOptions.value = Array.isArray(sp) ? sp : [];
   } catch { spanNameOptions.value = []; }
   try {
-    const rs = await bffClient.zipkinRemoteServices(svc);
+    const rs = await bffClient.zipkin.remoteServices(svc);
     remoteSvcOptions.value = Array.isArray(rs) ? rs : [];
   } catch { remoteSvcOptions.value = []; }
 }
@@ -241,7 +241,7 @@ const annotationValueOptions = ref<string[]>([]);
 const annotationValueKey = ref<string>('');
 async function loadAnnotationKeys(): Promise<void> {
   try {
-    const res = await bffClient.zipkinAutocompleteKeys();
+    const res = await bffClient.zipkin.autocompleteKeys();
     annotationKeyOptions.value = Array.isArray(res) ? res : [];
   } catch { /* best-effort */ }
 }
@@ -249,7 +249,7 @@ async function loadAnnotationValues(key: string): Promise<void> {
   if (!key || key === annotationValueKey.value) return;
   annotationValueKey.value = key;
   try {
-    const res = await bffClient.zipkinAutocompleteValues(key);
+    const res = await bffClient.zipkin.autocompleteValues(key);
     annotationValueOptions.value = Array.isArray(res) ? res : [];
   } catch { /* noop */ }
 }

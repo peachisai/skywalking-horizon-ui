@@ -39,7 +39,7 @@ import { useAutoRefreshSubscribe } from './useAutoRefreshSubscribe';
 export function useAdminFeatures() {
   const q = useQuery({
     queryKey: ['oap-preflight'],
-    queryFn: () => bffClient.preflight(),
+    queryFn: () => bffClient.menu.preflight(),
     staleTime: 30_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,

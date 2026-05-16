@@ -36,7 +36,7 @@ export function useLayerEndpoints(
   const q = useQuery({
     queryKey: ['layer-endpoints', layerKey, service, query, limit],
     queryFn: () =>
-      bffClient.layerEndpoints(layerKey.value, service.value ?? '', query.value, limit.value),
+      bffClient.layer.endpoints(layerKey.value, service.value ?? '', query.value, limit.value),
     enabled: computed(() => layerKey.value.length > 0 && !!service.value),
     staleTime: 30_000,
   });

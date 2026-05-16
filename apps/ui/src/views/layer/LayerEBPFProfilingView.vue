@@ -137,7 +137,7 @@ async function refreshTasks(): Promise<void> {
   }
   tasksLoading.value = true;
   try {
-    const resp = await bffClient.layerEBPFTasks(layerKey.value, selectedId.value);
+    const resp = await bffClient.ebpf.tasks(layerKey.value, selectedId.value);
     if (!resp.reachable && resp.error) tasksError.value = resp.error;
     tasks.value = resp.tasks ?? [];
     couldProfiling.value = resp.couldProfiling;
@@ -162,7 +162,7 @@ async function pickTask(t: EBPFTask): Promise<void> {
   analyzeTip.value = '';
   schedulesError.value = null;
   try {
-    const resp = await bffClient.ebpfTaskSchedules(t.taskId);
+    const resp = await bffClient.ebpf.schedules(t.taskId);
     if (!resp.reachable && resp.error) schedulesError.value = resp.error;
     schedules.value = resp.schedules ?? [];
     resetFiltersForTask();
@@ -244,7 +244,7 @@ async function runAnalyze(): Promise<void> {
   analyzeLoading.value = true;
   analyzeTip.value = '';
   try {
-    const resp = await bffClient.ebpfAnalyze({
+    const resp = await bffClient.ebpf.analyze({
       scheduleIdList: matching.map((sc) => sc.scheduleId),
       timeRanges: merged,
       aggregateType: aggregateType.value,
@@ -285,7 +285,7 @@ async function submitNewTask(): Promise<void> {
   const start =
     newTask.monitorTime === 'now' ? Date.now() : newTask.monitorTimeAt.getTime();
   try {
-    const resp = await bffClient.createEBPFTask(layerKey.value, {
+    const resp = await bffClient.ebpf.create(layerKey.value, {
       serviceId: selectedId.value,
       processLabels: newTask.labels,
       startTime: start,
