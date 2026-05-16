@@ -214,14 +214,14 @@
         "rowSpan": 3
       },
       {
-        "id": "top_endpoints_in_service",
-        "title": "Top 10 endpoints in service",
-        "tip": "Ranked across the selected service's endpoints.",
+        "id": "top_apis",
+        "title": "Top 20 APIs",
+        "tip": "Top endpoints under the selected service, by traffic / slowness / worst success rate.",
         "type": "top",
         "expressions": [
-          "top_n(endpoint_cpm,10,des)",
-          "top_n(endpoint_resp_time,10,des)",
-          "top_n(endpoint_sla,10,asc)/100"
+          "top_n(endpoint_cpm,20,des)",
+          "top_n(endpoint_resp_time,20,des)",
+          "top_n(endpoint_sla,20,asc)/100"
         ],
         "expressionLabels": [
           "Traffic",
@@ -234,7 +234,7 @@
           "%"
         ],
         "span": 6,
-        "rowSpan": 3
+        "rowSpan": 4
       }
     ],
     "instance": [
