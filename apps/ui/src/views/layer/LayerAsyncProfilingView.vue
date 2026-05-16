@@ -390,7 +390,7 @@ function instanceName(id: string): string {
   color: var(--sw-fg-3);
 }
 .side-err {
-  color: #ff8888;
+  color: var(--sw-err);
 }
 .side-list {
   list-style: none;
@@ -533,7 +533,7 @@ function instanceName(id: string): string {
 .banner.err {
   padding: 6px 12px;
   font-size: 11px;
-  color: #ff8888;
+  color: var(--sw-err);
   background: var(--sw-bg-2);
   border-bottom: 1px solid var(--sw-line);
 }
@@ -628,7 +628,7 @@ function instanceName(id: string): string {
   border-top: 1px solid var(--sw-line);
 }
 .dlg-err {
-  color: #ff7676;
+  color: var(--sw-err);
   font-size: 11px;
 }
 </style>

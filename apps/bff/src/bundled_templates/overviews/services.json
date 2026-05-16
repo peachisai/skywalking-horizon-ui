@@ -1,0 +1,138 @@
+{
+  "id": "services",
+  "title": "Services Dashboard",
+  "description": "Cross-layer service health: traced services plus virtual databases / caches / message queues / GenAI backends, with the underlying Kubernetes capacity.",
+  "visibility": "public",
+  "icon": "svc",
+  "order": 10,
+  "layers": [
+    "GENERAL",
+    "VIRTUAL_DATABASE",
+    "VIRTUAL_CACHE",
+    "VIRTUAL_MQ",
+    "VIRTUAL_GENAI",
+    "K8S"
+  ],
+  "widgets": [
+    {
+      "id": "svc_break",
+      "title": "Services",
+      "type": "section-break",
+      "cols": 5
+    },
+    {
+      "id": "tile_general",
+      "title": "General services",
+      "tip": "Traced application services on the General layer.",
+      "type": "kpi-tile",
+      "layer": "GENERAL",
+      "showCount": true,
+      "kpis": [
+        { "label": "RPM", "mqe": "service_cpm", "unit": "rpm", "aggregation": "sum" },
+        { "label": "Latency", "mqe": "service_resp_time", "unit": "ms", "aggregation": "avg" },
+        { "label": "SLA", "mqe": "service_sla/100", "unit": "%", "aggregation": "avg" }
+      ],
+      "span": 1,
+      "rowSpan": 2
+    },
+    {
+      "id": "tile_db",
+      "title": "Virtual databases",
+      "tip": "Backend databases observed via client-side spans.",
+      "type": "kpi-tile",
+      "layer": "VIRTUAL_DATABASE",
+      "showCount": true,
+      "kpis": [
+        { "label": "RPM", "mqe": "database_access_cpm", "unit": "rpm", "aggregation": "sum" },
+        { "label": "Latency", "mqe": "database_access_resp_time", "unit": "ms", "aggregation": "avg" },
+        { "label": "SLA", "mqe": "database_access_sla/100", "unit": "%", "aggregation": "avg" }
+      ],
+      "span": 1,
+      "rowSpan": 2
+    },
+    {
+      "id": "tile_cache",
+      "title": "Virtual caches",
+      "tip": "Caches (Redis / Memcached / …) observed via client-side spans.",
+      "type": "kpi-tile",
+      "layer": "VIRTUAL_CACHE",
+      "showCount": true,
+      "kpis": [
+        { "label": "RPM", "mqe": "cache_access_cpm", "unit": "rpm", "aggregation": "sum" },
+        { "label": "Latency", "mqe": "cache_access_resp_time", "unit": "ms", "aggregation": "avg" },
+        { "label": "SLA", "mqe": "cache_access_sla/100", "unit": "%", "aggregation": "avg" }
+      ],
+      "span": 1,
+      "rowSpan": 2
+    },
+    {
+      "id": "tile_mq",
+      "title": "Virtual MQs",
+      "tip": "Message queues observed via consume + produce spans.",
+      "type": "kpi-tile",
+      "layer": "VIRTUAL_MQ",
+      "showCount": true,
+      "kpis": [
+        { "label": "Consume", "mqe": "mq_service_consume_cpm", "unit": "rpm", "aggregation": "sum" },
+        { "label": "Produce", "mqe": "mq_service_produce_cpm", "unit": "rpm", "aggregation": "sum" },
+        { "label": "Consume latency", "mqe": "mq_service_consume_latency", "unit": "ms", "aggregation": "avg" }
+      ],
+      "span": 1,
+      "rowSpan": 2
+    },
+    {
+      "id": "tile_genai",
+      "title": "Virtual GenAI",
+      "tip": "GenAI backends observed via instrumented client spans.",
+      "type": "kpi-tile",
+      "layer": "VIRTUAL_GENAI",
+      "showCount": true,
+      "kpis": [
+        { "label": "RPM", "mqe": "gen_ai_provider_cpm", "unit": "rpm", "aggregation": "sum" },
+        { "label": "Latency", "mqe": "gen_ai_provider_resp_time", "unit": "ms", "aggregation": "avg" },
+        { "label": "SLA", "mqe": "gen_ai_provider_sla/100", "unit": "%", "aggregation": "avg" }
+      ],
+      "span": 1,
+      "rowSpan": 2
+    },
+    {
+      "id": "topo_alarms_break",
+      "title": "Topology & active alarms",
+      "type": "section-break",
+      "cols": 12
+    },
+    {
+      "id": "svc_topo",
+      "title": "General service topology",
+      "tip": "Live service map — same renderer as the per-layer Topology tab, without the detail sidebar.",
+      "type": "topology",
+      "layer": "GENERAL",
+      "span": 9,
+      "rowSpan": 6
+    },
+    {
+      "id": "svc_alarms",
+      "title": "Active alarms",
+      "tip": "All currently firing alarms (layer filter is best-effort in v1).",
+      "type": "alarms",
+      "limit": 12,
+      "span": 3,
+      "rowSpan": 6
+    },
+    {
+      "id": "k8s_break",
+      "title": "Kubernetes",
+      "type": "section-break",
+      "cols": 12
+    },
+    {
+      "id": "k8s_summary",
+      "title": "Cluster capacity & utilisation",
+      "tip": "Nodes / namespaces / workloads + cluster-wide CPU, memory, and disk usage.",
+      "type": "k8s-summary",
+      "layer": "K8S",
+      "span": 12,
+      "rowSpan": 3
+    }
+  ]
+}

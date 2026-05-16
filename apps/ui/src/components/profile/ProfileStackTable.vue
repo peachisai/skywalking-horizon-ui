@@ -100,30 +100,36 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- Header + body share ONE scroll container so the column titles
+       horizontally scroll alongside the rows when the Thread Stack
+       column overflows. `position: sticky; top: 0` keeps the header
+       vertically pinned during a body scroll. -->
   <div class="stack-table">
-    <div class="stack-header">
-      <div class="cell sig" :style="{ width: thread + 'px' }">
-        Thread Stack
-        <span ref="dragger" class="dragger" title="Drag to resize">⇿</span>
+    <div class="stack-scroll">
+      <div class="stack-header">
+        <div class="cell sig" :style="{ width: thread + 'px' }">
+          Thread Stack
+          <span ref="dragger" class="dragger" title="Drag to resize">⇿</span>
+        </div>
+        <div class="cell num">Duration (ms)</div>
+        <div class="cell num">
+          Self Duration (ms)
+          <button
+            type="button"
+            class="top-slow"
+            :class="{ 'is-on': highlightTop }"
+            @click="emit('toggle-highlight')"
+            title="Highlight top 10 slow methods"
+          >
+            top slow
+          </button>
+        </div>
+        <div class="cell num">Dump Count</div>
       </div>
-      <div class="cell num">Duration (ms)</div>
-      <div class="cell num">
-        Self Duration (ms)
-        <button
-          type="button"
-          class="top-slow"
-          :class="{ 'is-on': highlightTop }"
-          @click="emit('toggle-highlight')"
-          title="Highlight top 10 slow methods"
-        >
-          top slow
-        </button>
+      <div class="stack-body">
+        <div v-if="!tableData.length" class="empty">No analyze data yet — pick a profiled span and click Analyze.</div>
+        <ProfileStackRow v-for="(n, i) in tableData" :key="'r' + i" :node="n" :thread="thread" :depth="0" />
       </div>
-      <div class="cell num">Dump Count</div>
-    </div>
-    <div class="stack-body">
-      <div v-if="!tableData.length" class="empty">No analyze data yet — pick a profiled span and click Analyze.</div>
-      <ProfileStackRow v-for="(n, i) in tableData" :key="'r' + i" :node="n" :thread="thread" :depth="0" />
     </div>
   </div>
 </template>
@@ -136,6 +142,16 @@ onMounted(() => {
   font-size: 11.5px;
   color: var(--sw-fg-1);
   font-family: var(--sw-mono);
+  overflow: hidden;
+}
+/* Single scroll container — header lives inside so it scrolls
+ * horizontally with rows. `width: max-content` lets the inner row
+ * width drive horizontal scrollbar instead of being capped by the
+ * viewport. */
+.stack-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
 }
 .stack-header {
   display: flex;
@@ -143,6 +159,15 @@ onMounted(() => {
   background: var(--sw-bg-2);
   border-bottom: 1px solid var(--sw-line);
   flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  width: max-content;
+  min-width: 100%;
+}
+.stack-body {
+  width: max-content;
+  min-width: 100%;
 }
 .cell {
   height: 28px;
@@ -185,10 +210,6 @@ onMounted(() => {
 .top-slow.is-on {
   color: var(--sw-accent);
   border-color: var(--sw-accent);
-}
-.stack-body {
-  flex: 1 1 0;
-  overflow: auto;
 }
 .empty {
   padding: 16px;

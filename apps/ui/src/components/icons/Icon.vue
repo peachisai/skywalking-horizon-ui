@@ -44,7 +44,14 @@ export type IconName =
   | 'star'
   | 'flame'
   | 'sky'
-  | 'user';
+  | 'user'
+  | 'mesh'
+  | 'db'
+  | 'cluster'
+  | 'web'
+  | 'fn'
+  | 'cache'
+  | 'topic';
 </script>
 
 <template>
@@ -172,6 +179,40 @@ export type IconName =
     <template v-else-if="name === 'user'">
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+    </template>
+    <template v-else-if="name === 'mesh'">
+      <circle cx="5" cy="6" r="2" />
+      <circle cx="19" cy="6" r="2" />
+      <circle cx="12" cy="14" r="2" />
+      <circle cx="5" cy="20" r="2" />
+      <circle cx="19" cy="20" r="2" />
+      <path d="M6.5 7.5L10.5 13M17.5 7.5L13.5 13M10.5 15L6.5 19M13.5 15L17.5 19" />
+    </template>
+    <template v-else-if="name === 'db'">
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+    </template>
+    <template v-else-if="name === 'cluster'">
+      <rect x="3" y="3" width="8" height="8" rx="1" />
+      <rect x="13" y="3" width="8" height="8" rx="1" />
+      <rect x="3" y="13" width="8" height="8" rx="1" />
+      <rect x="13" y="13" width="8" height="8" rx="1" />
+    </template>
+    <template v-else-if="name === 'web'">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" />
+    </template>
+    <template v-else-if="name === 'fn'">
+      <path d="M6 4h8l4 4v12H6z" />
+      <path d="M14 4v4h4" />
+    </template>
+    <template v-else-if="name === 'cache'">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </template>
+    <template v-else-if="name === 'topic'">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M4 12h16M12 4v16" opacity="0.6" />
     </template>
   </svg>
 </template>

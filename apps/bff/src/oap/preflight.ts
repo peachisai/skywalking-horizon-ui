@@ -31,33 +31,14 @@
  * "set selectors".
  */
 
-import type { FetchLike } from '@skywalking-horizon-ui/api-client';
+import type {
+  FetchLike,
+  PreflightModule,
+  PreflightResult,
+} from '@skywalking-horizon-ui/api-client';
 import type { HorizonConfig } from '../config/schema.js';
 
-export interface PreflightModule {
-  /** OAP module name as it appears in the config-dump key prefix. */
-  name: string;
-  /** The env var that controls this module's selector. */
-  envVar: string;
-  /** True when Studio depends on this module being on. */
-  required: boolean;
-  /** True iff the dump carries at least one key with this module's prefix. */
-  enabled: boolean;
-  /** What part of Studio's UI breaks when this module is off. */
-  affects: string;
-}
-
-export interface PreflightResult {
-  adminUrl: string;
-  /** True iff `/debugging/config/dump` responded 2xx. */
-  adminReachable: boolean;
-  /** Short reason when `adminReachable` is false. */
-  adminError?: string;
-  modules: PreflightModule[];
-  /** Total keys in the dump. Diagnostic only. */
-  dumpKeyCount: number;
-  generatedAt: number;
-}
+export type { PreflightModule, PreflightResult };
 
 interface ModuleDef {
   name: string;

@@ -70,6 +70,13 @@ audit:
 setup:
   file: ./horizon-setup.json
 
+# Alarm-page setup — which OAP layers' RPM traffic is drawn as the
+# background series on /alarms, and what MQE to fire per layer.
+# Operators edit the saved file through the Alert Page Setup admin
+# view; this section just tells the BFF where to keep the file.
+alarms:
+  file: ./horizon-alarms.json
+
 debugLog:
   enabled: false
   file: ./horizon-wire.jsonl

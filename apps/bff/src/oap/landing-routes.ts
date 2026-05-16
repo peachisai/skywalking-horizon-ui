@@ -300,7 +300,16 @@ export function registerLandingRoute(app: FastifyInstance, deps: LandingRouteDep
       }
 
       const totalServiceCount = services.length;
-      if (services.length === 0 || cfg.columns.length === 0) {
+      // Only short-circuit when the layer truly has no services — empty
+      // `columns` still needs to flow through so the response carries
+      // the service-list rows (with empty `metrics` objects). Without
+      // those rows the SPA can't resolve `serviceName` from
+      // `?service=<id>` and every downstream widget query stays gated
+      // on `service.value` being truthy and never fires. This bit the
+      // so11y_* layers when their header columns were intentionally
+      // empty (their meters are SERVICE_INSTANCE-only — see
+      // CLAUDE.md "Metric entity-scope validation").
+      if (services.length === 0) {
         const body: LandingResponse = {
           layer: layerKey,
           topN: cfg.topN,
@@ -310,7 +319,7 @@ export function registerLandingRoute(app: FastifyInstance, deps: LandingRouteDep
           durationStart: window.start,
           durationEnd: window.end,
           rows: [],
-          aggregates: { serviceCount: totalServiceCount, metrics: {}, seriesByMetric: {} },
+          aggregates: { serviceCount: 0, metrics: {}, seriesByMetric: {} },
           reachable: true,
         };
         return reply.send(body);

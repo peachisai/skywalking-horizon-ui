@@ -119,6 +119,13 @@ const setupSchema = z
   .strict()
   .default({ file: './horizon-setup.json' });
 
+const alarmsSchema = z
+  .object({
+    file: z.string().default('./horizon-alarms.json'),
+  })
+  .strict()
+  .default({ file: './horizon-alarms.json' });
+
 const debugLogSchema = z
   .object({
     enabled: z.boolean().default(false),
@@ -143,6 +150,7 @@ export const configSchema = z
     session: sessionSchema,
     audit: auditSchema,
     setup: setupSchema,
+    alarms: alarmsSchema,
     debugLog: debugLogSchema,
   })
   .strict();

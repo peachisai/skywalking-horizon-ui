@@ -178,6 +178,9 @@ export interface LayerTemplate {
    *  → "Istio"; so11y_* → "Self-Observability"). Layers without a
    *  group hang at the top level on their own. */
   group?: string;
+  /** Sidebar placement — `public` (default) → regular Layers section;
+   *  `operate` → operations section (e.g. self-observability layers). */
+  visibility?: 'public' | 'operate';
   /** Layer-dot color (CSS var or hex). */
   color?: string;
   /** Doc link surfaced as a chip on the layer page. */

@@ -94,6 +94,7 @@ export type {
   LogFacetsResponse,
 } from './logs.js';
 export type { OapInfo } from './oap-info.js';
+export type { PreflightModule, PreflightResult } from './preflight.js';
 export type {
   ProfileTask,
   ProfileTaskLog,
@@ -165,6 +166,8 @@ export type {
 export type {
   OverviewWidgetType,
   OverviewWidget,
+  OverviewKpi,
+  OverviewVisibility,
   OverviewDashboard,
   OverviewDashboardListResponse,
   OverviewDashboardResponse,

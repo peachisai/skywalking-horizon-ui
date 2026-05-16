@@ -218,6 +218,11 @@ export interface LayerDef {
    *  sidebar (e.g. `Istio` aggregates mesh / mesh_cp / mesh_dp). When
    *  absent the layer renders at the top level on its own. */
   group?: string;
+  /** Sidebar placement — `public` (default) for layers visible to
+   *  everyone in the Layers section, `operate` for operations-only
+   *  layers like the SO11Y self-observability tree that surface under
+   *  the Operate section instead. */
+  visibility?: 'public' | 'operate';
   /** OAP's per-service `normal` flag, sampled from the first service in
    *  the layer. In practice every service within a layer shares the
    *  same value (VIRTUAL_*, AWS_* are all `false`; GENERAL/MESH/etc are

@@ -1,7 +1,8 @@
 {
   "key": "SO11Y_SATELLITE",
-  "alias": "Satellite (self-obs)",
+  "alias": "Satellite",
   "group": "Self-Observability",
+  "visibility": "operate",
   "color": "var(--sw-fg-2)",
   "documentLink": "https://skywalking.apache.org/docs/skywalking-satellite/next/readme/",
   "aliases": {
@@ -16,35 +17,7 @@
     "logs": false
   },
   "layer-header": {
-    "orderBy": "conns",
-    "columns": [
-      {
-        "metric": "conns",
-        "label": "Connections",
-        "mqe": "sum(satellite_service_grpc_connect_count)",
-        "aggregation": "sum"
-      },
-      {
-        "metric": "cpu",
-        "label": "CPU",
-        "unit": "%",
-        "mqe": "avg(satellite_service_server_cpu_utilization)",
-        "aggregation": "avg"
-      },
-      {
-        "metric": "queueUsed",
-        "label": "Queue used",
-        "mqe": "sum(satellite_service_queue_used_count)",
-        "aggregation": "sum"
-      },
-      {
-        "metric": "recvEvents",
-        "label": "Events",
-        "unit": "/min",
-        "mqe": "sum(satellite_service_receive_event_count)",
-        "aggregation": "sum"
-      }
-    ]
+    "columns": []
   },
   "overview": {
     "groups": [

@@ -107,6 +107,12 @@ export interface LandingConfig {
   throughput?: ThroughputConfig;
   /** @deprecated kept for back-compat; new code reads `overviewGroups`. */
   overviewMetrics?: string[];
+  /** Explicit per-layer page header columns — distinct from `columns`
+   *  which mixes header + overview-promoted entries (the BFF batches
+   *  every MQE in one query). The LayerShell KPI strip iterates ONLY
+   *  this list so overview-only metrics don't leak into the header.
+   *  Absent on legacy configs → LayerShell falls back to `columns`. */
+  headerColumns?: LandingColumn[];
   /** Resolved Overview tile groups. Each group becomes one tile on
    *  the Overview strip with the group's `title` in the header.
    *  Metrics are referenced by id — those ids show up as synthetic

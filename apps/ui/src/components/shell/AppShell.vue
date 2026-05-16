@@ -18,6 +18,7 @@
 import { RouterView } from 'vue-router';
 import AppSidebar from './AppSidebar.vue';
 import AppTopbar from './AppTopbar.vue';
+import GlobalConnectivityBanner from './GlobalConnectivityBanner.vue';
 import TracePopout from '@/components/trace/TracePopout.vue';
 import ZipkinTracePopout from '@/components/trace/ZipkinTracePopout.vue';
 </script>
@@ -27,6 +28,10 @@ import ZipkinTracePopout from '@/components/trace/ZipkinTracePopout.vue';
     <AppSidebar />
     <AppTopbar />
     <main class="sw-main">
+      <!-- Sticky strip under the topbar; only renders when the graphql
+           (`:12800`) poll reports unreachable. Admin-port (`:17128`)
+           failures render per-page via AdminFeatureWarning, not here. -->
+      <GlobalConnectivityBanner />
       <RouterView />
     </main>
     <!-- Global trace-id popout: any page can call useTracePopout().openTrace(id)

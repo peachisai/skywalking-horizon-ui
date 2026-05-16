@@ -121,30 +121,78 @@ function layerRoute(): RouteRecordRaw {
 }
 
 const shellRoutes: RouteRecordRaw[] = [
-  { path: '', name: 'overview', component: () => import('@/views/overview/OverviewView.vue') },
+  { path: '', name: 'overview', component: () => import('@/views/overview/OverviewLanding.vue') },
+  {
+    path: 'overview/:id',
+    name: 'overview-dashboard',
+    component: () => import('@/views/overview/OverviewDashboardView.vue'),
+  },
   { path: 'setup', name: 'setup', component: () => import('@/views/setup/SetupView.vue') },
   layerRoute(),
-  // Alerts (user-facing — alarms are observability data, not operator-only)
-  { path: 'alarms', component: placeholder, props: { title: 'Alarms', phase: 'Phase 5', note: 'Read-only; recovery is backend-auto. Live debug card via admin REST.' } },
-  // Marketplace — all dashboards / templates across layers
-  { path: 'operate/marketplace', component: placeholder, props: { title: 'Marketplace', phase: 'Phase 2', note: 'All dashboard templates browse + clone + customize.' } },
+  // Alarms — independent page (not a layer template / overview).
+  // OAP `getAlarm` proxy + background-traffic timeline + per-layer
+  // grouping. Read-only; OAP auto-recovers, no acknowledge / silence.
+  { path: 'alarms', name: 'alarms', component: () => import('@/views/alarms/AlarmsView.vue') },
   // Cluster
   { path: 'operate/cluster', component: () => import('@/views/operate/ClusterStatusView.vue') },
-  // DSL Management
-  { path: 'operate/dsl/:catalog(otel-rules|telegraf-rules|lal|log-mal-rules)', component: placeholder, props: (r) => ({ title: `DSL · ${r.params.catalog}`, phase: 'Phase 6', note: 'Rule catalog grid + filter + new-rule form. Click a rule to open the editor.' }) },
-  { path: 'operate/dsl/:catalog(otel-rules|telegraf-rules|lal|log-mal-rules)/:name', component: placeholder, props: (r) => ({ title: `Edit · ${r.params.name}`, phase: 'Phase 6', note: 'Monaco YAML + diff vs server + diff vs bundled + destructive-confirm.' }) },
-  { path: 'operate/oal', component: placeholder, props: { title: 'OAL · read-only', phase: 'Phase 6', note: 'Line-numbered OAL files with jump-to-debugger on each rule.' } },
-  // Inspect
-  { path: 'operate/inspect', component: placeholder, props: { title: 'Inspect', phase: 'Phase 6', note: 'OAP metric catalog browse + MQE ad-hoc charts with rule attribution.' } },
-  // Live debugger
-  { path: 'operate/live-debug/:tab(mal|lal|oal)?', component: placeholder, props: (r) => ({ title: `Live debugger · ${r.params.tab ?? 'mal'}`, phase: 'Phase 6' }) },
-  { path: 'operate/live-debug/history', component: placeholder, props: { title: 'Capture history', phase: 'Phase 6', note: 'Local-only history of finished capture sessions.' } },
-  // Dump
-  { path: 'operate/dump', component: placeholder, props: { title: 'Dump & restore', phase: 'Phase 6', note: 'Stream OAP runtime-rule dump as tar.gz. Restore is deferred (no OAP endpoint yet).' } },
+  // ── DSL Management ─────────────────────────────────────────────────
+  // Static sub-routes are declared first so they aren't shadowed by
+  // the catalog alternation regex (which would otherwise grab `edit`
+  // / `dump`). Each gated on `receiver-runtime-rule` at the page-body
+  // level via AdminFeatureWarning.
+  {
+    path: 'operate/dsl/edit',
+    name: 'edit',
+    component: () => import('@/views/operate/dsl/DslEditorView.vue'),
+  },
+  {
+    path: 'operate/dsl/dump',
+    name: 'dump',
+    component: () => import('@/views/operate/dsl/DslDumpView.vue'),
+  },
+  {
+    path: 'operate/dsl/:catalog(otel-rules|telegraf-rules|lal|log-mal-rules)',
+    name: 'catalog',
+    component: () => import('@/views/operate/dsl/DslCatalogView.vue'),
+    props: true,
+  },
+  {
+    path: 'operate/oal',
+    name: 'oal-catalog',
+    component: () => import('@/views/operate/dsl/OalCatalogView.vue'),
+  },
+  // Inspect — gated on the `inspect` module (and `receiver-runtime-rule`
+  // for rule attribution; degrades cleanly to "unknown" attribution
+  // when admin-server is missing).
+  {
+    path: 'operate/inspect',
+    name: 'inspect',
+    component: () => import('@/views/operate/InspectView.vue'),
+  },
+  // Live debugger — gated on `dsl-debugging`. History is local-only
+  // (browser localStorage) so it stays useful even when admin is down.
+  // Declared before the catch-all tab route so it doesn't shadow.
+  {
+    path: 'operate/live-debug/history',
+    name: 'debug-history',
+    component: () => import('@/views/operate/live-debug/DebugHistoryView.vue'),
+  },
+  {
+    path: 'operate/live-debug/:tab(mal|lal|oal)?',
+    name: 'live-debugger',
+    component: () => import('@/views/operate/live-debug/LiveDebuggerView.vue'),
+  },
   // Admin
   {
     path: 'admin/layer-dashboards',
     component: () => import('@/views/admin/LayerDashboardsAdmin.vue'),
+  },
+  // Alert page setup — sits under Dashboard setup in the sidebar but
+  // routes off the admin tree since it's an operator-only config view.
+  {
+    path: 'admin/alert-page-setup',
+    name: 'alert-page-setup',
+    component: () => import('@/views/admin/AlertPageSetupView.vue'),
   },
   { path: 'admin/users', component: placeholder, props: { title: 'Users', phase: 'Phase 7' } },
   { path: 'admin/roles', component: placeholder, props: { title: 'Roles & permissions', phase: 'Phase 7' } },

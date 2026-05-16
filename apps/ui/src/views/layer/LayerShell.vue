@@ -221,7 +221,12 @@ const layerKpis = computed<HeaderKpi[]>(() => {
   if (!c) return [];
   const a = aggregates.value;
   const out: HeaderKpi[] = [];
-  for (const col of c.landing.columns.slice(0, 5)) {
+  // Prefer the operator-defined header set (`headerColumns`) over the
+  // combined `columns` array — the combined set carries overview
+  // promotions that aren't real service-level KPIs. Falls back to
+  // `columns` for legacy persisted configs that pre-date this field.
+  const headerCols = c.landing.headerColumns ?? c.landing.columns;
+  for (const col of headerCols.slice(0, 5)) {
     const m = metricMeta(col.metric);
     out.push({
       // Catalog label wins when the persisted `col.label` is a
@@ -251,7 +256,8 @@ const serviceKpis = computed<HeaderKpi[]>(() => {
   const row = selectedRow.value;
   if (!row) return [];
   const out: HeaderKpi[] = [];
-  for (const col of c.landing.columns.slice(0, 5)) {
+  const headerCols = c.landing.headerColumns ?? c.landing.columns;
+  for (const col of headerCols.slice(0, 5)) {
     const m = metricMeta(col.metric);
     out.push({
       // Catalog label wins when the persisted `col.label` is a
@@ -289,7 +295,7 @@ const serviceKpis = computed<HeaderKpi[]>(() => {
             </span>
           </div>
         </div>
-        <div class="kpi-strip layer-kpis">
+        <div v-if="layerKpis.length > 0" class="kpi-strip layer-kpis">
           <div v-for="(k, i) in layerKpis" :key="i" class="kpi">
             <div class="kpi-label">
               {{ k.label }}<span v-if="k.unit" class="unit">({{ k.unit }})</span>
@@ -331,7 +337,7 @@ const serviceKpis = computed<HeaderKpi[]>(() => {
           <span v-if="selectedGroup" class="svc-group">{{ selectedGroup }}</span>
           <span class="svc-name">{{ selectedName }}</span>
         </button>
-        <div class="kpi-strip service-kpis">
+        <div v-if="serviceKpis.length > 0" class="kpi-strip service-kpis">
           <div v-for="(k, i) in serviceKpis" :key="i" class="kpi compact">
             <span class="kpi-label inline">
               {{ k.label }}<span v-if="k.unit" class="unit">({{ k.unit }})</span>

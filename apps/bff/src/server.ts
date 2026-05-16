@@ -34,6 +34,10 @@ import { registerLogRoute } from './oap/log-routes.js';
 import { registerMenuRoute } from './oap/menu-routes.js';
 import { registerOapRoutes } from './oap/routes.js';
 import { registerPreflightRoutes } from './oap/preflight-routes.js';
+import { registerDebugRoutes } from './oap/debug-routes.js';
+import { registerInspectRoutes } from './oap/inspect-routes.js';
+import { registerAlarmsRoutes } from './alarms/routes.js';
+import { AlarmsStore } from './alarms/store.js';
 import { registerProfileRoutes } from './oap/profile-routes.js';
 import { registerEBPFRoutes } from './oap/ebpf-routes.js';
 import { registerAsyncProfileRoutes } from './oap/async-profile-routes.js';
@@ -69,6 +73,8 @@ const audit = new AuditLogger(source.current.audit.file);
 await audit.open();
 const setupStore = new SetupStore(source.current.setup.file);
 await setupStore.load();
+const alarmsStore = new AlarmsStore(source.current.alarms.file);
+await alarmsStore.load();
 
 await app.register(cookie);
 
@@ -92,6 +98,14 @@ registerDashboardRoute(app, { config: source, sessions });
 registerSetupRoutes(app, { config: source, sessions, audit, store: setupStore });
 registerOapRoutes(app, { config: source, sessions, audit });
 registerPreflightRoutes(app, { config: source, sessions });
+// Live debugger — `/api/debug/*` proxies for SWIP-13's
+// `/dsl-debugging/*` wire (start / poll / stop session, list active
+// sessions, per-node status fan-out).
+registerDebugRoutes(app, { config: source, sessions, audit });
+// Inspect — OAP metric catalog browse + MQE ad-hoc execution.
+registerInspectRoutes(app, { config: source, sessions, audit });
+// Alarms — getAlarm proxy + traffic-background fan-out + config CRUD.
+registerAlarmsRoutes(app, { config: source, sessions, audit, store: alarmsStore });
 registerProfileRoutes(app, { config: source, sessions });
 registerEBPFRoutes(app, { config: source, sessions });
 registerAsyncProfileRoutes(app, { config: source, sessions });

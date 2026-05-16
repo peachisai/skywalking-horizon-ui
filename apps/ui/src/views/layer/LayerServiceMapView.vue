@@ -72,9 +72,18 @@ import {
 import Sparkline from '@/components/charts/Sparkline.vue';
 import { isUserNode } from '@/composables/useTopologyIcons';
 
+/** When embedded as a widget (e.g. inside the Services / Mesh overview
+ *  dashboards) the host passes the layer key directly and asks for the
+ *  read-only variant. In the normal `/layer/:key/topology` route, both
+ *  props are absent and we fall back to the route param + full
+ *  interactive UI. */
+const props = defineProps<{ layerKey?: string; embedded?: boolean }>();
 const route = useRoute();
 const router = useRouter();
-const layerKey = computed(() => String(route.params.layerKey ?? ''));
+const layerKey = computed(() =>
+  props.layerKey && props.layerKey.length > 0 ? props.layerKey : String(route.params.layerKey ?? ''),
+);
+const embedded = computed(() => Boolean(props.embedded));
 
 const { layers } = useLayers();
 const layer = computed<LayerDef | null>(
@@ -943,9 +952,13 @@ function edgeMidpoint(c: TopologyCall): { x: number; y: number } | null {
 const selectedNodeId = ref<string | null>(null);
 const selectedCallId = ref<string | null>(null);
 function selectNode(id: string | null): void {
+  // Embedded snapshot mode renders the same map but with no detail
+  // sidebar — click is therefore a no-op.
+  if (embedded.value) return;
   selectedNodeId.value = selectedNodeId.value === id ? null : id;
 }
 function selectCall(id: string | null): void {
+  if (embedded.value) return;
   selectedCallId.value = selectedCallId.value === id ? null : id;
 }
 const selectedNode = computed<LayoutNode | null>(() => {
@@ -1345,8 +1358,8 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
 </script>
 
 <template>
-  <div class="sm-tab">
-    <header class="sm-toolbar sw-card">
+  <div class="sm-tab" :class="{ 'is-embedded': embedded }">
+    <header v-if="!embedded" class="sm-toolbar sw-card">
       <div class="left">
         <span class="kicker">Topology</span>
         <span v-if="focusServiceNames.length === 0" class="for-svc">layer overview · all services</span>
@@ -1786,8 +1799,10 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
         </div>
 
         <!-- Floating zoom controls — top-right, mirror the map
-             toolbar's affordance vocabulary (small ghost buttons). -->
-        <div v-if="layoutNodes.length > 0" class="sm-zoom-ctrls">
+             toolbar's affordance vocabulary (small ghost buttons).
+             Hidden in embedded (dashboard widget) mode — the snapshot
+             is non-interactive. -->
+        <div v-if="!embedded && layoutNodes.length > 0" class="sm-zoom-ctrls">
           <button class="sw-btn small" type="button" title="Zoom in (wheel up)" @click="zoomBy(1.25)">+</button>
           <button class="sw-btn small" type="button" title="Zoom out (wheel down)" @click="zoomBy(1 / 1.25)">−</button>
           <button class="sw-btn small" type="button" title="Fit to screen (double-click canvas)" @click="fitToScreen(true)">Fit</button>
@@ -2080,6 +2095,15 @@ function fmtWithUnit(v: number | null | undefined, unit: string | undefined): st
   flex-direction: column;
   gap: 12px;
   padding: 4px 0 0;
+}
+/* Embedded (dashboard-widget) mode — toolbar / detail sidebar / zoom
+ * controls are already gated off in the template; this just tightens
+ * paddings and lets the SVG fill its host grid cell so the map reads
+ * as a card body, not a standalone page. */
+.sm-tab.is-embedded {
+  padding: 0;
+  gap: 0;
+  height: 100%;
 }
 .sm-toolbar {
   display: flex;

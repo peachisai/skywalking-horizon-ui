@@ -27,7 +27,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { OverviewDashboard } from '@skywalking-horizon-ui/api-client';
+import type {
+  OverviewDashboard,
+  OverviewKpi,
+  OverviewVisibility,
+  OverviewWidgetType,
+} from '@skywalking-horizon-ui/api-client';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Bundled overview dashboards live under `bundled_templates/overviews/`
@@ -40,6 +45,41 @@ let cache: OverviewDashboard[] | null = null;
 
 function isString(v: unknown): v is string {
   return typeof v === 'string' && v.length > 0;
+}
+
+const WIDGET_TYPES: ReadonlySet<OverviewWidgetType> = new Set([
+  'service-count',
+  'metric',
+  'topology',
+  'section-break',
+  'kpi-tile',
+  'alarms',
+  'k8s-summary',
+  'pilot-summary',
+]);
+// `layer` is required for data-bound widgets; layout-only / aggregate
+// widgets resolve their data without an explicit layer binding.
+const LAYERLESS_WIDGETS: ReadonlySet<OverviewWidgetType> = new Set([
+  'section-break',
+  'alarms',
+]);
+
+function parseKpis(raw: unknown): OverviewKpi[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: OverviewKpi[] = [];
+  for (const k of raw) {
+    if (!k || typeof k !== 'object') continue;
+    const rec = k as Record<string, unknown>;
+    if (!isString(rec.label) || !isString(rec.mqe)) continue;
+    out.push({
+      label: rec.label,
+      mqe: rec.mqe,
+      unit: isString(rec.unit) ? rec.unit : undefined,
+      aggregation:
+        rec.aggregation === 'sum' ? 'sum' : rec.aggregation === 'avg' ? 'avg' : undefined,
+    });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 function validate(raw: unknown, file: string): OverviewDashboard | null {
@@ -55,26 +95,39 @@ function validate(raw: unknown, file: string): OverviewDashboard | null {
   const widgets = (r.widgets as unknown[]).filter((w): w is Record<string, unknown> => {
     if (!w || typeof w !== 'object') return false;
     const rec = w as Record<string, unknown>;
-    return (
-      isString(rec.id) &&
-      isString(rec.title) &&
-      isString(rec.layer) &&
-      (rec.type === 'service-count' || rec.type === 'metric' || rec.type === 'topology')
-    );
+    if (!isString(rec.id) || !isString(rec.title)) return false;
+    if (!WIDGET_TYPES.has(rec.type as OverviewWidgetType)) return false;
+    if (!LAYERLESS_WIDGETS.has(rec.type as OverviewWidgetType) && !isString(rec.layer)) {
+      return false;
+    }
+    return true;
   });
+  const visibility: OverviewVisibility | undefined =
+    r.visibility === 'operate' ? 'operate' : r.visibility === 'public' ? 'public' : undefined;
+  const layers = Array.isArray(r.layers)
+    ? (r.layers as unknown[]).filter(isString)
+    : undefined;
   return {
     id: r.id,
     title: r.title,
     description: isString(r.description) ? r.description : undefined,
+    visibility,
+    icon: isString(r.icon) ? r.icon : undefined,
+    order: typeof r.order === 'number' ? r.order : undefined,
+    layers,
     widgets: widgets.map((w) => ({
       id: w.id as string,
       title: w.title as string,
       tip: isString(w.tip) ? w.tip : undefined,
-      layer: w.layer as string,
-      type: w.type as 'service-count' | 'metric' | 'topology',
+      layer: isString(w.layer) ? w.layer : undefined,
+      type: w.type as OverviewWidgetType,
       mqe: isString(w.mqe) ? w.mqe : undefined,
       unit: isString(w.unit) ? w.unit : undefined,
       aggregation: w.aggregation === 'sum' ? 'sum' : w.aggregation === 'avg' ? 'avg' : undefined,
+      cols: typeof w.cols === 'number' ? w.cols : undefined,
+      kpis: parseKpis(w.kpis),
+      showCount: w.showCount === true ? true : undefined,
+      limit: typeof w.limit === 'number' ? w.limit : undefined,
       span: typeof w.span === 'number' ? w.span : undefined,
       rowSpan: typeof w.rowSpan === 'number' ? w.rowSpan : undefined,
     })),
@@ -103,9 +156,18 @@ export function loadOverviewDashboards(): OverviewDashboard[] {
       console.warn(`overview/${f}: parse error`, err instanceof Error ? err.message : err);
     }
   }
-  // Keep stable ordering by id so the SPA's tab strip doesn't flicker
-  // on reload.
-  out.sort((a, b) => a.id.localeCompare(b.id));
+  // Stable sort: explicit `order` first, then visibility (public before
+  // operate), then id. Operators bumping `order` on a single dashboard
+  // shouldn't need to renumber the rest of the bundle.
+  out.sort((a, b) => {
+    const ao = a.order ?? 1000;
+    const bo = b.order ?? 1000;
+    if (ao !== bo) return ao - bo;
+    const av = a.visibility ?? 'public';
+    const bv = b.visibility ?? 'public';
+    if (av !== bv) return av === 'public' ? -1 : 1;
+    return a.id.localeCompare(b.id);
+  });
   cache = out;
   return cache;
 }

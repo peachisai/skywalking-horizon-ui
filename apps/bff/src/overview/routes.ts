@@ -56,6 +56,10 @@ export function registerOverviewRoutes(app: FastifyInstance, deps: OverviewRoute
         id: d.id,
         title: d.title,
         description: d.description,
+        visibility: d.visibility,
+        icon: d.icon,
+        order: d.order,
+        layers: d.layers,
         widgetCount: d.widgets.length,
       })),
     };

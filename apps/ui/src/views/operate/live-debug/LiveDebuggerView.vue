@@ -1,0 +1,144 @@
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<script setup lang="ts">
+/**
+ * Live debugger — three-tab shell over MAL / LAL / OAL views.
+ * Each tab owns its own session via the per-widget clientId so an
+ * operator can have all three running in parallel from the same
+ * tab.
+ *
+ * The active tab is **URL-driven** (`/debug/{mal|lal|oal}`) so deep
+ * links from elsewhere (catalog rule cards, OAL file viewer's gutter
+ * arrow) land on the right tab with their query params intact for
+ * the per-DSL picker to read.
+ */
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import DebugMal from './DebugMal.vue';
+import DebugLal from './DebugLal.vue';
+import DebugOal from './DebugOal.vue';
+import AdminFeatureWarning from '@/components/shell/AdminFeatureWarning.vue';
+
+type Tab = 'mal' | 'lal' | 'oal';
+
+const route = useRoute();
+const router = useRouter();
+
+const tab = computed<Tab>(() => {
+  const raw = route.params.tab;
+  if (raw === 'mal' || raw === 'lal' || raw === 'oal') return raw;
+  return 'mal';
+});
+
+const tabs: { id: Tab; label: string; hint: string }[] = [
+  { id: 'mal', label: 'MAL', hint: 'meter analyzer · OTEL + log-mal' },
+  { id: 'lal', label: 'LAL', hint: 'log analyzer · per-block + statement' },
+  { id: 'oal', label: 'OAL', hint: 'observability analysis · per-clause' },
+];
+
+const activeHint = computed(() => tabs.find((t) => t.id === tab.value)?.hint ?? '');
+
+function selectTab(t: Tab): void {
+  // Tab clicks clear deep-link query params — they were specific to
+  // the prior tab's picker and shouldn't leak across.
+  void router.push({ path: `/debug/${t}` });
+}
+</script>
+
+<template>
+  <div class="dbg">
+    <AdminFeatureWarning module="dsl-debugging" feature-label="Live debugger" />
+    <header class="dbg__header">
+      <h1 class="dbg__h1">Live debugger</h1>
+      <span class="dbg__hint">{{ activeHint }}</span>
+    </header>
+
+    <nav class="dbg__tabs">
+      <button
+        v-for="t in tabs"
+        :key="t.id"
+        type="button"
+        class="dbg__tab"
+        :class="{ 'dbg__tab--active': tab === t.id }"
+        @click="selectTab(t.id)"
+      >
+        {{ t.label }}
+      </button>
+    </nav>
+
+    <KeepAlive>
+      <component :is="tab === 'mal' ? DebugMal : tab === 'lal' ? DebugLal : DebugOal" />
+    </KeepAlive>
+  </div>
+</template>
+
+<style scoped>
+.dbg {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 18px 24px;
+  gap: 12px;
+}
+
+.dbg__header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.dbg__h1 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--rr-heading);
+}
+
+.dbg__hint {
+  font-size: 12.5px;
+  color: var(--rr-dim);
+}
+
+.dbg__tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--rr-border);
+}
+
+.dbg__tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 14px;
+  font-family: var(--rr-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--rr-dim);
+  cursor: pointer;
+}
+
+.dbg__tab:hover {
+  color: var(--rr-ink);
+}
+
+.dbg__tab--active {
+  color: var(--rr-heading);
+  border-bottom-color: var(--rr-active);
+}
+</style>

@@ -54,6 +54,7 @@ import type {
 } from '@/api/client';
 import ProfileStackTable from '@/components/profile/ProfileStackTable.vue';
 import ProfileFlameGraph from '@/components/profile/ProfileFlameGraph.vue';
+import NativeTraceWaterfall from '@/components/trace/NativeTraceWaterfall.vue';
 
 const route = useRoute();
 const layerKey = computed(() => String(route.params.layerKey ?? ''));
@@ -324,14 +325,6 @@ function fmtTime(ms: number): string {
   const z = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
 }
-function fmtDuration(span: ProfileSpan): string {
-  const ms = span.endTime - span.startTime;
-  return `${ms} ms`;
-}
-function spanComponent(s: ProfileSpan): string {
-  if (s.peer) return `${s.component} → ${s.peer}`;
-  return s.component;
-}
 </script>
 
 <template>
@@ -434,41 +427,29 @@ function spanComponent(s: ProfileSpan): string {
         >{{ analyzeLoading ? 'Analyzing…' : 'Analyze' }}</button>
       </div>
 
-      <!-- Span table -->
-      <div class="span-table">
-        <div class="st-head">
-          <div class="c c-name">Span</div>
-          <div class="c c-svc">Service / Instance</div>
-          <div class="c c-comp">Component</div>
-          <div class="c c-dur">Duration</div>
-          <div class="c c-prof">Profiled</div>
-        </div>
-        <div v-if="!segmentSpans.length" class="st-empty">
-          {{ currentTask ? 'No spans in selected segment.' : 'Select a task to load spans.' }}
-        </div>
-        <div
-          v-for="(sp, i) in segmentSpans"
-          :key="i"
-          class="st-row"
-          :class="{ 'is-active': currentSpan === sp, err: sp.isError, profiled: sp.profiled }"
-          @click="currentSpan = sp"
-        >
-          <div class="c c-name" :title="sp.endpointName">
-            <span class="t-tag">{{ sp.type }}</span>
-            <span class="t-name">{{ sp.endpointName }}</span>
+      <!-- Spans rendered through the shared NativeTraceWaterfall used
+           by the Trace explorer — identical visual vocabulary (service-
+           coloured bar, kind glyph, component icon, peer arrow,
+           duration suffix). The only profiling-specific addition is
+           the `profiled` chip per row, enabled via `mark-profiled`. -->
+      <section class="sw-card span-card">
+        <header class="span-card-head">
+          <h4>Spans</h4>
+          <span class="sub">{{ segmentSpans.length }} in segment · click to select</span>
+        </header>
+        <div class="span-scroll">
+          <div v-if="!segmentSpans.length" class="span-empty">
+            {{ currentTask ? 'No spans in selected segment.' : 'Select a task to load spans.' }}
           </div>
-          <div class="c c-svc">
-            <div class="cs1">{{ sp.serviceCode }}</div>
-            <div class="cs2">{{ sp.serviceInstanceName }}</div>
-          </div>
-          <div class="c c-comp">{{ spanComponent(sp) }}</div>
-          <div class="c c-dur">{{ fmtDuration(sp) }}</div>
-          <div class="c c-prof">
-            <span v-if="sp.profiled" class="b-yes">yes</span>
-            <span v-else class="b-no">no</span>
-          </div>
+          <NativeTraceWaterfall
+            v-else
+            :spans="segmentSpans"
+            :selected-span="currentSpan"
+            mark-profiled
+            @select-span="(sp) => (currentSpan = sp as ProfileSpan)"
+          />
         </div>
-      </div>
+      </section>
 
       <!-- Result panel -->
       <div class="result">
@@ -653,7 +634,7 @@ function spanComponent(s: ProfileSpan): string {
 .side-err {
   padding: 8px 12px;
   font-size: 11px;
-  color: #ff8888;
+  color: var(--sw-err);
 }
 .side-empty {
   padding: 12px;
@@ -682,7 +663,7 @@ function spanComponent(s: ProfileSpan): string {
   padding-left: 7px;
 }
 .side-list li.err .ep {
-  color: #ff7676;
+  color: var(--sw-err);
 }
 .row1 {
   display: flex;
@@ -814,90 +795,36 @@ function spanComponent(s: ProfileSpan): string {
   cursor: pointer;
 }
 
-.span-table {
+/* Span card frame — wraps the shared NativeTraceWaterfall in a
+ * sw-card boundary with a labelled header so it reads as a distinct
+ * section above the Analyze result panel. */
+.span-card {
   flex: 0 0 auto;
-  max-height: 36%;
-  overflow-y: auto;
-  border-bottom: 1px solid var(--sw-line);
-}
-.st-head,
-.st-row {
-  display: grid;
-  grid-template-columns: minmax(280px, 2fr) minmax(180px, 1.2fr) minmax(160px, 1fr) 110px 90px;
-  align-items: center;
-  font-size: 11.5px;
-  color: var(--sw-fg-1);
-  font-family: var(--sw-mono);
-}
-.st-head {
-  background: var(--sw-bg-2);
-  border-bottom: 1px solid var(--sw-line);
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-.st-head .c {
-  padding: 6px 8px;
-  font-weight: 600;
-  color: var(--sw-fg-1);
-}
-.st-row {
-  border-bottom: 1px dotted var(--sw-line);
-  cursor: pointer;
-}
-.st-row:hover {
-  background: var(--sw-bg-2);
-}
-.st-row.is-active {
-  background: var(--sw-bg-3, var(--sw-bg-2));
-  border-left: 3px solid var(--sw-accent);
-}
-.st-row.err {
-  color: #ff8e8e;
-}
-.st-row .c {
-  padding: 5px 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.st-row .c-name {
+  max-height: 42%;
   display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.t-tag {
-  display: inline-block;
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  padding: 0 5px;
-  border-radius: 2px;
-  background: var(--sw-bg-3, var(--sw-bg-2));
-  color: var(--sw-fg-2);
-}
-.st-row.profiled .t-tag {
-  background: var(--sw-accent);
-  color: #fff;
-}
-.t-name {
+  flex-direction: column;
+  min-height: 0;
+  margin-bottom: 10px;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
-.cs1 {
-  color: var(--sw-fg-0);
+.span-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--sw-line);
+  background: var(--sw-bg-1);
 }
-.cs2 {
-  font-size: 10px;
-  color: var(--sw-fg-3);
+.span-card-head h4 {
+  margin: 0; font-size: 12px; font-weight: 600; color: var(--sw-fg-0);
 }
-.b-yes {
-  color: var(--sw-accent);
-  font-weight: 600;
+.span-card-head .sub { font-size: 10.5px; color: var(--sw-fg-3); margin-left: auto; }
+.span-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
-.b-no {
-  color: var(--sw-fg-3);
-}
-.st-empty {
+.span-empty {
   padding: 14px;
   font-size: 11.5px;
   color: var(--sw-fg-3);
@@ -997,7 +924,7 @@ function spanComponent(s: ProfileSpan): string {
   border-top: 1px solid var(--sw-line);
 }
 .dlg-err {
-  color: #ff7676;
+  color: var(--sw-err);
   font-size: 11px;
 }
 .kv {

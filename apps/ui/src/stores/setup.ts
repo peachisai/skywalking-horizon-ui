@@ -86,7 +86,15 @@ export function defaultLandingFor(
   // ---- Per-layer page header (service-list columns + default sort).
   //      Drives the per-layer Service page's picker table. Overview is
   //      now self-contained and does NOT cross-reference these. ----
-  const headerCols = fromHeader?.columns && fromHeader.columns.length > 0
+  // A template that ships `columns: []` is the operator's explicit
+  // way of saying "no service-level header KPIs for this layer" — most
+  // commonly because the layer's underlying meters are
+  // SERVICE_INSTANCE-only (so11y_java_agent, so11y_oap, etc., where a
+  // service-scope query would just return `null`). Honor that as-is.
+  // Only when the template provides NO `columns` array at all (legacy
+  // / un-templated layers) do we synthesize the static
+  // RPC-cpm/resp/sla defaults.
+  const headerCols = fromHeader?.columns !== undefined
     ? fromHeader.columns.map((c) => ({
         metric: c.metric,
         label: c.label,
@@ -100,7 +108,15 @@ export function defaultLandingFor(
         ...c,
         aggregation: defaultAggregationFor(c.metric),
       }));
-  const orderBy = fromHeader?.orderBy ?? headerCols[0]?.metric ?? defaultOrderByForLayer(layerKey);
+  // Use `||` not `??` so an empty string (template with no header
+  // columns intentionally omits the orderBy) falls through to the
+  // first synthesized column / static default. The BFF schema
+  // rejects `orderBy: ""` (z.string().min(1)) so this must never
+  // ship empty.
+  const orderBy =
+    (fromHeader?.orderBy && fromHeader.orderBy.length > 0 ? fromHeader.orderBy : null) ??
+    headerCols[0]?.metric ??
+    defaultOrderByForLayer(layerKey);
 
   // ---- Overview tile groups. Each group becomes one tile on the
   //      Overview strip with its own title + size. Metrics inside a
@@ -157,6 +173,13 @@ export function defaultLandingFor(
     topN: 5,
     orderBy,
     columns: combined,
+    // The original header-column set, preserved here so the LayerShell
+    // KPI strip can render ONLY these (the combined `columns` above
+    // also carries overview-promoted entries which would otherwise
+    // bleed into the header — wrong for so11y_* layers whose overview
+    // metrics are SERVICE_INSTANCE-only and show as `—` on the
+    // Service page header).
+    headerColumns: headerCols,
     spark: { metric: headline, height: 28 },
     throughput: {
       metric: headline,
@@ -275,6 +298,23 @@ export const useSetupStore = defineStore('setup', () => {
         if (cfg.caps[key] === undefined) cfg.caps[key] = v;
       }
       const fresh = defaultLandingFor(layerKey, defaults.metrics, defaults.overview);
+      // When the bundled template now ships `columns: []` (e.g.
+      // so11y_* layers whose meters are SERVICE_INSTANCE-only and have
+      // no service-level KPIs), clear any leftover persisted columns —
+      // they're stale baggage from a prior bundle version and would
+      // resurrect a row of `—` cells. Operators that explicitly want
+      // custom columns can re-add them via the setup admin.
+      if (fresh.columns.length === 0 && cfg.landing.columns.length > 0) {
+        cfg.landing.columns = [];
+        cfg.landing.orderBy = fresh.orderBy;
+      }
+      // Always re-derive `headerColumns` from the fresh template — it's
+      // the operator-defined header set (excludes overview-promoted
+      // synthetic cols). New field; legacy persisted configs won't
+      // have it. We trust the template here rather than preserving
+      // stale persisted state because the field is a pure derivation,
+      // not operator-editable.
+      cfg.landing.headerColumns = fresh.headerColumns;
       // Patch / add columns from the fresh template — only fields
       // that are missing on the persisted column get filled. mqe is
       // the common stale field; this is also where label fixes from

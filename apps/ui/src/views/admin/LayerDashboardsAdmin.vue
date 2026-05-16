@@ -699,6 +699,16 @@ function toggleComponent(key: ComponentKey): void {
   const c = ensureComponents();
   c[key] = !c[key];
 }
+function setVisibility(v: 'public' | 'operate'): void {
+  if (!draft.template) return;
+  // `public` is the implicit default — drop the field rather than
+  // emit a redundant value, so saved JSON stays minimal.
+  if (v === 'public') {
+    delete (draft.template as { visibility?: string }).visibility;
+  } else {
+    (draft.template as { visibility?: string }).visibility = 'operate';
+  }
+}
 
 // ── Topology cluster setup — rule editor + live tester.
 // The rule is a named-capture regex run against every service name in
@@ -885,6 +895,50 @@ const namingTest = computed<NamingTestResult>(() => {
               >
                 {{ isSaving ? 'Saving…' : 'Save' }}
               </button>
+            </div>
+          </div>
+          <!-- Sidebar placement: `public` (default) → regular Layers
+               section. `operate` → operations block (alongside Cluster,
+               DSL Management, etc.). Use for layers that an operator
+               manages but a regular UI user doesn't need surfaced
+               next to user-facing application layers — self-obs
+               (OAP / Satellite / agent self-obs) is the canonical
+               example. -->
+          <div class="visibility-row">
+            <label class="vis-label">Sidebar placement</label>
+            <div class="vis-options">
+              <label
+                class="vis-opt"
+                :class="{ on: (selectedTpl.visibility ?? 'public') === 'public' }"
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="public"
+                  :checked="(selectedTpl.visibility ?? 'public') === 'public'"
+                  @change="setVisibility('public')"
+                />
+                <span class="vis-opt-body">
+                  <span class="vis-opt-title">Public</span>
+                  <span class="vis-opt-hint">Shows in the user-facing Layers section</span>
+                </span>
+              </label>
+              <label
+                class="vis-opt"
+                :class="{ on: selectedTpl.visibility === 'operate' }"
+              >
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="operate"
+                  :checked="selectedTpl.visibility === 'operate'"
+                  @change="setVisibility('operate')"
+                />
+                <span class="vis-opt-body">
+                  <span class="vis-opt-title">Operate</span>
+                  <span class="vis-opt-hint">Shows in the operations / self-observability section</span>
+                </span>
+              </label>
             </div>
           </div>
         </section>
@@ -1865,7 +1919,12 @@ const namingTest = computed<NamingTestResult>(() => {
   gap: 14px;
   min-width: 0;
 }
-.identity-card { padding: 12px 16px; }
+.identity-card {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .identity-row {
   display: flex;
   align-items: center;
@@ -1892,6 +1951,36 @@ const namingTest = computed<NamingTestResult>(() => {
   border-radius: 3px;
   color: var(--sw-fg-1);
 }
+.visibility-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 0 0;
+  margin-top: 10px;
+  border-top: 1px dashed var(--sw-line);
+}
+.vis-label {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--sw-fg-3); flex: 0 0 auto;
+}
+.vis-options { display: flex; gap: 10px; flex: 1; flex-wrap: wrap; }
+.vis-opt {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 12px;
+  background: var(--sw-bg-2);
+  border: 1px solid var(--sw-line-2);
+  border-radius: 5px;
+  cursor: pointer; user-select: none;
+  min-width: 220px;
+}
+.vis-opt:hover { background: var(--sw-bg-3); }
+.vis-opt.on {
+  background: var(--sw-accent-soft);
+  border-color: var(--sw-accent-line, var(--sw-accent));
+}
+.vis-opt input { margin-top: 2px; accent-color: var(--sw-accent); }
+.vis-opt-body { display: flex; flex-direction: column; gap: 2px; }
+.vis-opt-title { font-size: 12px; font-weight: 600; color: var(--sw-fg-0); }
+.vis-opt.on .vis-opt-title { color: var(--sw-accent-2); }
+.vis-opt-hint { font-size: 10.5px; color: var(--sw-fg-3); line-height: 1.4; }
 .chip {
   font-size: 10px;
   padding: 1px 6px;

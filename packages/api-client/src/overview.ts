@@ -28,16 +28,47 @@
  * combining General service metrics with Kubernetes service counts).
  *
  * Widget types:
- *   - `service-count` — count of services reporting on the layer.
- *   - `metric`        — an MQE expression evaluated layer-wide.
- *   - `topology`      — the service-map graph for the layer.
+ *   - `service-count`  — count of services reporting on the layer.
+ *   - `metric`         — an MQE expression evaluated layer-wide.
+ *   - `topology`       — static service-map snapshot for the layer with
+ *                        click-through to the full topology view.
+ *   - `section-break`  — visual row header; pure layout, no data.
+ *   - `kpi-tile`       — compound tile: optional service count + 1–N
+ *                        KPI rows for one layer. Used for the
+ *                        per-service-type rows on the Services / Mesh
+ *                        dashboards.
+ *   - `alarms`         — active-alarm rail. Carries no MQE — the
+ *                        renderer queries `getAlarms` directly. Layer
+ *                        filter is best-effort (server-side scope tags
+ *                        today, no native layer filter).
+ *   - `k8s-summary`    — fixed-shape Kubernetes capacity + utilisation
+ *                        block. Renderer-driven so the JSON stays
+ *                        compact.
+ *   - `pilot-summary`  — fixed-shape Istio pilot push / error / push-
+ *                        time block. Renderer-driven, see `k8s-summary`.
  *
  * The layout uses the same 12-col / `span` + `rowSpan` model as the
  * per-layer dashboard, so the same renderer can place these widgets
  * on a grid.
  */
 
-export type OverviewWidgetType = 'service-count' | 'metric' | 'topology';
+export type OverviewWidgetType =
+  | 'service-count'
+  | 'metric'
+  | 'topology'
+  | 'section-break'
+  | 'kpi-tile'
+  | 'alarms'
+  | 'k8s-summary'
+  | 'pilot-summary';
+
+/** One KPI row inside a `kpi-tile` widget. */
+export interface OverviewKpi {
+  label: string;
+  mqe: string;
+  unit?: string;
+  aggregation?: 'sum' | 'avg';
+}
 
 export interface OverviewWidget {
   /** Stable id, unique within the dashboard. */
@@ -47,8 +78,10 @@ export interface OverviewWidget {
   /** Optional one-line hint shown next to the title. */
   tip?: string;
   /** Which layer this widget pulls from. Upper-snake to match
-   *  OAP's layer enum (`GENERAL`, `MESH`, `K8S_SERVICE`, …). */
-  layer: string;
+   *  OAP's layer enum (`GENERAL`, `MESH`, `K8S_SERVICE`, …). Optional
+   *  for `section-break` (purely visual) and `alarms` (queries are
+   *  layer-agnostic in v1). */
+  layer?: string;
   /** Widget kind. See module docs. */
   type: OverviewWidgetType;
   /** For `metric` widgets — MQE expression evaluated layer-wide. */
@@ -57,11 +90,27 @@ export interface OverviewWidget {
   unit?: string;
   /** `sum` for throughput-shaped metrics, `avg` otherwise. */
   aggregation?: 'sum' | 'avg';
+  /** For `section-break` — overrides the grid column count for widgets
+   *  that follow this break, up to the next break. Default 12. Use 5
+   *  for "five tiles across", etc. */
+  cols?: number;
+  /** For `kpi-tile` — KPI rows shown under the tile header. */
+  kpis?: OverviewKpi[];
+  /** For `kpi-tile` — also render the layer's service count above the
+   *  KPIs. Defaults to false. */
+  showCount?: boolean;
+  /** For `alarms` — cap the alarm list at this many rows. */
+  limit?: number;
   /** Grid span in 12-col grid. */
   span?: number;
   /** Grid row span. */
   rowSpan?: number;
 }
+
+/** Where the overview appears in the sidebar. `public` overviews surface
+ *  at the top of the menu for everyone; `operate` overviews are gated to
+ *  the operations / admin section. */
+export type OverviewVisibility = 'public' | 'operate';
 
 export interface OverviewDashboard {
   /** Stable id, used in routes (`/overview/:id`). */
@@ -70,6 +119,17 @@ export interface OverviewDashboard {
   title: string;
   /** Optional description shown in the dashboard header. */
   description?: string;
+  /** Sidebar placement — `public` (default) or `operate` (admin only). */
+  visibility?: OverviewVisibility;
+  /** Sidebar icon name. Falls back to the renderer's default. */
+  icon?: string;
+  /** Sort order within the visibility bucket. Lower = earlier. */
+  order?: number;
+  /** Layers this overview aggregates. Used for auto-activation: when
+   *  none of the listed layers have services reporting, the overview
+   *  is hidden from the menu. Widgets' own `layer` fields still drive
+   *  data fetches independently. */
+  layers?: string[];
   /** Ordered list of widgets. */
   widgets: OverviewWidget[];
 }
@@ -81,6 +141,10 @@ export interface OverviewDashboardListResponse {
     id: string;
     title: string;
     description?: string;
+    visibility?: OverviewVisibility;
+    icon?: string;
+    order?: number;
+    layers?: string[];
     widgetCount: number;
   }>;
 }

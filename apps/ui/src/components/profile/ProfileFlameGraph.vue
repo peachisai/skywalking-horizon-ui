@@ -27,7 +27,7 @@
                                        is `count`.
 -->
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import * as d3 from 'd3';
 import { flamegraph } from 'd3-flame-graph';
 import type { ProfileAnalyzationElement, ProfileAnalyzationTree } from '@/api/client';
@@ -151,67 +151,70 @@ function draw(): void {
     .title('')
     .selfValue(false)
     .inverted(true)
-    .setColorMapper((d: { highlight: boolean }, original: string) =>
-      d.highlight ? '#6aff8f' : original,
-    );
+    // Dim, frame-friendly palette. d3-flame-graph's default ramp is a
+     // bright yellow→orange→red gradient that overwhelms a dark UI; the
+     // mapper below produces deterministic, lower-saturation colors
+     // keyed off the frame name so each stack cell stays distinguishable
+     // but the overall card reads as part of the dark canvas instead of
+     // glowing through it.
+    .setColorMapper((d: { highlight: boolean; data?: { name?: string } }, _original: string) => {
+      if (d.highlight) return '#6aff8f';
+      const name = d.data?.name ?? '';
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+      // 0–360° hue, fixed mid sat + dark lightness for dark-theme calm.
+      const hue = Math.abs(hash) % 360;
+      return `hsl(${hue}, 32%, 38%)`;
+    });
 
-  // Plain in-DOM tooltip (the booster-ui implementation pulled in
-  // d3-tip; we use a single appended <div> instead to avoid the dep).
-  const tip = document.createElement('div');
-  tip.className = 'fg-tip';
-  document.body.appendChild(tip);
   chart.tooltip(false);
   d3.select(root.value).datum(tree).call(chart);
   const svg = root.value.querySelector('svg');
   if (svg) {
-    svg.addEventListener('mousemove', (event) => {
+    // Click a frame → open the popout dialog. This replaces the
+    // earlier cursor-following tooltip, which clipped against the
+    // viewport edge when the cell was near the bottom of the page.
+    // The dialog renders inside Vue's template (see below) — viewport-
+    // centered, with backdrop + ESC + outside-click to dismiss.
+    svg.addEventListener('click', (event) => {
       const target = (event.target as Element).closest('g');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data: any = target && (d3.select(target as Element).datum() as any);
-      if (!data || !data.data) {
-        tip.style.display = 'none';
-        return;
-      }
-      const d = data.data as FlameNode;
-      const pctRoot = tree.count
-        ? ((d.count / tree.count) * 100).toFixed(2)
-        : '0';
-      tip.innerHTML = `
-        <div class="t-row"><strong>${escapeHtml(d.codeSignature)}</strong></div>
-        <div class="t-row">Dump Count: ${d.count}</div>
-        <div class="t-row">Duration: ${d.duration} ns</div>
-        <div class="t-row">Duration (excl. children): ${d.durationChildExcluded} ns</div>
-        <div class="t-row">% of root: ${pctRoot}%</div>
-      `;
-      tip.style.display = 'block';
-      const me = event as MouseEvent;
-      tip.style.left = me.clientX + 16 + 'px';
-      tip.style.top = me.clientY + 16 + 'px';
+      if (!data || !data.data) return;
+      selectedFrame.value = data.data as FlameNode;
     });
-    svg.addEventListener('mouseleave', () => {
-      tip.style.display = 'none';
-    });
-    // Make absolutely sure the tip leaves with us on unmount.
-    onBeforeUnmount(() => tip.remove());
   }
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case '&': return '&amp;';
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '"': return '&quot;';
-      case "'": return '&#39;';
-      default: return c;
-    }
-  });
+const selectedFrame = ref<FlameNode | null>(null);
+const rootCountForPct = computed<number>(() => {
+  const tree = buildVirtualRoot();
+  return tree?.count ?? 0;
+});
+const selectedPctRoot = computed<string>(() => {
+  const f = selectedFrame.value;
+  const total = rootCountForPct.value;
+  if (!f || total === 0) return '0';
+  return ((f.count / total) * 100).toFixed(2);
+});
+
+function closeFrameDialog(): void { selectedFrame.value = null; }
+function onKeyDown(ev: KeyboardEvent): void {
+  if (ev.key === 'Escape' && selectedFrame.value) closeFrameDialog();
 }
 
-onMounted(draw);
-watch(() => [props.trees, props.metricKey], draw);
+onMounted(() => {
+  draw();
+  window.addEventListener('keydown', onKeyDown);
+});
+watch(() => [props.trees, props.metricKey], () => {
+  // Closing the dialog on data change keeps a stale frame from being
+  // shown after Analyze re-runs against a different span / segment.
+  selectedFrame.value = null;
+  draw();
+});
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown);
   if (chart) {
     try {
       chart.destroy();
@@ -226,6 +229,54 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="root" class="fg-host"></div>
+  <!-- Frame-detail popout. Replaces the cursor-following tooltip that
+       used to clip at the viewport edge — now centered, with a
+       backdrop, ESC + outside-click + close-button to dismiss.
+       Backdrop swallows the click bubble (.self) so clicks inside the
+       dialog don't close it. -->
+  <Teleport to="body">
+    <div
+      v-if="selectedFrame"
+      class="fg-pop-backdrop"
+      @click.self="closeFrameDialog"
+    >
+      <div class="fg-pop sw-card" role="dialog" aria-label="Frame detail">
+        <header class="fg-pop-head">
+          <h4>Stack frame</h4>
+          <button
+            type="button"
+            class="fg-pop-close"
+            aria-label="Close"
+            title="Close (Esc)"
+            @click="closeFrameDialog"
+          >×</button>
+        </header>
+        <div class="fg-pop-body">
+          <div class="fg-pop-sig" :title="selectedFrame.codeSignature">
+            {{ selectedFrame.codeSignature }}
+          </div>
+          <dl class="fg-pop-rows">
+            <div class="fg-pop-row">
+              <dt>Dump count</dt>
+              <dd>{{ selectedFrame.count }}</dd>
+            </div>
+            <div class="fg-pop-row">
+              <dt>Duration</dt>
+              <dd>{{ selectedFrame.duration }} ns</dd>
+            </div>
+            <div class="fg-pop-row">
+              <dt>Duration (excl. children)</dt>
+              <dd>{{ selectedFrame.durationChildExcluded }} ns</dd>
+            </div>
+            <div class="fg-pop-row">
+              <dt>% of root</dt>
+              <dd>{{ selectedPctRoot }}%</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -241,27 +292,103 @@ onBeforeUnmount(() => {
 </style>
 
 <style>
-.fg-tip {
+/* Modal backdrop + frame-detail card. Lives in <body> via <Teleport>
+ * so it isn't clipped by any ancestor's overflow:hidden. Card width
+ * caps at 560px and uses `overflow-wrap: anywhere` so even the
+ * longest stack frame (`org.jboss.threads.EnhancedQueueExecutor$
+ * ThreadBody.run:1556`) wraps inside the box instead of pushing past
+ * its edge. */
+.fg-pop-backdrop {
   position: fixed;
-  display: none;
-  pointer-events: none;
+  inset: 0;
   z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.fg-pop {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
   background: var(--sw-bg-1, #1b1d24);
-  color: var(--sw-fg-0, #f5f7fb);
   border: 1px solid var(--sw-line, #2a2d36);
-  border-radius: 4px;
-  padding: 8px 10px;
+  border-radius: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.fg-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--sw-line, #2a2d36);
+  background: var(--sw-bg-2, #20232c);
+}
+.fg-pop-head h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sw-fg-1, #d4d6de);
+}
+.fg-pop-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--sw-fg-3, #6b6f7a);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 6px;
+  border-radius: 3px;
+}
+.fg-pop-close:hover {
+  background: var(--sw-bg-3, #2a2d36);
+  color: var(--sw-fg-0, #f5f7fb);
+}
+.fg-pop-body {
+  padding: 12px 14px;
+  overflow: auto;
   font-family: var(--sw-mono, monospace);
-  font-size: 11px;
-  max-width: 420px;
-  line-height: 1.45;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  font-size: 11.5px;
+  color: var(--sw-fg-1, #d4d6de);
+  line-height: 1.5;
 }
-.fg-tip .t-row + .t-row {
-  margin-top: 3px;
-}
-.fg-tip strong {
+.fg-pop-sig {
   color: var(--sw-fg-0, #f5f7fb);
   font-weight: 600;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--sw-line, #2a2d36);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+.fg-pop-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fg-pop-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fg-pop-row dt {
+  margin: 0;
+  color: var(--sw-fg-3, #6b6f7a);
+  flex: 0 0 auto;
+}
+.fg-pop-row dd {
+  margin: 0;
+  color: var(--sw-fg-0, #f5f7fb);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 </style>

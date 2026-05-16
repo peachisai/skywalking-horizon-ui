@@ -22,6 +22,7 @@ import logoSw from '@/assets/icons/logo-sw.svg?raw';
 import { useAuthStore } from '@/stores/auth';
 import { useLayers, firstLayerTab } from '@/composables/useLayers';
 import { useLandingOrder } from '@/composables/useLandingOrder';
+import { useOverviewDashboards } from '@/composables/useOverviewDashboards';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -31,16 +32,57 @@ async function signOut(): Promise<void> {
 }
 
 const { availableLayers, oapReachable, oapError, hasTopology } = useLayers();
-// Sidebar shares the landing's priority order so the two views stay in sync.
 const orderedLayers = useLandingOrder(availableLayers);
+const { publicOverviews } = useOverviewDashboards();
 
-/* A layer counts as "single-feature" when its caps + slots only support
- * the basic services view + maybe a dashboards tab — no traces, logs,
- * topology, profiling, events, instances, or endpoints. For these,
- * expanding the row would reveal at most one or two sibling links, so
- * we skip the expander and make the row a direct link to the services
- * page (which IS the dashboard for virtual / cache / database / MQ
- * scopes). */
+function sectionIcon(label: string): IconName {
+  const k = label.toLowerCase();
+  if (k === 'overviews' || k === 'overview') return 'dash';
+  if (k === 'layers') return 'svc';
+  if (k === 'platform monitoring') return 'flame';
+  if (k === 'operate') return 'set';
+  if (k === 'dashboard setup') return 'metric';
+  if (k === 'admin') return 'user';
+  if (k.startsWith('istio') || k.includes('mesh') || k.includes('envoy') || k.includes('cilium')) {
+    return 'mesh';
+  }
+  if (k.includes('kubernetes') || k.includes('k8s') || k.includes('eks')) return 'cluster';
+  if (k.includes('browser') || k.includes('rum') || k.includes('mini')) return 'web';
+  if (k.includes('database') || k.includes('sql') || k.includes('mongo')) return 'db';
+  if (k.includes('cache') || k.includes('redis')) return 'cache';
+  if (k.includes('mq') || k.includes('kafka') || k.includes('queue')) return 'topic';
+  if (k.includes('faas') || k.includes('function')) return 'fn';
+  if (k.includes('aws') || k.includes('cloud')) return 'cluster';
+  if (k.includes('agent') || k.includes('so11y') || k.includes('satellite')) return 'flame';
+  return 'dash';
+}
+
+function layerIcon(L: SidebarLayer): IconName {
+  const k = L.key.toLowerCase();
+  if (k === 'general' || k === 'general_service') return 'sky';
+  if (k.startsWith('mesh') || k.startsWith('istio') || k.startsWith('envoy') || k.startsWith('cilium')) {
+    return 'mesh';
+  }
+  if (k.startsWith('k8s') || k === 'aws_eks') return 'cluster';
+  if (k === 'browser' || k === 'ios' || k.includes('mini_program')) return 'web';
+  if (k === 'faas') return 'fn';
+  if (
+    k === 'virtual_mq' || k === 'kafka' || k === 'rocketmq' || k === 'rabbitmq' ||
+    k === 'pulsar' || k === 'activemq' || k === 'bookkeeper'
+  ) {
+    return 'topic';
+  }
+  if (
+    k === 'virtual_database' || k === 'mysql' || k === 'postgresql' || k === 'mongodb' ||
+    k === 'clickhouse' || k === 'elasticsearch' || k === 'aws_dynamodb'
+  ) {
+    return 'db';
+  }
+  if (k === 'virtual_cache' || k === 'redis') return 'cache';
+  if (k.startsWith('so11y') || k.includes('agent') || k.includes('satellite')) return 'flame';
+  return 'svc';
+}
+
 type SidebarLayer = (typeof orderedLayers.value)[number];
 function hasInstances(L: SidebarLayer): boolean {
   return L.caps.instances ?? Boolean(L.slots.instances);
@@ -48,6 +90,8 @@ function hasInstances(L: SidebarLayer): boolean {
 function hasEndpoints(L: SidebarLayer): boolean {
   return L.caps.endpoints ?? Boolean(L.slots.endpoints);
 }
+/** A layer whose only worthwhile screen is the services list — no
+ *  tabs to expand into. Rendered as a direct link, not an accordion. */
 function isSingleFeatureLayer(L: SidebarLayer): boolean {
   if (hasInstances(L) || hasEndpoints(L)) return false;
   if (hasTopology(L)) return false;
@@ -57,23 +101,10 @@ function isSingleFeatureLayer(L: SidebarLayer): boolean {
   return true;
 }
 
-// Which layer's row is expanded — the tab strip (Service / Instance /
-// Endpoint / Topology / …) renders only beneath the expanded layer.
-// Auto-driven by the URL: whatever layer the route is on stays
-// expanded so a cold reload of `/layer/<key>/...` shows the tabs +
-// the active tab highlighted. The initial-load watcher only fires
-// when the route ISN'T on a layer page (the top-level / overview) —
-// in that case we pick the first available layer so the sidebar
-// doesn't look closed on first visit.
 const expandedLayer = ref<string | null>(null);
 function toggleLayer(key: string): void {
   const wasExpanded = expandedLayer.value === key;
   expandedLayer.value = wasExpanded ? null : key;
-  // Opening a layer (transition closed → open) also navigates to its
-  // first available sub-tab so the operator lands on actionable
-  // content. Collapsing is purely a section close (no nav). Skip when
-  // the route is already on this layer — we'd be navigating to the
-  // same place. This matches the group toggle's behaviour.
   if (!wasExpanded) {
     const L = orderedLayers.value.find((l) => l.key === key);
     if (!L) return;
@@ -84,20 +115,16 @@ function toggleLayer(key: string): void {
   }
 }
 
-// Bucket the ordered layer list by the template's `group` field so the
-// sidebar renders a single section per group (Istio / Kubernetes / AWS
-// / …) instead of dumping every layer flat. Ungrouped layers (general,
-// browser) are surfaced first at the top. Group sections are
-// independently collapsible — clicking one toggles its open state.
 interface LayerGroup { kind: 'group'; label: string; layers: SidebarLayer[] }
 interface LayerSingle { kind: 'single'; layer: SidebarLayer }
 type SidebarEntry = LayerGroup | LayerSingle;
-const sidebarEntries = computed<SidebarEntry[]>(() => {
+/** Group layers by their template's `group` field, preserving the
+ *  first-seen position so the section lands where the first member
+ *  appears in source order. Ungrouped layers fall through as singles. */
+function bucket(rows: SidebarLayer[]): SidebarEntry[] {
   const out: SidebarEntry[] = [];
   const groupBuckets = new Map<string, SidebarLayer[]>();
-  // Preserve the source order — first time we see a group, that's
-  // where its section lands in the sidebar.
-  for (const L of orderedLayers.value) {
+  for (const L of rows) {
     if (L.group) {
       if (!groupBuckets.has(L.group)) {
         groupBuckets.set(L.group, []);
@@ -109,36 +136,26 @@ const sidebarEntries = computed<SidebarEntry[]>(() => {
     }
   }
   return out;
-});
-const openGroups = ref<Set<string>>(new Set());
-function isGroupOpen(label: string): boolean { return openGroups.value.has(label); }
-// Plain toggle — click open if closed, click close if open. Opening
-// also navigates to the first layer's Service page so the operator
-// lands on actionable content; closing is purely a section collapse
-// (no nav, so they don't get yanked away from their current page).
-function toggleGroup(label: string, layers: SidebarLayer[]): void {
-  const wasOpen = openGroups.value.has(label);
-  const next = new Set(openGroups.value);
-  if (wasOpen) next.delete(label);
-  else next.add(label);
-  openGroups.value = next;
-  if (!wasOpen && layers[0]) {
-    void router.push(`/layer/${layers[0].key}/${firstLayerTab(layers[0])}`);
-  }
 }
+const publicLayers = computed(() =>
+  orderedLayers.value.filter((L) => L.visibility !== 'operate'),
+);
+const operateLayers = computed(() =>
+  orderedLayers.value.filter((L) => L.visibility === 'operate'),
+);
+const sidebarEntries = computed<SidebarEntry[]>(() => bucket(publicLayers.value));
 
 const route = useRoute();
 function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(path + '/');
 }
+/** Use this — not {@link isActive} — for sibling routes where one is
+ *  a prefix of another (e.g. `/operate/live-debug` vs
+ *  `/operate/live-debug/history`); prefix-match would light both up. */
+function isActiveExact(path: string): boolean {
+  return route.path === path;
+}
 
-// URL-driven sidebar focus. When the route is on a layer page, the
-// containing group expands AND the layer's row expands so the tabs +
-// active-tab highlight are visible. Fires on every route change so
-// deep-linking from outside (bookmark, paste-in) lands the operator
-// with the right rails open. When the route ISN'T on a layer, fall
-// back to the first available layer so the sidebar isn't empty on
-// the overview / setup pages.
 watch(
   [() => route.path, orderedLayers],
   ([path, rows]) => {
@@ -146,19 +163,9 @@ watch(
     if (m) {
       const key = m[1];
       const L = rows.find((l) => l.key === key);
-      if (L) {
-        // Expand this layer's tab strip.
-        expandedLayer.value = key;
-        // Open its parent group if grouped.
-        if (L.group && !openGroups.value.has(L.group)) {
-          openGroups.value = new Set([...openGroups.value, L.group]);
-        }
-      }
+      if (L) expandedLayer.value = key;
       return;
     }
-    // No layer in URL — only seed the default expansion if nothing is
-    // currently expanded (don't yank a layer the operator was looking
-    // at on the previous route).
     if (!expandedLayer.value && rows.length > 0) {
       expandedLayer.value = rows[0].key;
     }
@@ -171,6 +178,10 @@ interface NavRow {
   label: string;
   to: string;
   badge?: { text: string; kind?: 'ok' | 'warn' | 'err' | 'info' };
+  /** Custom active-match; defaults to exact `path === to`. */
+  activeWhen?: (path: string) => boolean;
+  /** Present ⇒ row renders as an L1 expandable with these as L2. */
+  children?: NavRow[];
 }
 
 interface NavSection {
@@ -178,62 +189,86 @@ interface NavSection {
   links: NavRow[];
 }
 
-// One leading row before the Layers block — the cross-layer landing.
-const overview: NavRow = { icon: 'dash', label: 'Overview', to: '/' };
-
-// Vantage-style flat kickers for the Operate / Admin half of the sidebar.
-// Alarms is user-facing so it sits before the Operate block (between user
-// observability concerns and OAP operator concerns).
 const sections: NavSection[] = [
   {
-    kicker: 'Alerts',
-    links: [{ icon: 'alert', label: 'Alarms', to: '/alarms', badge: { text: '7', kind: 'err' } }],
-  },
-  {
-    kicker: 'Marketplace',
-    links: [{ icon: 'metric', label: 'All dashboards', to: '/operate/marketplace' }],
-  },
-  {
-    kicker: 'Cluster',
-    links: [{ icon: 'svc', label: 'Cluster status', to: '/operate/cluster' }],
-  },
-  {
-    kicker: 'DSL Management',
+    kicker: 'Operate',
     links: [
-      { icon: 'set', label: 'MAL · OTEL', to: '/operate/dsl/otel-rules' },
-      { icon: 'set', label: 'MAL · Telegraf', to: '/operate/dsl/telegraf-rules' },
-      { icon: 'set', label: 'LAL', to: '/operate/dsl/lal' },
-      // log-mal-rules = MAL applied to LAL-derived logs; the data flow reads
-      // LAL → MAL so the label says so.
-      { icon: 'set', label: 'LAL → MAL', to: '/operate/dsl/log-mal-rules' },
-      { icon: 'trace', label: 'OAL · read-only', to: '/operate/oal' },
+      { icon: 'svc', label: 'Cluster status', to: '/operate/cluster' },
+      {
+        icon: 'flame',
+        label: 'Live debugger',
+        to: '/operate/live-debug',
+        // Match the tab variants only; the history sibling at
+        // /operate/live-debug/history must NOT highlight this row.
+        activeWhen: (p) => p === '/operate/live-debug' || /^\/operate\/live-debug\/(mal|lal|oal)(\/|$)/.test(p),
+        children: [
+          { icon: 'event', label: 'Capture history', to: '/operate/live-debug/history' },
+        ],
+      },
+      { icon: 'metric', label: 'Metrics Inspect', to: '/operate/inspect' },
+      {
+        icon: 'set',
+        label: 'DSL Management',
+        // No standalone landing — `to` jumps to the first rule page so
+        // the L1 itself is clickable; activeWhen covers all DSL routes.
+        to: '/operate/dsl/otel-rules',
+        activeWhen: (p) => p === '/operate/oal' || /^\/operate\/dsl(\/|$)/.test(p),
+        children: [
+          { icon: 'set', label: 'MAL · OTEL', to: '/operate/dsl/otel-rules' },
+          { icon: 'set', label: 'MAL · Telegraf', to: '/operate/dsl/telegraf-rules' },
+          { icon: 'set', label: 'LAL', to: '/operate/dsl/lal' },
+          { icon: 'set', label: 'LAL → MAL', to: '/operate/dsl/log-mal-rules' },
+          { icon: 'trace', label: 'OAL · read-only', to: '/operate/oal' },
+          { icon: 'download', label: 'Dump & restore', to: '/operate/dsl/dump' },
+        ],
+      },
     ],
   },
   {
-    kicker: 'Inspect',
-    links: [{ icon: 'metric', label: 'Inspect', to: '/operate/inspect' }],
-  },
-  {
-    kicker: 'Live debugger',
+    kicker: 'Dashboard setup',
     links: [
-      { icon: 'flame', label: 'Live debugger', to: '/operate/live-debug' },
-      { icon: 'event', label: 'Capture history', to: '/operate/live-debug/history' },
+      { icon: 'set', label: 'Overview dashboards', to: '/setup' },
+      { icon: 'metric', label: 'Layer dashboards', to: '/admin/layer-dashboards' },
+      { icon: 'alert', label: 'Alert page', to: '/admin/alert-page-setup' },
     ],
-  },
-  {
-    kicker: 'Dump',
-    links: [{ icon: 'download', label: 'Dump & restore', to: '/operate/dump' }],
   },
   {
     kicker: 'Admin',
     links: [
-      { icon: 'set', label: 'Overview setup', to: '/setup' },
-      { icon: 'metric', label: 'Layer dashboards', to: '/admin/layer-dashboards' },
       { icon: 'user', label: 'Users', to: '/admin/users' },
       { icon: 'set', label: 'Roles', to: '/admin/roles' },
     ],
   },
 ];
+
+const openNavL1 = ref<Set<string>>(new Set());
+function isNavL1Open(to: string): boolean { return openNavL1.value.has(to); }
+function toggleNavL1(row: NavRow): void {
+  if (!row.children) return;
+  const next = new Set(openNavL1.value);
+  if (next.has(row.to)) next.delete(row.to);
+  else next.add(row.to);
+  openNavL1.value = next;
+}
+
+watch(
+  () => route.path,
+  (path) => {
+    for (const sec of sections) {
+      for (const row of sec.links) {
+        if (!row.children) continue;
+        const childActive = row.children.some((c) =>
+          c.activeWhen ? c.activeWhen(path) : path === c.to,
+        );
+        const parentActive = row.activeWhen ? row.activeWhen(path) : path === row.to;
+        if ((childActive || parentActive) && !openNavL1.value.has(row.to)) {
+          openNavL1.value = new Set([...openNavL1.value, row.to]);
+        }
+      }
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -244,19 +279,32 @@ const sections: NavSection[] = [
     </RouterLink>
 
     <nav class="sw-nav">
+      <div class="sw-nav-section sw-nav-section--icon">
+        <Icon :name="sectionIcon('Overviews')" />
+        <span>Overviews</span>
+      </div>
       <RouterLink
-        :to="overview.to"
-        class="sw-nav-item lead"
-        :class="{ 'is-active': route.path === overview.to }"
+        v-for="ov in publicOverviews"
+        :key="`pub:${ov.id}`"
+        :to="`/overview/${ov.id}`"
+        class="sw-nav-item"
+        :class="{ 'is-active': isActive(`/overview/${ov.id}`) }"
       >
-        <Icon :name="overview.icon" /><span>{{ overview.label }}</span>
+        <Icon :name="(ov.icon as IconName) || 'dash'" /><span>{{ ov.title }}</span>
+      </RouterLink>
+      <RouterLink
+        to="/alarms"
+        class="sw-nav-item"
+        :class="{ 'is-active': isActive('/alarms') }"
+      >
+        <Icon name="alert" /><span>Alarms</span>
+        <span class="sw-badge err" style="margin-left: auto">7</span>
       </RouterLink>
 
-      <div class="sw-nav-section sw-row" style="justify-content: space-between">
-        <span>Layers</span>
-        <span style="color: var(--sw-fg-3); font-weight: 400">
-          {{ availableLayers.length }} with services
-        </span>
+      <div class="sw-nav-section sw-nav-section--icon" style="justify-content: space-between">
+        <Icon :name="sectionIcon('Layers')" />
+        <span style="flex: 1">Layers</span>
+        <span class="sw-nav-section-count">{{ publicLayers.length }} with services</span>
       </div>
       <div v-if="!oapReachable && oapError" class="oap-banner" :title="oapError">
         OAP unreachable
@@ -268,49 +316,36 @@ const sections: NavSection[] = [
         </RouterLink>
       </div>
       <template v-for="(E, ei) in sidebarEntries" :key="E.kind === 'group' ? `g:${E.label}` : `s:${E.layer.key}:${ei}`">
-        <!-- Grouped layers: collapsible section header + nested layer
-             rows. Group is identified by the layer template's `group`
-             field; expanding shows the same row UI as ungrouped layers. -->
         <template v-if="E.kind === 'group'">
-          <div
-            class="layer-group"
-            :class="{ 'is-open': isGroupOpen(E.label) }"
-            @click="toggleGroup(E.label, E.layers)"
-          >
+          <div class="sw-nav-section sw-nav-section--icon">
+            <Icon :name="sectionIcon(E.label)" />
             <span class="layer-group-name">{{ E.label }}</span>
-            <span class="caret" :class="{ open: isGroupOpen(E.label) }">
-              <Icon name="caret" :size="10" />
-            </span>
           </div>
-          <template v-if="isGroupOpen(E.label)">
-            <template v-for="L in E.layers" :key="`${E.label}::${L.key}`">
-              <!-- Same per-layer markup as the ungrouped path. -->
+          <template v-for="L in E.layers" :key="`${E.label}::${L.key}`">
               <RouterLink
                 v-if="isSingleFeatureLayer(L)"
                 :to="`/layer/${L.key}/${firstLayerTab(L)}`"
                 class="layer-row direct in-group"
                 :class="{ 'is-active': isActive(`/layer/${L.key}`) }"
               >
-                <span class="layer-dot" :style="{ background: L.color }" />
+                <Icon :name="layerIcon(L)" />
                 <span class="layer-name">{{ L.name }}</span>
               </RouterLink>
               <div
                 v-else
                 class="layer-row in-group"
-                :class="{ 'is-active': expandedLayer === L.key }"
+                :class="{
+                  'is-expanded': expandedLayer === L.key,
+                  'is-active': isActiveExact(`/layer/${L.key}`),
+                }"
                 @click="toggleLayer(L.key)"
               >
-                <span class="layer-dot" :style="{ background: L.color }" />
-                <span class="layer-name" :style="{ fontWeight: expandedLayer === L.key ? 600 : 500 }">
-                  {{ L.name }}
-                </span>
+                <Icon :name="layerIcon(L)" />
+                <span class="layer-name">{{ L.name }}</span>
                 <span class="caret" :class="{ open: expandedLayer === L.key }">
                   <Icon name="caret" :size="10" />
                 </span>
               </div>
-              <!-- Children of a multi-feature grouped layer slot in below
-                   the row, indented one level deeper than ungrouped layers'
-                   children so the visual hierarchy stays legible. -->
               <div
                 v-if="!isSingleFeatureLayer(L) && expandedLayer === L.key"
                 class="layer-children in-group"
@@ -414,7 +449,6 @@ const sections: NavSection[] = [
                 </RouterLink>
               </div>
             </template>
-          </template>
         </template>
 
         <!-- Ungrouped single-feature layer: direct link. -->
@@ -424,30 +458,25 @@ const sections: NavSection[] = [
           class="layer-row direct"
           :class="{ 'is-active': isActive(`/layer/${E.layer.key}`) }"
         >
-          <span class="layer-dot" :style="{ background: E.layer.color }" />
+          <Icon :name="layerIcon(E.layer)" />
           <span class="layer-name">{{ E.layer.name }}</span>
         </RouterLink>
 
-        <!-- Ungrouped multi-feature layer: rendered as its own implicit
-             section header so the visual hierarchy stays consistent
-             with grouped sections. The "row" sits at the same level as
-             group headers (ISTIO / DATABASES / …); the tabs slot in
-             beneath it as the section's children. -->
         <div
           v-else
-          class="layer-group standalone"
-          :class="{ 'is-open': expandedLayer === E.layer.key }"
+          class="layer-row expandable"
+          :class="{
+            'is-expanded': expandedLayer === E.layer.key,
+            'is-active': isActiveExact(`/layer/${E.layer.key}`),
+          }"
           @click="toggleLayer(E.layer.key)"
         >
-          <span class="layer-dot" :style="{ background: E.layer.color }" />
-          <span class="layer-group-name">{{ E.layer.name }}</span>
+          <Icon :name="layerIcon(E.layer)" />
+          <span class="layer-name">{{ E.layer.name }}</span>
           <span class="caret" :class="{ open: expandedLayer === E.layer.key }">
             <Icon name="caret" :size="10" />
           </span>
         </div>
-        <!-- Children for the ungrouped multi-feature path. The grouped
-             path renders its own children block above, indented one
-             level deeper. -->
         <div
           v-if="E.kind === 'single' && !isSingleFeatureLayer(E.layer) && expandedLayer === E.layer.key"
           class="layer-children"
@@ -552,20 +581,118 @@ const sections: NavSection[] = [
         </div>
       </template>
 
-      <template v-for="sec in sections" :key="sec.kicker">
-        <div class="sw-nav-section">{{ sec.kicker }}</div>
-        <RouterLink
-          v-for="row in sec.links"
-          :key="row.to"
-          :to="row.to"
-          class="sw-nav-item"
-          :class="{ 'is-active': isActive(row.to) }"
-        >
-          <Icon :name="row.icon" /><span>{{ row.label }}</span>
-          <span v-if="row.badge" class="sw-badge" :class="row.badge.kind" style="margin-left: auto">
-            {{ row.badge.text }}
-          </span>
-        </RouterLink>
+      <template v-if="operateLayers.length > 0">
+        <div class="sw-nav-section sw-nav-section--icon">
+          <Icon :name="sectionIcon('Platform monitoring')" />
+          <span>Platform monitoring</span>
+        </div>
+        <template v-for="L in operateLayers" :key="`op:${L.key}`">
+          <RouterLink
+            v-if="isSingleFeatureLayer(L)"
+            :to="`/layer/${L.key}/${firstLayerTab(L)}`"
+            class="layer-row direct"
+            :class="{ 'is-active': isActive(`/layer/${L.key}`) }"
+          >
+            <Icon :name="layerIcon(L)" />
+            <span class="layer-name">{{ L.name }}</span>
+            <span class="sw-badge" style="margin-left: auto">{{ L.serviceCount }}</span>
+          </RouterLink>
+          <div
+            v-else
+            class="layer-row expandable"
+            :class="{
+              'is-expanded': expandedLayer === L.key,
+              'is-active': isActiveExact(`/layer/${L.key}`),
+            }"
+            @click="toggleLayer(L.key)"
+          >
+            <Icon :name="layerIcon(L)" />
+            <span class="layer-name">{{ L.name }}</span>
+            <span class="caret" :class="{ open: expandedLayer === L.key }">
+              <Icon name="caret" :size="10" />
+            </span>
+          </div>
+          <div
+            v-if="!isSingleFeatureLayer(L) && expandedLayer === L.key"
+            class="layer-children"
+          >
+            <RouterLink
+              v-if="L.caps.dashboards"
+              :to="`/layer/${L.key}/${firstLayerTab(L)}`"
+              class="sw-nav-item"
+              :class="{ 'is-active': isActive(`/layer/${L.key}/${firstLayerTab(L)}`) || route.path === `/layer/${L.key}` }"
+            >
+              <Icon name="svc" /><span>Service</span>
+              <span class="sw-badge" style="margin-left: auto">{{ L.serviceCount }}</span>
+            </RouterLink>
+            <RouterLink
+              v-if="hasInstances(L)"
+              :to="`/layer/${L.key}/instance`"
+              class="sw-nav-item"
+              :class="{ 'is-active': isActive(`/layer/${L.key}/instance`) }"
+            >
+              <Icon name="prof" /><span>{{ L.slots.instances ?? 'Instance' }}</span>
+            </RouterLink>
+            <RouterLink
+              v-if="hasEndpoints(L)"
+              :to="`/layer/${L.key}/endpoint`"
+              class="sw-nav-item"
+              :class="{ 'is-active': isActive(`/layer/${L.key}/endpoint`) }"
+            >
+              <Icon name="ep" /><span>{{ L.slots.endpoints ?? 'Endpoint' }}</span>
+            </RouterLink>
+          </div>
+        </template>
+      </template>
+
+      <template v-for="entry in sections" :key="`m:${entry.kicker}`">
+        <div class="sw-nav-section sw-nav-section--icon">
+          <Icon :name="sectionIcon(entry.kicker)" />
+          <span>{{ entry.kicker }}</span>
+        </div>
+        <template v-for="row in entry.links" :key="row.to">
+          <RouterLink
+            v-if="!row.children"
+            :to="row.to"
+            class="sw-nav-item"
+            :class="{ 'is-active': row.activeWhen ? row.activeWhen(route.path) : isActiveExact(row.to) }"
+          >
+            <Icon :name="row.icon" /><span>{{ row.label }}</span>
+            <span v-if="row.badge" class="sw-badge" :class="row.badge.kind" style="margin-left: auto">
+              {{ row.badge.text }}
+            </span>
+          </RouterLink>
+          <template v-else>
+            <div
+              class="layer-row expandable"
+              :class="{
+                'is-expanded': isNavL1Open(row.to),
+                'is-active': row.activeWhen ? row.activeWhen(route.path) : isActiveExact(row.to),
+              }"
+              @click="toggleNavL1(row)"
+            >
+              <Icon :name="row.icon" />
+              <span class="layer-name">{{ row.label }}</span>
+              <span class="caret" :class="{ open: isNavL1Open(row.to) }">
+                <Icon name="caret" :size="10" />
+              </span>
+            </div>
+            <div v-if="isNavL1Open(row.to)" class="layer-children">
+              <RouterLink
+                v-for="c in row.children"
+                :key="c.to"
+                :to="c.to"
+                class="sw-nav-item"
+                :class="{ 'is-active': c.activeWhen ? c.activeWhen(route.path) : isActiveExact(c.to) }"
+              >
+                <Icon :name="c.icon" /><span>{{ c.label }}</span>
+                <span v-if="c.badge" class="sw-badge" :class="c.badge.kind" style="margin-left: auto">
+                  {{ c.badge.text }}
+                </span>
+              </RouterLink>
+            </div>
+          </template>
+        </template>
       </template>
     </nav>
 
@@ -616,26 +743,50 @@ const sections: NavSection[] = [
   margin-left: 2px;
   letter-spacing: 0.02em;
 }
+/* L1 row — unified menu spec: 28px tall, 16px icon, 12/600 fg-1.
+ * Active = accent inset + 10% accent fill; expanded-only = white-fade. */
 .layer-row {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 7px 10px;
+  margin: 1px 8px;
+  padding: 6px 10px;
   border-radius: 6px;
   color: var(--sw-fg-1);
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   user-select: none;
   position: relative;
 }
+.layer-row :deep(svg) {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: var(--sw-fg-2);
+  opacity: 1;
+}
+.layer-row .caret :deep(svg) {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  color: var(--sw-fg-3);
+}
 .layer-row:hover {
-  background: var(--sw-bg-2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sw-fg-0);
+}
+.layer-row.is-expanded {
+  background: rgba(255, 255, 255, 0.025);
   color: var(--sw-fg-0);
 }
 .layer-row.is-active {
-  background: var(--sw-bg-3);
+  background: var(--sw-accent-soft);
   color: var(--sw-fg-0);
   box-shadow: inset 2px 0 0 var(--sw-accent);
+}
+.layer-row.is-active :deep(svg):not(.caret svg) {
+  color: var(--sw-accent);
 }
 .layer-row .layer-name {
   flex: 1;
@@ -647,6 +798,10 @@ const sections: NavSection[] = [
 .layer-row.direct {
   text-decoration: none;
 }
+.layer-row.expandable {
+  cursor: pointer;
+  user-select: none;
+}
 .empty-layers {
   margin: 4px 10px 8px;
   padding: 6px 8px;
@@ -654,14 +809,8 @@ const sections: NavSection[] = [
   color: var(--sw-fg-3);
   font-style: italic;
 }
-.layer-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex: 0 0 7px;
-}
+/* Base glyph points down; -90° collapses to right-arrow. */
 .caret {
-  color: var(--sw-fg-3);
   margin-left: 4px;
   transition: transform 0.15s;
   display: inline-flex;
@@ -671,82 +820,145 @@ const sections: NavSection[] = [
 .caret.open {
   transform: rotate(0);
 }
+/* L2 — children of an expanded layer. Vertical rail at left:22 with
+ * a per-row horizontal tick; the last child masks the rail's tail
+ * with --sw-bg-1 so it reads as a half-line. */
 .layer-children {
-  padding-left: 12px;
-  margin-left: 18px;
+  position: relative;
+  padding: 2px 0 4px;
   margin-bottom: 4px;
-  border-left: 1px dashed var(--sw-line-2);
+}
+.layer-children::before {
+  content: '';
+  position: absolute;
+  left: 22px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--sw-line-2);
 }
 .layer-children .sw-nav-item {
+  position: relative;
+  margin: 1px 8px 1px 28px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
   text-decoration: none;
+  gap: 8px;
+  color: var(--sw-fg-1);
 }
-/* Sidebar group header (e.g. "Istio", "Databases", "AWS"). Collapsible
-   section that buckets layer rows sharing the template's `group` field.
-   Visually quieter than a layer row — the layer rows beneath it stay
-   the primary affordance. */
-.layer-group {
+.layer-children .sw-nav-item::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+  background: var(--sw-line-2);
+}
+.layer-children .sw-nav-item:last-child::after {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: calc(50% + 1px);
+  bottom: -4px;
+  width: 2px;
+  background: var(--sw-bg-1);
+}
+.layer-children .sw-nav-item :deep(svg) {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  color: var(--sw-fg-2);
+  opacity: 1;
+}
+.layer-children .sw-nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sw-fg-0);
+}
+.layer-children .sw-nav-item.is-active {
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--sw-fg-0);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--sw-accent);
+}
+.layer-children .sw-nav-item.is-active :deep(svg) {
+  color: var(--sw-accent);
+}
+/* L0 — every section header lives at the same rhythm regardless of
+ * whether it's the top-of-sidebar Overviews/Layers/Manage kicker or
+ * an in-Layers sub-group bucket (Istio / Kubernetes / …). All wear
+ * the spec voice (10/700/0.1em uppercase fg-3, 14px top padding) and
+ * carry an icon on the left so the icon column stays aligned with
+ * the L1 rows below — the eye doesn't have to jump positions when
+ * scanning. No caret, no click — L0s are presentational. */
+.sw-nav-section,
+.sw-nav-section--icon {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sw-fg-3);
+}
+.sw-nav-section--icon {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px 5px;
-  margin-top: 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  /* The section header IS the navigational anchor — operators rely on
-   * it to find the right layer family — so it needs to be legible at
-   * a glance. We previously dimmed it to `--sw-fg-3` which made the
-   * grouped sections (ISTIO / DATABASES / …) read like throwaway
-   * dividers; now it stays in `--sw-fg-2` baseline and brightens to
-   * `--sw-fg-0` on hover/open with a 2-px accent rule on the left so
-   * the section boundary is unambiguous. */
-  color: var(--sw-fg-2);
-  cursor: pointer;
-  user-select: none;
-  border-left: 2px solid transparent;
-  border-radius: 0 4px 4px 0;
+  padding: 14px 14px 4px;
 }
-.layer-group:hover { color: var(--sw-fg-0); border-left-color: var(--sw-line-2); }
-.layer-group.is-open {
-  color: var(--sw-fg-0);
-  border-left-color: var(--sw-accent);
+.sw-nav-section--icon :deep(svg) {
+  /* Slightly larger than the 10px text so the glyph reads as a label
+   * mark, not a punctuation dot. Inherits text colour (fg-3) so it
+   * stays in the L0 voice. */
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  color: var(--sw-fg-3);
+  opacity: 1;
 }
 .layer-group-name { flex: 1; min-width: 0; }
-/* Standalone variant — ungrouped multi-feature layers (General /
-   Browser today) render as their own implicit section header so they
-   read as siblings of ISTIO / DATABASES / etc. The colored layer dot
-   sits before the name; styling stays in the group-header voice. */
-.layer-group.standalone {
-  padding: 7px 12px 5px;
-}
-.layer-group.standalone .layer-dot {
-  /* Slightly bigger so the dot reads at the section-header type size. */
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-}
-/* Layer rows nested inside a group section get a left indent + dashed
-   guide rule so the visual hierarchy reads at a glance. */
-.layer-row.in-group {
-  margin-left: 10px;
-  padding-left: 10px;
-  border-left: 1px dashed var(--sw-line-2);
-}
-.layer-children.in-group {
-  margin-left: 28px;
-}
+/* Grouped and ungrouped layer rows sit at the same indent — the group
+ * header already delineates the section, so no extra tree-style nest. */
+.layer-row.in-group { }
+.layer-children.in-group { }
 .sw-nav-item {
   text-decoration: none;
 }
-.sw-nav-item.lead {
-  margin-top: 4px;
-}
-.sw-nav-item.is-inactive .layer-dot {
-  opacity: 0.4;
-}
-.sw-nav-item.is-inactive > span:nth-child(2) {
+.sw-nav-section-count {
   color: var(--sw-fg-3);
+  font-weight: 500;
+  font-size: 10.5px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.sw-nav-item.is-inactive > span {
+  color: var(--sw-fg-3);
+}
+/* L1 overrides for `.sw-nav-item` at the top level of the sidebar.
+ * Direct-child selector keeps it scoped so the global tokens-default
+ * `.sw-nav-item.is-active` (bg-3) still applies on other surfaces. */
+.sw-nav > .sw-nav-item {
+  margin: 1px 8px;
+  font-weight: 600;
+}
+.sw-nav > .sw-nav-item :deep(svg) {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: var(--sw-fg-2);
+  opacity: 1;
+}
+.sw-nav > .sw-nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.sw-nav > .sw-nav-item.is-active {
+  background: var(--sw-accent-soft);
+  color: var(--sw-fg-0);
+  box-shadow: inset 2px 0 0 var(--sw-accent);
+}
+.sw-nav > .sw-nav-item.is-active :deep(svg) {
+  color: var(--sw-accent);
 }
 .oap-banner {
   margin: 4px 10px 8px;

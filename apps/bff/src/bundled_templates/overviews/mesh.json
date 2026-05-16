@@ -1,82 +1,80 @@
 {
   "id": "mesh",
-  "title": "Istio Managed SVCs",
-  "description": "Istio-mesh overview — control-plane + data-plane signals with the K8s service-count cross-referenced.",
+  "title": "Mesh Dashboard",
+  "description": "Istio data-plane service health, pilot push activity, and the underlying Kubernetes capacity. Mesh deployments always ride on K8s, so the cluster block is folded in.",
+  "visibility": "public",
+  "icon": "topo",
+  "order": 20,
+  "layers": ["MESH", "MESH_CP", "K8S"],
   "widgets": [
     {
-      "id": "m_count",
-      "title": "Active Istio services",
-      "tip": "Services routed through the Istio data-plane.",
+      "id": "svc_break",
+      "title": "Mesh services",
+      "type": "section-break",
+      "cols": 12
+    },
+    {
+      "id": "tile_mesh",
+      "title": "Istio-managed services",
+      "tip": "Services routed through the Istio data plane.",
+      "type": "kpi-tile",
       "layer": "MESH",
-      "type": "service-count",
-      "span": 3,
-      "rowSpan": 1
+      "showCount": true,
+      "kpis": [
+        { "label": "RPM", "mqe": "service_cpm", "unit": "rpm", "aggregation": "sum" },
+        { "label": "P95", "mqe": "service_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
+        { "label": "SLA", "mqe": "service_sla/100", "unit": "%", "aggregation": "avg" }
+      ],
+      "span": 4,
+      "rowSpan": 2
     },
     {
-      "id": "m_rpm",
-      "title": "Istio RPM",
-      "tip": "Istio-mesh-wide requests per minute.",
-      "layer": "MESH",
-      "type": "metric",
-      "mqe": "service_mesh_cpm",
-      "unit": "rpm",
-      "aggregation": "sum",
-      "span": 3,
-      "rowSpan": 1
+      "id": "pilot_summary",
+      "title": "Istio pilot",
+      "tip": "xDS push count (cds / eds / lds / rds), reject errors, and proxy push time.",
+      "type": "pilot-summary",
+      "layer": "MESH_CP",
+      "span": 8,
+      "rowSpan": 2
     },
     {
-      "id": "m_p99",
-      "title": "P99 latency",
-      "tip": "99th-percentile response time across Istio-routed traffic.",
-      "layer": "MESH",
-      "type": "metric",
-      "mqe": "service_mesh_percentile{p='99'}",
-      "unit": "ms",
-      "aggregation": "avg",
-      "span": 3,
-      "rowSpan": 1
+      "id": "topo_alarms_break",
+      "title": "Topology & active alarms",
+      "type": "section-break",
+      "cols": 12
     },
     {
-      "id": "m_err",
-      "title": "Error rate",
-      "tip": "100 − mesh SLA.",
-      "layer": "MESH",
-      "type": "metric",
-      "mqe": "100 - service_mesh_sla/100",
-      "unit": "%",
-      "aggregation": "avg",
-      "span": 3,
-      "rowSpan": 1
-    },
-    {
-      "id": "k8s_count",
-      "title": "K8s services",
-      "tip": "Services reporting through the K8s service layer.",
-      "layer": "K8S_SERVICE",
-      "type": "service-count",
-      "span": 3,
-      "rowSpan": 1
-    },
-    {
-      "id": "k8s_p99",
-      "title": "K8s P99",
-      "tip": "99th-percentile latency for K8s-routed traffic.",
-      "layer": "K8S_SERVICE",
-      "type": "metric",
-      "mqe": "k8s_service_resp_time_percentile{p='99'}",
-      "unit": "ms",
-      "aggregation": "avg",
-      "span": 3,
-      "rowSpan": 1
-    },
-    {
-      "id": "m_topo",
-      "title": "Istio service topology",
-      "tip": "Live service map for the Istio data-plane.",
-      "layer": "MESH",
+      "id": "mesh_topo",
+      "title": "Mesh service topology",
+      "tip": "Live service map — same renderer as the per-layer Topology tab, without the detail sidebar.",
       "type": "topology",
+      "layer": "MESH",
+      "span": 9,
+      "rowSpan": 6
+    },
+    {
+      "id": "mesh_alarms",
+      "title": "Active alarms",
+      "tip": "All currently firing alarms (layer filter is best-effort in v1).",
+      "type": "alarms",
+      "limit": 12,
+      "span": 3,
+      "rowSpan": 6
+    },
+    {
+      "id": "k8s_break",
+      "title": "Kubernetes",
+      "type": "section-break",
+      "cols": 12
+    },
+    {
+      "id": "k8s_summary",
+      "title": "Cluster capacity & utilisation",
+      "tip": "Nodes / namespaces / workloads + cluster-wide CPU, memory, and disk usage.",
+      "type": "k8s-summary",
+      "layer": "K8S",
       "span": 12,
-      "rowSpan": 4
+      "rowSpan": 3
     }
   ]
 }

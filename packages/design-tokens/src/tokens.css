@@ -51,6 +51,38 @@
 
   --sw-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
   --sw-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  /* ── Vantage-studio (booster-ui) token aliases ────────────────────────
+   * Pages migrated from skywalking-booster-ui (Operate · Inspect, DSL
+   * editor / catalog / dump, Live Debug MAL/LAL/OAL, primitives, etc.)
+   * were authored against booster-ui's `--rr-*` palette. Map each to
+   * horizon-ui's `--sw-*` palette so the migrated pages adopt the
+   * standard observability dark theme without touching the page-level
+   * CSS. Same tech stack, very different look — this layer is the
+   * bridge so we don't have to rewrite every selector.
+   */
+  --rr-bg: var(--sw-bg-0);
+  --rr-bg2: var(--sw-bg-2);
+  --rr-bg3: var(--sw-bg-3);
+  --rr-panel: var(--sw-bg-1);
+  --rr-border: var(--sw-line);
+  --rr-border2: var(--sw-line-2);
+  --rr-ink: var(--sw-fg-1);
+  --rr-ink2: var(--sw-fg-2);
+  --rr-heading: var(--sw-fg-0);
+  --rr-dim: var(--sw-fg-3);
+  --rr-accent: var(--sw-accent);
+  --rr-active: var(--sw-accent);
+  --rr-err: var(--sw-err);
+  --rr-ok: var(--sw-ok);
+  --rr-warn: var(--sw-warn);
+  --rr-info: var(--sw-info);
+  --rr-font-mono: var(--sw-mono);
+  --rr-font-sans: var(--sw-sans);
+  --rr-font-ui: var(--sw-sans);
+  --rr-radius-sm: 3px;
+  --rr-radius-md: 6px;
+  --rr-radius-lg: 10px;
 }
 
 /* artboard root */
@@ -102,8 +134,8 @@
 
 .sw-nav { padding: 8px 6px; flex: 1; overflow: auto; }
 .sw-nav-section {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--sw-fg-3); padding: 10px 10px 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--sw-fg-3); padding: 14px 14px 4px;
 }
 .sw-nav-item {
   display: flex; align-items: center; gap: 9px;
@@ -214,6 +246,17 @@
 .sw-btn.is-primary:hover { background: var(--sw-accent-2); }
 .sw-btn.is-ghost { background: transparent; }
 .sw-btn.is-icon { width: 26px; padding: 0; justify-content: center; }
+
+/* Global disable indicator — applies to every native button / input /
+ * select / textarea everywhere. Just two properties; per-page styling
+ * stays in charge of color + layout, this only signals "not clickable". */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .sw-badge {
   display: inline-flex; align-items: center; gap: 4px;

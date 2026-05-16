@@ -407,7 +407,7 @@ function fmtTime(ms: number): string {
   text-align: center;
 }
 .side-err {
-  color: #ff8888;
+  color: var(--sw-err);
 }
 .side-list {
   list-style: none;
@@ -535,7 +535,7 @@ function fmtTime(ms: number): string {
   color: var(--sw-accent);
 }
 .alive.err {
-  color: #ff7676;
+  color: var(--sw-err);
 }
 .spacer {
   flex: 1 1 0;
@@ -543,7 +543,7 @@ function fmtTime(ms: number): string {
 .banner.err {
   padding: 6px 12px;
   font-size: 11px;
-  color: #ff8888;
+  color: var(--sw-err);
   background: var(--sw-bg-2);
   border-bottom: 1px solid var(--sw-line);
 }
@@ -673,7 +673,7 @@ function fmtTime(ms: number): string {
 .sampling-head .del {
   background: transparent;
   border: none;
-  color: #ff7676;
+  color: var(--sw-err);
   cursor: pointer;
   font-size: 11px;
 }
@@ -717,7 +717,7 @@ function fmtTime(ms: number): string {
   border-top: 1px solid var(--sw-line);
 }
 .dlg-err {
-  color: #ff7676;
+  color: var(--sw-err);
   font-size: 11px;
 }
 </style>

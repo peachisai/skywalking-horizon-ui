@@ -622,7 +622,7 @@ function toggleNewTaskLabel(l: string): void {
   text-align: center;
 }
 .side-err {
-  color: #ff8888;
+  color: var(--sw-err);
 }
 .side-list {
   list-style: none;
@@ -785,7 +785,7 @@ function toggleNewTaskLabel(l: string): void {
   border-bottom: 1px solid var(--sw-line);
 }
 .banner.err {
-  color: #ff8888;
+  color: var(--sw-err);
 }
 .banner strong {
   color: var(--sw-fg-0);
@@ -947,7 +947,7 @@ function toggleNewTaskLabel(l: string): void {
   border-top: 1px solid var(--sw-line);
 }
 .dlg-err {
-  color: #ff7676;
+  color: var(--sw-err);
   font-size: 11px;
 }
 .empty {
