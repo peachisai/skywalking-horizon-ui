@@ -27,51 +27,7 @@
     "scope": "instance"
   },
   "layer-header": {
-    "orderBy": "conns",
-    "columns": [
-      {
-        "metric": "conns",
-        "label": "Connections",
-        "mqe": "avg(envoy_total_connections_used)",
-        "aggregation": "avg"
-      },
-      {
-        "metric": "threads",
-        "label": "Worker Threads",
-        "mqe": "avg(envoy_worker_threads)",
-        "aggregation": "avg"
-      },
-      {
-        "metric": "bugFail",
-        "label": "Bug Failures",
-        "mqe": "avg(envoy_bug_failures)",
-        "aggregation": "avg"
-      }
-    ]
-  },
-  "overview": {
-    "groups": [
-      {
-        "title": "Sidecar health",
-        "size": "auto",
-        "metrics": [
-          {
-            "id": "conns",
-            "label": "Connections",
-            "tip": "Envoy connections used across sidecars.",
-            "mqe": "avg(envoy_total_connections_used)",
-            "aggregation": "avg"
-          },
-          {
-            "id": "bugFail",
-            "label": "Bug Failures",
-            "tip": "Envoy assertion / bug counter \u2014 should be 0 in healthy clusters.",
-            "mqe": "avg(envoy_bug_failures)",
-            "aggregation": "avg"
-          }
-        ]
-      }
-    ]
+    "columns": []
   },
   "dashboards": {
     "instance": [

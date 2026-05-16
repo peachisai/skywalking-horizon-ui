@@ -30,7 +30,6 @@
         "title": "Page health",
         "size": "auto",
         "metrics": [
-          { "id": "fmp_p95", "label": "FMP P95", "tip": "95th-percentile first-meaningful-paint latency across the app.", "mqe": "browser_app_page_fmp_percentile{p='95'}", "unit": "ms", "aggregation": "avg" },
           { "id": "errorRate", "label": "Error Rate", "tip": "Percentage of page loads that produced an error.", "mqe": "browser_app_error_rate/100", "unit": "%", "aggregation": "avg" }
         ]
       },

@@ -1,7 +1,8 @@
 {
   "key": "SO11Y_JAVA_AGENT",
-  "alias": "Java Agent (self-obs)",
+  "alias": "Java Agent",
   "group": "Self-Observability",
+  "visibility": "operate",
   "color": "var(--sw-fg-2)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/service-agent/server-agents/",
   "aliases": {
@@ -17,61 +18,7 @@
     "logs": false
   },
   "layer-header": {
-    "orderBy": "created",
-    "columns": [
-      {
-        "metric": "created",
-        "label": "Created RPM",
-        "mqe": "sum(aggregate_labels(meter_java_agent_created_tracing_context_count,sum))",
-        "aggregation": "sum",
-        "unit": "rpm"
-      },
-      {
-        "metric": "finished",
-        "label": "Finished RPM",
-        "mqe": "sum(aggregate_labels(meter_java_agent_finished_tracing_context_count,sum))",
-        "aggregation": "sum",
-        "unit": "rpm"
-      },
-      {
-        "metric": "ignored",
-        "label": "Ignored RPM",
-        "mqe": "sum(aggregate_labels(meter_java_agent_created_ignored_context_count,sum))",
-        "aggregation": "sum",
-        "unit": "rpm"
-      },
-      {
-        "metric": "leaked",
-        "label": "Leaks",
-        "mqe": "sum(meter_java_agent_possible_leaked_context_count)",
-        "aggregation": "sum"
-      }
-    ]
-  },
-  "overview": {
-    "groups": [
-      {
-        "title": "Tracing context",
-        "size": "auto",
-        "metrics": [
-          {
-            "id": "created",
-            "label": "Created",
-            "tip": "Tracing contexts created across all Java agents in this service per minute.",
-            "mqe": "sum(aggregate_labels(meter_java_agent_created_tracing_context_count,sum))",
-            "unit": "rpm",
-            "aggregation": "sum"
-          },
-          {
-            "id": "leaked",
-            "label": "Leaks",
-            "tip": "Possible leaked contexts \u2014 non-zero indicates instrumentation drift.",
-            "mqe": "sum(meter_java_agent_possible_leaked_context_count)",
-            "aggregation": "sum"
-          }
-        ]
-      }
-    ]
+    "columns": []
   },
   "dashboards": {
     "instance": [

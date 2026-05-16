@@ -5,44 +5,43 @@
   "color": "var(--sw-warn)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-aws-eks-monitoring/",
   "aliases": {
-    "services": "EKS services",
-    "instances": "Nodes"
+    "services": "Clusters",
+    "instances": "Nodes",
+    "endpoints": "EKS services"
   },
   "components": {
     "service": true,
     "instances": true,
-    "endpoints": false,
+    "endpoints": true,
     "topology": false,
     "traces": false,
     "logs": false
   },
   "layer-header": {
-    "orderBy": "podCpu",
+    "orderBy": "nodes",
     "columns": [
       {
-        "metric": "podCpu",
-        "label": "Pod CPU %",
-        "unit": "%",
-        "mqe": "avg(eks_cluster_service_pod_cpu_utilization)",
+        "metric": "nodes",
+        "label": "Nodes",
+        "mqe": "latest(eks_cluster_node_count)",
         "aggregation": "avg"
       },
       {
-        "metric": "podMem",
-        "label": "Pod Mem %",
-        "unit": "%",
-        "mqe": "avg(eks_cluster_service_pod_memory_utilization)",
+        "metric": "failedNodes",
+        "label": "Failed Nodes",
+        "mqe": "latest(eks_cluster_failed_node_count)",
         "aggregation": "avg"
       },
       {
-        "metric": "txErr",
-        "label": "TX Err",
-        "mqe": "avg(eks_cluster_service_pod_net_tx_error)",
+        "metric": "namespaces",
+        "label": "Namespaces",
+        "mqe": "latest(eks_cluster_namespace_count)",
         "aggregation": "avg"
       },
       {
-        "metric": "rxErr",
-        "label": "RX Err",
-        "mqe": "avg(eks_cluster_service_pod_net_rx_error)",
+        "metric": "services",
+        "label": "Services",
+        "mqe": "latest(eks_cluster_service_count)",
         "aggregation": "avg"
       }
     ]
@@ -54,19 +53,17 @@
         "size": "auto",
         "metrics": [
           {
-            "id": "podCpu",
-            "label": "Pod CPU %",
-            "tip": "Service pods CPU utilization.",
-            "mqe": "avg(eks_cluster_service_pod_cpu_utilization)",
-            "unit": "%",
+            "id": "nodes",
+            "label": "Nodes",
+            "tip": "EKS cluster node count.",
+            "mqe": "latest(eks_cluster_node_count)",
             "aggregation": "avg"
           },
           {
-            "id": "podMem",
-            "label": "Pod Mem %",
-            "tip": "Service pods memory utilization.",
-            "mqe": "avg(eks_cluster_service_pod_memory_utilization)",
-            "unit": "%",
+            "id": "failedNodes",
+            "label": "Failed Nodes",
+            "tip": "Failed EKS nodes reported by the cluster.",
+            "mqe": "latest(eks_cluster_failed_node_count)",
             "aggregation": "avg"
           }
         ]
@@ -75,6 +72,82 @@
   },
   "dashboards": {
     "service": [
+      {
+        "id": "node_count",
+        "title": "Node Count",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_node_count"
+        ],
+        "span": 3,
+        "rowSpan": 2,
+        "format": "int"
+      },
+      {
+        "id": "failed_nodes",
+        "title": "Failed Nodes",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_failed_node_count"
+        ],
+        "span": 3,
+        "rowSpan": 2,
+        "format": "int"
+      },
+      {
+        "id": "namespace_count",
+        "title": "Namespace Count",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_namespace_count"
+        ],
+        "span": 3,
+        "rowSpan": 2,
+        "format": "int"
+      },
+      {
+        "id": "service_count",
+        "title": "EKS Service Count",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_service_count"
+        ],
+        "span": 3,
+        "rowSpan": 2,
+        "format": "int"
+      },
+      {
+        "id": "network_errors",
+        "title": "Cluster Network Errors",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_net_rx_error",
+          "eks_cluster_net_tx_error"
+        ],
+        "expressionLabels": [
+          "rx",
+          "tx"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      },
+      {
+        "id": "network_dropped",
+        "title": "Cluster Network Drops",
+        "type": "line",
+        "expressions": [
+          "eks_cluster_net_rx_dropped",
+          "eks_cluster_net_tx_dropped"
+        ],
+        "expressionLabels": [
+          "rx",
+          "tx"
+        ],
+        "span": 6,
+        "rowSpan": 2
+      }
+    ],
+    "endpoint": [
       {
         "id": "pod_cpu",
         "title": "Pod CPU Utilization (%)",

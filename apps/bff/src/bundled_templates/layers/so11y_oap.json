@@ -1,7 +1,8 @@
 {
   "key": "SO11Y_OAP",
-  "alias": "OAP (self-obs)",
+  "alias": "OAP",
   "group": "Self-Observability",
+  "visibility": "operate",
   "color": "var(--sw-fg-2)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/setup/backend/backend-setup/",
   "aliases": {
@@ -17,62 +18,7 @@
     "logs": false
   },
   "layer-header": {
-    "orderBy": "cpu",
-    "columns": [
-      {
-        "metric": "cpu",
-        "label": "Avg CPU",
-        "unit": "%",
-        "mqe": "avg(meter_oap_instance_cpu_percentage)",
-        "aggregation": "avg"
-      },
-      {
-        "metric": "persist",
-        "label": "Persist",
-        "unit": "/min",
-        "mqe": "sum(meter_oap_instance_persistence_execute_count)",
-        "aggregation": "sum"
-      },
-      {
-        "metric": "graphql",
-        "label": "GraphQL",
-        "unit": "/min",
-        "mqe": "sum(meter_oap_instance_graphql_query_count)",
-        "aggregation": "sum"
-      },
-      {
-        "metric": "graphqlErr",
-        "label": "GraphQL err",
-        "unit": "/min",
-        "mqe": "sum(meter_oap_instance_graphql_query_error_count)",
-        "aggregation": "sum"
-      }
-    ]
-  },
-  "overview": {
-    "groups": [
-      {
-        "title": "OAP health",
-        "size": "auto",
-        "metrics": [
-          {
-            "id": "cpu",
-            "label": "CPU %",
-            "tip": "OAP process CPU usage averaged across instances.",
-            "mqe": "avg(meter_oap_instance_cpu_percentage)",
-            "unit": "%",
-            "aggregation": "avg"
-          },
-          {
-            "id": "graphqlErr",
-            "label": "GraphQL Err",
-            "tip": "GraphQL query errors per minute summed across instances.",
-            "mqe": "sum(meter_oap_instance_graphql_query_error_count)",
-            "aggregation": "sum"
-          }
-        ]
-      }
-    ]
+    "columns": []
   },
   "dashboards": {
     "instance": [
