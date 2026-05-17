@@ -37,6 +37,7 @@ import { colorForMetric } from '@/utils/metricColor';
 import { useLayerLanding } from '@/layer/useLayerLanding';
 import { useLayers, firstLayerTab } from '@/shell/useLayers';
 import { useSelectedService } from '@/layer/useSelectedService';
+import { useLayerSelectionStore } from '@/state/layerSelection';
 import { useSetupStore } from '@/state/setup';
 import { fmtMetric } from '@/utils/formatters';
 import { parseServiceName } from '@/utils/serviceName';
@@ -44,6 +45,28 @@ import { parseServiceName } from '@/utils/serviceName';
 const route = useRoute();
 const router = useRouter();
 const layerKey = computed(() => String(route.params.layerKey ?? ''));
+
+// Seed the selection store from the URL ONCE per (layer, scope)
+// entry. After this point the store owns the live picker state and
+// the URL stays frozen — see state/layerSelection.ts for the
+// contract. We rehydrate when the layer or scope segment of the
+// route changes so deep-linking still works for cross-layer
+// navigation. The scope segment is extracted from `/layer/<key>/<scope>`
+// without depending on the nested route's `meta` since that resolves
+// later than this watch needs.
+const selectionStore = useLayerSelectionStore();
+const scopeSegment = computed<string>(() => {
+  const m = route.path.match(/^\/layer\/[^/]+\/([^/?]+)/);
+  return m ? m[1] : 'service';
+});
+watch(
+  [layerKey, scopeSegment],
+  ([key, scope]) => {
+    if (!key) return;
+    selectionStore.hydrateFromQuery(key, scope, route.query);
+  },
+  { immediate: true },
+);
 const { layers, isLoading: layersLoading } = useLayers();
 const layer = computed<LayerDef | null>(() => {
   const found = layers.value.find((l) => l.key === layerKey.value);

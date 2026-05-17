@@ -16,32 +16,22 @@
  */
 
 /**
- * Page-wide selected-endpoint state. Mirrors `useSelectedInstance`:
- * URL-backed (`?endpoint=<name>`) so the choice is shareable and
- * survives a reload. The Endpoint scope's widget queries thread this
- * value to the BFF; other scopes ignore it.
+ * Selected endpoint for the per-layer page. Backed by the
+ * `layerSelection` Pinia store — URL hydrates on entry, store
+ * holds the live value, URL stays frozen. See
+ * `state/layerSelection.ts` for the contract.
  */
 
 import { computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useLayerSelectionStore } from '@/state/layerSelection';
 
 export function useSelectedEndpoint() {
-  const route = useRoute();
-  const router = useRouter();
+  const store = useLayerSelectionStore();
 
-  const selectedEndpoint = computed<string | null>(() => {
-    const v = route.query.endpoint;
-    if (typeof v === 'string' && v.length > 0) return v;
-    return null;
-  });
+  const selectedEndpoint = computed<string | null>(() => store.endpoint);
 
   function setSelectedEndpoint(name: string | null): void {
-    const current = typeof route.query.endpoint === 'string' ? route.query.endpoint : null;
-    if (name === current) return;
-    const next = { ...route.query };
-    if (name) next.endpoint = name;
-    else delete next.endpoint;
-    void router.replace({ path: route.path, query: next });
+    store.setEndpoint(name);
   }
 
   return { selectedEndpoint, setSelectedEndpoint };

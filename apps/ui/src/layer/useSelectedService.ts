@@ -16,47 +16,23 @@
  */
 
 /**
- * Page-wide selected-service state for the per-layer page. Backed by the
- * URL's `?service=` query parameter so the selection is shareable +
- * survives a full reload. Every tab inside the LayerShell reads via this
- * composable; the LayerServiceSelector at the top of the page is the
- * single writer.
+ * Selected service for the per-layer page. Backed by the
+ * `layerSelection` Pinia store, which is seeded from the URL on
+ * landing and updated in-memory afterwards. The URL is a
+ * shareable starting point, not a live state mirror — see
+ * `state/layerSelection.ts` for the contract.
  */
 
 import { computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useLayerSelectionStore } from '@/state/layerSelection';
 
 export function useSelectedService() {
-  const route = useRoute();
-  const router = useRouter();
+  const store = useLayerSelectionStore();
 
-  const selectedId = computed<string | null>(() => {
-    const v = route.query.service;
-    if (typeof v === 'string' && v.length > 0) return v;
-    return null;
-  });
+  const selectedId = computed<string | null>(() => store.service);
 
-  function setSelected(id: string | null): void {
-    const next = { ...route.query };
-    const current = typeof route.query.service === 'string' ? route.query.service : null;
-    if (id === current) return;
-    if (id) next.service = id;
-    else delete next.service;
-    // Drop the narrower picks (?instance=, ?endpoint=) ONLY when
-    // we're replacing an existing service. First-time auto-fill
-    // (`current === null` — URL arrived with no ?service= at all)
-    // preserves any `?instance=` / `?endpoint=` URL hints the
-    // operator typed or that a sharable link carried, because
-    // those were the explicit intent. Without this, hitting
-    // `/layer/general/instance?instance=X` dropped X immediately
-    // and the auto-picked service's first instance won the race.
-    if (current !== null) {
-      delete next.instance;
-      delete next.endpoint;
-    }
-    // `replace` instead of `push` — switching services shouldn't bloat
-    // the browser back stack with N entries.
-    void router.replace({ path: route.path, query: next });
+  function setSelected(id: string | null, opts: { keepNarrower?: boolean } = {}): void {
+    store.setService(id, opts);
   }
 
   return { selectedId, setSelected };

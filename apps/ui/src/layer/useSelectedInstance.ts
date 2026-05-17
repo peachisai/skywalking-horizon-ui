@@ -16,38 +16,22 @@
  */
 
 /**
- * Page-wide selected-instance state. Mirrors `useSelectedService`:
- * a single URL-backed selection (`?instance=<name>`) so the
- * dashboard query, breadcrumbs, and selector all stay in sync and
- * the choice survives a reload.
- *
- * The selection is **service-derived** — instances belong to a
- * service, so the selector is only meaningful when a service is
- * already picked. `useLayerDashboard` reads the instance value and
- * forwards it to the BFF on the Instance scope only; other scopes
- * (Service / Endpoint / Trace …) ignore it.
+ * Selected instance for the per-layer page. Backed by the
+ * `layerSelection` Pinia store — URL hydrates on entry, store
+ * holds the live value, URL stays frozen. See
+ * `state/layerSelection.ts` for the contract.
  */
 
 import { computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useLayerSelectionStore } from '@/state/layerSelection';
 
 export function useSelectedInstance() {
-  const route = useRoute();
-  const router = useRouter();
+  const store = useLayerSelectionStore();
 
-  const selectedInstance = computed<string | null>(() => {
-    const v = route.query.instance;
-    if (typeof v === 'string' && v.length > 0) return v;
-    return null;
-  });
+  const selectedInstance = computed<string | null>(() => store.instance);
 
   function setSelectedInstance(name: string | null): void {
-    const current = typeof route.query.instance === 'string' ? route.query.instance : null;
-    if (name === current) return;
-    const next = { ...route.query };
-    if (name) next.instance = name;
-    else delete next.instance;
-    void router.replace({ path: route.path, query: next });
+    store.setInstance(name);
   }
 
   return { selectedInstance, setSelectedInstance };
