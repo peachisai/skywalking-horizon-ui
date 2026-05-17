@@ -147,24 +147,6 @@ function toggleLayer(key: string): void {
   }
 }
 
-/**
- * Group-header click — cascade two levels: expand the first layer in
- * the group AND navigate to its first tab. Mirrors the behaviour
- * described as "for group menu, only the first sub menu select
- * (nested twice), then fire the real menu selection". Without this
- * the section labels were inert and the operator had to drill in via
- * two clicks (layer → tab) instead of one (group).
- */
-function pickGroupFirst(layers: SidebarLayer[]): void {
-  const first = layers[0];
-  if (!first) return;
-  const nav = layerNavByKey.value.get(first.key);
-  if (!nav) return;
-  expandedLayer.value = first.key;
-  if (route.path === nav.primaryTo) return;
-  void router.push(nav.primaryTo);
-}
-
 interface LayerGroup { kind: 'group'; label: string; layers: SidebarLayer[] }
 interface LayerSingle { kind: 'single'; layer: SidebarLayer }
 type SidebarEntry = LayerGroup | LayerSingle;
@@ -365,10 +347,7 @@ watch(
       </div>
       <template v-for="(E, ei) in sidebarEntries" :key="E.kind === 'group' ? `g:${E.label}` : `s:${E.layer.key}:${ei}`">
         <template v-if="E.kind === 'group'">
-          <div
-            class="sw-nav-section sw-nav-section--icon sw-nav-section--clickable"
-            @click="pickGroupFirst(E.layers)"
-          >
+          <div class="sw-nav-section sw-nav-section--icon">
             <Icon :name="sectionIcon(E.label)" />
             <span class="layer-group-name">{{ E.label }}</span>
           </div>
@@ -459,10 +438,7 @@ watch(
       </template>
 
       <template v-if="operateLayers.length > 0">
-        <div
-          class="sw-nav-section sw-nav-section--icon sw-nav-section--clickable"
-          @click="pickGroupFirst(operateLayers)"
-        >
+        <div class="sw-nav-section sw-nav-section--icon">
           <Icon :name="sectionIcon('Platform monitoring')" />
           <span>Platform monitoring</span>
         </div>
@@ -781,16 +757,6 @@ watch(
   flex: 0 0 12px;
   color: var(--sw-fg-3);
   opacity: 1;
-}
-/* Clickable section header — cascades through the first child layer
- * to its first tab. Hover lifts the text so the affordance reads. */
-.sw-nav-section--clickable {
-  cursor: pointer;
-  user-select: none;
-}
-.sw-nav-section--clickable:hover,
-.sw-nav-section--clickable:hover :deep(svg) {
-  color: var(--sw-fg-1);
 }
 .layer-group-name { flex: 1; min-width: 0; }
 /* Grouped and ungrouped layer rows sit at the same indent — the group
