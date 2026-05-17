@@ -334,10 +334,18 @@ function copyTraceId(): void {
   padding: 0;
 }
 .zk-time-axis {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   padding: 6px 12px;
+  /* Solid background + shadow so the axis cleanly overlays the
+   * scrolling rows underneath rather than letting the first row's
+   * bar bleed through (sibling rendering on scroll). */
+  background-color: var(--sw-bg-1);
   border-bottom: 1px solid var(--sw-line);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   font-size: 10px;
   color: var(--sw-fg-3);
   font-family: var(--sw-mono);

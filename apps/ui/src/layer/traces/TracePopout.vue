@@ -528,12 +528,22 @@ function nativeSpanError(s: NativeSpan): boolean { return s.isError; }
 .tp-time-axis {
   position: sticky;
   top: 0;
-  z-index: 2;
+  /* High enough to clear the `.tp-bar` (position: absolute) inside
+   * scrolled rows; z-index 2 was being rendered behind the bars on
+   * scroll because absolute-positioned siblings can paint above
+   * sticky in some webkit stacking quirks. 10 is plenty. */
+  z-index: 10;
   display: flex;
   justify-content: space-between;
-  padding: 4px 12px;
-  background: var(--sw-bg-1);
+  padding: 6px 12px;
+  /* Solid color (not shorthand) so the row content underneath is
+   * fully obscured when the axis sticks during scroll. */
+  background-color: var(--sw-bg-1);
   border-bottom: 1px solid var(--sw-line);
+  /* Soft shadow under the axis once scrolled — gives the axis a
+   * "floating header" feel and visually separates it from the first
+   * row even on dense traces. */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   font-family: var(--sw-mono);
   font-size: 10px;
   color: var(--sw-fg-3);
