@@ -38,9 +38,7 @@ import {
 } from '@/controls/configBundle';
 import type {
   DashboardConfig,
-  DashboardResponse,
   DashboardWidget,
-  DashboardWidgetResult,
 } from '@skywalking-horizon-ui/api-client';
 
 export function useLayerDashboardConfig(layerKey: Ref<string>, scope?: Ref<string>) {
@@ -134,12 +132,15 @@ export function useLayerDashboard(
     if (!r) return null;
     return `${r.step}:${Math.floor(r.startMs / 60_000)}:${Math.floor(r.endMs / 60_000)}`;
   });
-  // Per-chunk progress for the loading indicator. Resets to
-  // {arrived: 0, total: N} at queryFn start, ticks up as each
-  // parallel BFF chunk resolves. The widget-list path uses this;
-  // the legacy single-call path leaves it at {0, 0}.
+  // Total widget count for the loading indicator — only used to
+  // surface "N metrics loading" while the BFF batch is in flight.
+  // We don't chunk on the SPA side (each BFF call would re-run
+  // `listServices` to resolve the entity, doubling the latency for
+  // no real win — the BFF already chunks the OAP GraphQL trips
+  // internally via Promise.all, see http/query/dashboard.ts step 2).
+  // Single BFF call → one entity resolution + chunked MQE batches
+  // server-side → one merged response.
   const progress = ref<{ arrived: number; total: number }>({ arrived: 0, total: 0 });
-  const CHUNK_SIZE = 6;
 
   const q = useQuery({
     queryKey: [
@@ -151,10 +152,11 @@ export function useLayerDashboard(
       entityRefs.instance ?? computed(() => null),
       entityRefs.endpoint ?? computed(() => null),
       rangeKey,
-      // Hash of widget ids so adding/removing a widget refires.
       computed(() => widgetsList?.value.map((w) => w.id).join('|') ?? null),
     ],
     queryFn: async () => {
+      const total = widgetsList?.value.length ?? 0;
+      progress.value = { arrived: 0, total };
       const baseBody = {
         ...(service.value ? { service: service.value } : {}),
         ...(scope?.value ? { scope: scope.value } : {}),
@@ -167,55 +169,12 @@ export function useLayerDashboard(
               endMs: rangeRef.value.endMs,
             }
           : {}),
+        ...(widgetsList?.value.length ? { widgets: widgetsList.value } : {}),
       };
       const opts = mockTop?.value ? { mockTop: mockTop.value } : {};
-      const all = widgetsList?.value ?? [];
-      // No widget list → fall back to the legacy single-call path:
-      // BFF resolves widgets from the layer template + auto-picks
-      // entities. No per-chunk progress (no list to chunk against).
-      if (all.length === 0) {
-        progress.value = { arrived: 0, total: 0 };
-        return bffClient.layer.dashboard(layerKey.value, baseBody, opts);
-      }
-      // Chunked path. Fire N parallel BFF calls (one per 6-widget
-      // group) so each chunk's completion ticks the progress ref.
-      // Wall-clock is roughly max(chunk_time) thanks to Promise.all;
-      // each chunk is small enough to stay inside OAP's per-query
-      // budget without relying on BFF-internal chunking.
-      progress.value = { arrived: 0, total: all.length };
-      const chunks: DashboardWidget[][] = [];
-      for (let i = 0; i < all.length; i += CHUNK_SIZE) {
-        chunks.push(all.slice(i, i + CHUNK_SIZE));
-      }
-      const merged: DashboardWidgetResult[] = [];
-      let baseResp: DashboardResponse | null = null;
-      await Promise.all(
-        chunks.map(async (chunk) => {
-          const resp = await bffClient.layer.dashboard(
-            layerKey.value,
-            { ...baseBody, widgets: chunk },
-            opts,
-          );
-          // First-arrived chunk donates the response envelope
-          // (`service`, `reachable`, `durationStart/End`, etc.) —
-          // all chunks share the same upstream state since they
-          // were resolved against the same entity.
-          if (!baseResp) baseResp = resp;
-          merged.push(...(resp.widgets ?? []));
-          progress.value = { arrived: merged.length, total: all.length };
-        }),
-      );
-      const finalEnvelope = baseResp ?? {
-        layer: layerKey.value,
-        service: service.value ?? null,
-        generatedAt: Date.now(),
-        step: 'MINUTE' as const,
-        durationStart: '',
-        durationEnd: '',
-        reachable: true,
-        widgets: [],
-      };
-      return { ...finalEnvelope, widgets: merged };
+      const resp = await bffClient.layer.dashboard(layerKey.value, baseBody, opts);
+      progress.value = { arrived: resp.widgets?.length ?? total, total };
+      return resp;
     },
     // Trailing-control principle: the widget batch is the deepest
     // control in the chain and must wait for everything upstream
