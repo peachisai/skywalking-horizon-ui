@@ -50,7 +50,7 @@ export interface FrameworkEvent {
   durationMs?: number;
 }
 
-const HISTORY_CAP = 50;
+const HISTORY_CAP = 200;
 const events = ref<FrameworkEvent[]>([]);
 let nextId = 1;
 /** Open `start` events keyed by topic — used to compute duration when

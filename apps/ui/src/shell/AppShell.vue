@@ -23,6 +23,7 @@ import GlobalConnectivityBanner from './GlobalConnectivityBanner.vue';
 import TracePopout from '@/layer/traces/TracePopout.vue';
 import ZipkinTracePopout from '@/layer/traces/ZipkinTracePopout.vue';
 import { ensureConfigBundle } from '@/controls/configBundle';
+import { useClickTracking } from '@/controls/useClickTracking';
 
 // Kick the config preload once the shell mounts (i.e. after the auth
 // guard has let the user through). All layer dashboard configs +
@@ -32,6 +33,12 @@ import { ensureConfigBundle } from '@/controls/configBundle';
 onMounted(() => {
   void ensureConfigBundle();
 });
+
+// Global delegated click tracker — emits `click` events into the
+// EventTicker so the timeline shows what the operator pressed before
+// each framework load. See `controls/useClickTracking.ts` for the
+// suppression rules (the ticker itself, form inputs, decorative bits).
+useClickTracking();
 </script>
 
 <template>

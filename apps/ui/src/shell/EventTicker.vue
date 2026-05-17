@@ -136,7 +136,9 @@ const eventCount = computed<number>(() => all.value.length);
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  max-height: 360px;
+  /* ~10 rows visible at once; the rest scrolls. Row is ~24px
+   * (4px top + 4px bottom padding + 11px text + a touch of slack). */
+  max-height: 260px;
   overflow-y: auto;
   z-index: 50;
   background: var(--sw-bg-2);

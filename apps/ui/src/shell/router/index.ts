@@ -16,7 +16,7 @@
  */
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/state/auth';
-import { pushEvent, resetEventLog } from '@/controls/eventLog';
+import { pushEvent } from '@/controls/eventLog';
 
 const placeholder = () => import('@/shell/PlaceholderView.vue');
 
@@ -237,13 +237,13 @@ router.beforeEach(async (to) => {
   }
 });
 
-// Every successful navigation clears the event log + posts a single
-// "Navigated to X" line so the topbar EventTicker shows what page the
-// operator just opened. Subsequent data loaders push their own start /
-// ok / err events on top of this baseline.
+// Every successful navigation posts a single "Navigated to X" line so
+// the EventTicker shows when each page started loading. The event
+// buffer is intentionally NOT cleared on navigation — operators want
+// to see the cross-page history (last 200 events) so they can trace
+// "I clicked here, then services loaded, then I clicked there".
 router.afterEach((to, from) => {
   if (to.path === from.path) return;
-  resetEventLog();
   pushEvent('route', 'info', `Navigated to ${to.path}`);
 });
 
