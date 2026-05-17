@@ -18,7 +18,11 @@
 import { computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { useAutoRefreshSubscribe } from '../controls/useAutoRefreshSubscribe';
-import { parseOapTimezoneMinutes, type OapInfo } from '@skywalking-horizon-ui/api-client';
+import {
+  parseOapTimezoneMinutes,
+  type OapCapabilities,
+  type OapInfo,
+} from '@skywalking-horizon-ui/api-client';
 import { bffClient } from '@/api/client';
 
 /**
@@ -77,6 +81,14 @@ export function useOapInfo() {
     return `${y}-${mo}-${d} ${h}${mi}`;
   }
 
+  /** GraphQL-schema feature flags reported by the BFF. Defaults to a
+   *  conservative all-false shape until the first poll lands, so pages
+   *  branching on a capability render the legacy path during initial
+   *  load rather than flashing a "new" UI that then disappears. */
+  const capabilities = computed<OapCapabilities>(() => ({
+    queryAlarms: info.value?.capabilities?.queryAlarms ?? false,
+  }));
+
   /** Health status pill colour: ok / warn / err / unknown. */
   const healthState = computed<'ok' | 'warn' | 'err' | 'unknown'>(() => {
     if (!reachable.value) return 'err';
@@ -98,6 +110,7 @@ export function useOapInfo() {
     tzOffsetLabel,
     healthScore,
     healthState,
+    capabilities,
     toServerTzString,
     refetch: q.refetch,
   };

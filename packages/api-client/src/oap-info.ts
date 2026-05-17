@@ -36,7 +36,21 @@ export interface OapInfo {
   /** Health score: 0 = OK, >0 = degraded, <0 = not started. */
   healthScore?: number;
   healthDetails?: string;
+  /** Per-feature schema capabilities probed via GraphQL introspection.
+   *  Absent when `reachable === false`. Each field is `true` iff the
+   *  corresponding `Query.<name>` field exists on the connected OAP.
+   *  Routes / pages branch on this to choose between legacy + new
+   *  query shapes (e.g. `getAlarm` vs `queryAlarms`). */
+  capabilities?: OapCapabilities;
   error?: string;
+}
+
+export interface OapCapabilities {
+  /** `Query.queryAlarms(condition: AlarmQueryCondition!)` — introduced
+   *  alongside the deprecation of `getAlarm`. Enables Entity / layer /
+   *  ruleName filters; absence means clients fall back to the
+   *  scope+keyword+tags-only `getAlarm`. */
+  queryAlarms: boolean;
 }
 
 /**

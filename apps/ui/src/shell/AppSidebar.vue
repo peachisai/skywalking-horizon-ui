@@ -23,6 +23,9 @@ import { useAuthStore } from '@/state/auth';
 import { useLayers, firstLayerTab } from '@/shell/useLayers';
 import { useLandingOrder } from '@/shell/useLandingOrder';
 import { useOverviewDashboards } from '@/render/overview/useOverviewDashboards';
+import { useDebugPanel } from '@/controls/debugPanel';
+
+const { enabled: debugPanelEnabled, toggle: toggleDebugPanel } = useDebugPanel();
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -648,6 +651,24 @@ watch(
             </div>
           </template>
         </template>
+        <!-- Toggle row appended to the bottom of the Admin section —
+             controls the bottom-fixed DebugEventPanel. Default state
+             is hostname-driven (on for localhost, off elsewhere) and
+             sticks via localStorage. Rendered as a plain button so
+             clicks fire the store toggle rather than navigating. -->
+        <button
+          v-if="entry.kicker === 'Admin'"
+          type="button"
+          class="sw-nav-item sw-nav-toggle"
+          :class="{ 'is-active': debugPanelEnabled }"
+          @click="toggleDebugPanel"
+        >
+          <Icon name="event" />
+          <span>Debug events</span>
+          <span class="sw-badge" :class="debugPanelEnabled ? 'ok' : ''" style="margin-left: auto">
+            {{ debugPanelEnabled ? 'on' : 'off' }}
+          </span>
+        </button>
       </template>
     </nav>
 
@@ -924,5 +945,22 @@ watch(
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 4px;
   letter-spacing: 0.02em;
+}
+/* Toggle row at the bottom of the Admin section — a <button> styled
+ * to blend with the surrounding .sw-nav-item links. Cursor is
+ * `pointer` (vs default `default` on RouterLinks) to flag the
+ * affordance, and `.is-active` reuses the same accent stripe so
+ * "on" reads consistently with selected nav items. */
+.sw-nav-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sw-nav-toggle .sw-badge.ok {
+  color: var(--sw-ok);
+  background: rgba(34, 197, 94, 0.12);
 }
 </style>

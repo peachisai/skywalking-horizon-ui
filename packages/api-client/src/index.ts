@@ -93,7 +93,7 @@ export type {
   LogsResponse,
   LogFacetsResponse,
 } from './logs.js';
-export type { OapInfo } from './oap-info.js';
+export type { OapInfo, OapCapabilities } from './oap-info.js';
 export type { PreflightModule, PreflightResult } from './preflight.js';
 export type {
   ProfileTask,

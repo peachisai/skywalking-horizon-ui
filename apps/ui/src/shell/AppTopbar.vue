@@ -18,7 +18,6 @@
 import { computed, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import Icon from '@/components/icons/Icon.vue';
-import EventTicker from '@/shell/EventTicker.vue';
 import { useOapInfo } from '@/shell/useOapInfo';
 import { useAutoRefreshStore } from '@/controls/autoRefresh';
 import { useTimeRangeStore, TIME_PRESETS, STEP_LIMITS, isValidRange, type TimeStep } from '@/controls/timeRange';
@@ -325,11 +324,11 @@ function formatRangeStamp(ms: number, step: TimeStep): string {
 
 <template>
   <header class="sw-top">
-    <!-- Event ticker replaces the old breadcrumb + search. Shows what
-         the framework is currently doing (loading services, rendering
-         widgets, …) so the operator gets feedback while the page
-         assembles instead of looking at a static breadcrumb. -->
-    <EventTicker />
+    <!-- Left zone intentionally empty for now. The framework-event
+         feed moved to a dedicated bottom-fixed panel (gated by the
+         Admin → "Debug events" sidebar toggle) — see
+         `controls/debugPanel.ts` + `shell/DebugEventPanel.vue`. -->
+    <div class="sw-top-spacer" />
     <div class="sw-top-actions">
       <RouterLink class="sw-btn oap-chip" :class="`is-${healthState}`" :title="oapChipTooltip" to="/operate/cluster">
         <span class="dot" />

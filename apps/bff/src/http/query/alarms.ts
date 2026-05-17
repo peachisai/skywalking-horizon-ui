@@ -45,6 +45,7 @@ import type { ConfigSource } from '../../config/loader.js';
 import type { SessionStore } from '../../user/sessions.js';
 import { badRequest } from '../../errors.js';
 import { buildOapOpts, graphqlPost } from '../../client/graphql.js';
+import { getOapCapabilities } from '../../logic/oap/capabilities.js';
 import type { ServiceLayerMap } from '../../logic/alarms/service-layer-map.js';
 import type { AlarmsStore } from '../../logic/alarms/store.js';
 
@@ -292,6 +293,37 @@ const GET_ALARM_QUERY = /* GraphQL */ `
   }
 `;
 
+/* New-API variant — added in query-protocol #157 alongside the
+ * deprecation of `getAlarm`. Same `Alarms.msgs` selection set as the
+ * legacy query so the row mapper stays shared; the only difference is
+ * the wrapper (`condition` input vs. individual args) and the future
+ * filter surface (entities / layers / ruleNames — wired in step 4). */
+const QUERY_ALARMS_QUERY = /* GraphQL */ `
+  query HorizonQueryAlarms($condition: AlarmQueryCondition!) {
+    queryAlarms(condition: $condition) {
+      msgs {
+        id
+        startTime
+        recoveryTime
+        scope
+        name
+        message
+        tags { key value }
+        snapshot {
+          expression
+          metrics {
+            name
+            results {
+              metric { labels { key value } }
+              values { id value traceID }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 const LIST_SERVICES_QUERY = /* GraphQL */ `
   query HorizonAlarmServices($layer: String!) {
     listServices(layer: $layer) { name normal }
@@ -304,6 +336,9 @@ interface ListServicesRaw {
 
 interface GetAlarmRaw {
   getAlarm?: { msgs?: AlarmMessage[] } | null;
+}
+interface QueryAlarmsRaw {
+  queryAlarms?: { msgs?: AlarmMessage[] } | null;
 }
 
 // ── Routes ───────────────────────────────────────────────────────────
@@ -349,23 +384,39 @@ export function registerAlarmsQueryRoutes(app: FastifyInstance, deps: AlarmsQuer
     const end = fmtSecond(q.endTime, offset);
 
     const opts = buildOapOpts(deps.config.current, deps.fetch);
-    const variables: Record<string, unknown> = {
-      duration: { start, end, step: 'SECOND' },
-      paging: { pageNum: q.pageNum, pageSize: q.pageSize },
-    };
-    if (q.scope) variables.scope = q.scope;
-    if (q.keyword) variables.keyword = q.keyword;
+    const caps = await getOapCapabilities(deps.config.current, deps.fetch);
 
-    let raw: GetAlarmRaw;
+    /* Branch on schema capability: `queryAlarms(condition)` is the
+     * forward path — same returned shape, bundles every filter into
+     * one input type so step-4 entity / layer / ruleName filters land
+     * here without a route change. `getAlarm` stays as the fallback
+     * for older OAPs (scope+keyword+tags-only). */
+    let msgsRaw: AlarmMessage[];
     try {
-      raw = await graphqlPost<GetAlarmRaw>(opts, GET_ALARM_QUERY, variables);
+      if (caps.queryAlarms) {
+        const condition: Record<string, unknown> = {
+          duration: { start, end, step: 'SECOND' },
+          paging: { pageNum: q.pageNum, pageSize: q.pageSize },
+        };
+        if (q.keyword) condition.keyword = q.keyword;
+        const raw = await graphqlPost<QueryAlarmsRaw>(opts, QUERY_ALARMS_QUERY, { condition });
+        msgsRaw = raw.queryAlarms?.msgs ?? [];
+      } else {
+        const variables: Record<string, unknown> = {
+          duration: { start, end, step: 'SECOND' },
+          paging: { pageNum: q.pageNum, pageSize: q.pageSize },
+        };
+        if (q.scope) variables.scope = q.scope;
+        if (q.keyword) variables.keyword = q.keyword;
+        const raw = await graphqlPost<GetAlarmRaw>(opts, GET_ALARM_QUERY, variables);
+        msgsRaw = raw.getAlarm?.msgs ?? [];
+      }
     } catch (err) {
       return reply.code(502).send({
         error: 'oap_unreachable',
         message: err instanceof Error ? err.message : String(err),
       });
     }
-    const msgsRaw = raw.getAlarm?.msgs ?? [];
 
     // Service-name → layer tag (best-effort, see service-layer-map docs).
     const layerIdx = await serviceLayer.get();

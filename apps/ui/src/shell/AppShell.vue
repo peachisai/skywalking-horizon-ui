@@ -19,6 +19,7 @@ import { computed, onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import AppSidebar from './AppSidebar.vue';
 import AppTopbar from './AppTopbar.vue';
+import DebugEventPanel from './DebugEventPanel.vue';
 import GlobalConnectivityBanner from './GlobalConnectivityBanner.vue';
 import TracePopout from '@/layer/traces/TracePopout.vue';
 import ZipkinTracePopout from '@/layer/traces/ZipkinTracePopout.vue';
@@ -88,6 +89,11 @@ const initReady = computed<boolean>(
          collision (e.g. an operator drilling into a Zipkin trace from
          a Logs row → trace link on a mesh layer). -->
     <ZipkinTracePopout />
+    <!-- Bottom-fixed framework-event panel. Self-hides when the Admin →
+         "Debug events" toggle is off (default off in production, on
+         when hostname looks local). Always mounted so the toggle
+         responds without a re-mount race. -->
+    <DebugEventPanel />
   </div>
 </template>
 

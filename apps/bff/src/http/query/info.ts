@@ -21,6 +21,7 @@ import type { ConfigSource } from '../../config/loader.js';
 import type { SessionStore } from '../../user/sessions.js';
 import { requireAuth } from '../../user/middleware.js';
 import { buildOapOpts, graphqlPost } from '../../client/graphql.js';
+import { getOapCapabilities } from '../../logic/oap/capabilities.js';
 
 /**
  * One round-trip combining `version`, `getTimeInfo`, and `checkHealth`.
@@ -66,7 +67,15 @@ export function registerOapInfoRoute(app: FastifyInstance, deps: InfoRouteDeps):
     const cfg = deps.config.current;
     const statusUrl = cfg.oap.statusUrl;
     try {
-      const raw = await graphqlPost<InfoRaw>(buildOapOpts(cfg, deps.fetch), INFO_QUERY);
+      /* Capability probe runs in parallel with the info call — both
+       * are GraphQL POSTs to the same endpoint; serialising would add
+       * round-trip latency to every poll without changing semantics.
+       * The probe is internally cached for 5 min so the wire traffic
+       * is one-off per OAP restart, not per call. */
+      const [raw, capabilities] = await Promise.all([
+        graphqlPost<InfoRaw>(buildOapOpts(cfg, deps.fetch), INFO_QUERY),
+        getOapCapabilities(cfg, deps.fetch),
+      ]);
       const body: OapInfo = {
         reachable: true,
         statusUrl,
@@ -75,6 +84,7 @@ export function registerOapInfoRoute(app: FastifyInstance, deps: InfoRouteDeps):
         currentTimestamp: raw.time?.currentTimestamp ?? undefined,
         healthScore: raw.health?.score ?? undefined,
         healthDetails: raw.health?.details ?? undefined,
+        capabilities,
       };
       return reply.send(body);
     } catch (err) {
