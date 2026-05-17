@@ -127,41 +127,43 @@ function buildOption(): echarts.EChartsCoreOption {
       extraCssText:
         'max-height: 60vh; overflow-y: auto; max-width: 360px; ' +
         'box-shadow: 0 8px 24px rgba(0,0,0,0.45);',
-      // Viewport-clamped positioning. `confine: true` only confines to
-      // the chart's own bbox, which doesn't help when the chart sits
-      // near the right / bottom screen edge — the tooltip still spills
-      // off-screen. This callback flips the tooltip to the opposite
-      // side of the cursor whenever it would overflow the viewport.
+      // Position callback returns an OBJECT form ({top, left/right,
+      // bottom}) keyed to the chart's own bbox. With appendToBody:true
+      // ECharts translates those chart-local anchors into body-absolute
+      // pixels internally — much more reliable than computing
+      // page-absolute coordinates by hand, which went wrong when the
+      // scroll container was `.sw-main` (not `<body>`) and `window.
+      // scrollY` was always 0 so the tooltip ended up at a body offset
+      // that no longer matched the visible cursor.
       //
-      // Coord systems matter here:
-      //  - `point` is chart-container-relative (echarts always passes it
-      //    that way, regardless of appendToBody).
-      //  - Viewport bounds use clientWidth/Height (no scroll).
-      //  - The returned [x, y] feeds `style.left/top` on the tooltip
-      //    DOM. With appendToBody:true the tooltip is in <body>, so the
-      //    returned coords must be PAGE-absolute (viewport + scroll).
+      // Strategy: prefer right-of and below the cursor; flip to the
+      // opposite side when the tooltip would overflow the chart's own
+      // viewSize. The chart's parent (`.widget`) has overflow that
+      // would otherwise clip the tooltip — `appendToBody` solves
+      // that. ECharts also clamps the final body position to the
+      // viewport so we don't need a separate viewport check.
       position(
         point: [number, number],
         _params: unknown,
         _dom: HTMLElement,
         _rect: unknown,
         size: { contentSize: [number, number]; viewSize: [number, number] },
-      ): [number, number] {
-        const chartRect = container.value?.getBoundingClientRect();
-        const viewportX = (chartRect?.left ?? 0) + point[0];
-        const viewportY = (chartRect?.top ?? 0) + point[1];
+      ): Record<string, number> {
         const [tw, th] = size.contentSize;
-        const vw = document.documentElement.clientWidth;
-        const vh = document.documentElement.clientHeight;
-        const margin = 8;
-        const offset = 12;
-        let vx = viewportX + offset;
-        if (vx + tw > vw - margin) vx = viewportX - tw - offset;
-        if (vx < margin) vx = margin;
-        let vy = viewportY + offset;
-        if (vy + th > vh - margin) vy = viewportY - th - offset;
-        if (vy < margin) vy = margin;
-        return [vx + window.scrollX, vy + window.scrollY];
+        const [vw, vh] = size.viewSize;
+        const gap = 12;
+        const obj: Record<string, number> = {};
+        if (point[0] + tw + gap * 2 > vw) {
+          obj.right = vw - point[0] + gap;
+        } else {
+          obj.left = point[0] + gap;
+        }
+        if (point[1] + th + gap * 2 > vh) {
+          obj.bottom = vh - point[1] + gap;
+        } else {
+          obj.top = point[1] + gap;
+        }
+        return obj;
       },
       valueFormatter: (v: unknown) =>
         typeof v === 'number' && Number.isFinite(v)
