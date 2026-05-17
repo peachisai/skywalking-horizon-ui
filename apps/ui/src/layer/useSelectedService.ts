@@ -36,17 +36,27 @@ export function useSelectedService() {
     return null;
   });
 
-  function setSelected(id: string | null): void {
+  /**
+   * Update the URL-backed service selection.
+   *
+   * `opts.keepNarrower` controls whether sibling `?instance=` /
+   * `?endpoint=` params survive. Default `false` matches the user
+   * clicking a different service in the picker — those narrower picks
+   * belong to the OLD service and have to go. Auto-repair callers (the
+   * shell's "URL points at a service no longer in the sampled subset"
+   * watch) pass `true` so the URL's existing instance/endpoint isn't
+   * blown away as a side-effect of a service-side refresh.
+   */
+  function setSelected(id: string | null, opts: { keepNarrower?: boolean } = {}): void {
     const next = { ...route.query };
     const current = typeof route.query.service === 'string' ? route.query.service : null;
     if (id === current) return;
     if (id) next.service = id;
     else delete next.service;
-    // Instance / endpoint choices are derived from the selected service.
-    // When the service changes, drop the narrower entity so each
-    // dashboard can auto-pick from the new service's own list.
-    delete next.instance;
-    delete next.endpoint;
+    if (!opts.keepNarrower) {
+      delete next.instance;
+      delete next.endpoint;
+    }
     // `replace` instead of `push` — switching services shouldn't bloat
     // the browser back stack with N entries.
     void router.replace({ path: route.path, query: next });

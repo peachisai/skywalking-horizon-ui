@@ -131,8 +131,15 @@ function buildOption(): echarts.EChartsCoreOption {
       // the chart's own bbox, which doesn't help when the chart sits
       // near the right / bottom screen edge — the tooltip still spills
       // off-screen. This callback flips the tooltip to the opposite
-      // side of the cursor whenever it would overflow the viewport,
-      // and never returns a coord with negative top/left.
+      // side of the cursor whenever it would overflow the viewport.
+      //
+      // Coord systems matter here:
+      //  - `point` is chart-container-relative (echarts always passes it
+      //    that way, regardless of appendToBody).
+      //  - Viewport bounds use clientWidth/Height (no scroll).
+      //  - The returned [x, y] feeds `style.left/top` on the tooltip
+      //    DOM. With appendToBody:true the tooltip is in <body>, so the
+      //    returned coords must be PAGE-absolute (viewport + scroll).
       position(
         point: [number, number],
         _params: unknown,
@@ -140,27 +147,21 @@ function buildOption(): echarts.EChartsCoreOption {
         _rect: unknown,
         size: { contentSize: [number, number]; viewSize: [number, number] },
       ): [number, number] {
-        // `point` is mouse pos in the chart's local coords; we need
-        // page coords to compare against viewport bounds. The chart's
-        // bounding rect on the page gives us the offset.
         const chartRect = container.value?.getBoundingClientRect();
-        const pageX = (chartRect?.left ?? 0) + point[0];
-        const pageY = (chartRect?.top ?? 0) + point[1];
+        const viewportX = (chartRect?.left ?? 0) + point[0];
+        const viewportY = (chartRect?.top ?? 0) + point[1];
         const [tw, th] = size.contentSize;
         const vw = document.documentElement.clientWidth;
         const vh = document.documentElement.clientHeight;
         const margin = 8;
         const offset = 12;
-        let x = pageX + offset;
-        if (x + tw > vw - margin) x = pageX - tw - offset;
-        if (x < margin) x = margin;
-        let y = pageY + offset;
-        if (y + th > vh - margin) y = pageY - th - offset;
-        if (y < margin) y = margin;
-        // With appendToBody:true, echarts treats returned [x, y] as
-        // page-absolute coords (positions the tooltip element in
-        // document.body), so we return pixel values.
-        return [x, y];
+        let vx = viewportX + offset;
+        if (vx + tw > vw - margin) vx = viewportX - tw - offset;
+        if (vx < margin) vx = margin;
+        let vy = viewportY + offset;
+        if (vy + th > vh - margin) vy = viewportY - th - offset;
+        if (vy < margin) vy = margin;
+        return [vx + window.scrollX, vy + window.scrollY];
       },
       valueFormatter: (v: unknown) =>
         typeof v === 'number' && Number.isFinite(v)

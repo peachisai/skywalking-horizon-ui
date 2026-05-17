@@ -140,8 +140,12 @@ const landingRows = computed(() => landing.data.value?.sampledRows ?? landing.ro
 watch(landingRows, (rows) => {
   const first = rows[0];
   if (!first) return;
+  // `keepNarrower: true` when repairing an existing URL pick so a
+  // periodic landing refetch can't silently drop the operator's
+  // `?instance=` / `?endpoint=` — only a fresh seed (no `?service=`
+  // yet) is allowed to start from a clean slate.
   if (!selectedId.value || !rows.some((r) => r.serviceId === selectedId.value)) {
-    setSelectedService(first.serviceId);
+    setSelectedService(first.serviceId, { keepNarrower: Boolean(selectedId.value) });
   }
 }, { immediate: true });
 // Drop the stale instance whenever the service changes — the new

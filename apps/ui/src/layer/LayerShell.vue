@@ -151,10 +151,12 @@ const selectedName = computed(() => {
 // say) can flip the same meta flag without touching this file.
 const viewOwnsServiceSelector = computed(() => Boolean(route.meta?.ownsServiceSelector));
 
-// Keep the URL-backed service selection honest for every page that
-// uses the shell picker. A stale `?service=` can survive navigation or
-// manual URL entry; the switch label used to fall back visually to the
-// first row while the metric query still waited for a valid service.
+// Seed `?service=` on first visit and repair a stale URL pick (a
+// bookmark / cross-layer link whose service no longer exists). The
+// repair call passes `keepNarrower: true` so the auto-rewrite during
+// a periodic refetch can't silently drop a still-valid `?instance=` /
+// `?endpoint=` — that drop is reserved for the user explicitly picking
+// a different service in the dropdown (pickService).
 watch(
   [sampledServices, selectedId, viewOwnsServiceSelector],
   ([rows, id, ownsSelector]) => {
@@ -162,7 +164,7 @@ watch(
     const first = rows[0];
     if (!first) return;
     if (!id || !rows.some((s) => s.serviceId === id)) {
-      setSelected(first.serviceId);
+      setSelected(first.serviceId, { keepNarrower: Boolean(id) });
     }
   },
   { immediate: true },

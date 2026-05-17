@@ -32,13 +32,78 @@
   "dashboards": {
     "instance": [
       {
-        "id": "up_rq_active",
+        "id": "bug_failures_card",
+        "title": "Bug Failures",
+        "tip": "Envoy internal bug-failure counter — non-zero indicates an assertion / debug check tripped (envoy_bug_failures).",
+        "type": "card",
+        "unit": "count",
+        "expressions": [
+          "latest(envoy_bug_failures)"
+        ],
+        "span": 3,
+        "rowSpan": 1,
+        "format": "int"
+      },
+      {
+        "id": "membership_healthy_card",
+        "title": "Membership Healthy",
+        "tip": "Healthy endpoints across all clusters (envoy_cluster_membership_healthy).",
+        "type": "card",
+        "unit": "endpoints",
+        "expressions": [
+          "latest(envoy_cluster_membership_healthy)"
+        ],
+        "span": 3,
+        "rowSpan": 1,
+        "format": "int"
+      },
+      {
+        "id": "worker_threads_card",
+        "title": "Worker Threads",
+        "tip": "Concurrent worker threads currently in use (envoy_worker_threads).",
+        "type": "card",
+        "unit": "threads",
+        "expressions": [
+          "latest(envoy_worker_threads)"
+        ],
+        "span": 3,
+        "rowSpan": 1,
+        "format": "int"
+      },
+      {
+        "id": "up_rq_active_card",
         "title": "Upstream Request Active",
-        "tip": "Total active upstream requests from this Envoy sidecar's clusters (envoy_cluster_up_rq_active).",
+        "tip": "Total active upstream requests across this Envoy's clusters (envoy_cluster_up_rq_active).",
+        "type": "card",
+        "unit": "reqs",
+        "expressions": [
+          "latest(envoy_cluster_up_rq_active)"
+        ],
+        "span": 3,
+        "rowSpan": 1,
+        "format": "int"
+      },
+      {
+        "id": "up_cx_active",
+        "title": "Upstream Connection Active",
+        "tip": "Active upstream connections (envoy_cluster_up_cx_active).",
+        "type": "line",
+        "unit": "conns",
+        "expressions": [
+          "envoy_cluster_up_cx_active"
+        ],
+        "span": 3,
+        "rowSpan": 2,
+        "format": "int"
+      },
+      {
+        "id": "up_rq_pending",
+        "title": "Upstream Request Pending",
+        "tip": "Requests pending in upstream queues (envoy_cluster_up_rq_pending_active).",
         "type": "line",
         "unit": "reqs",
         "expressions": [
-          "envoy_cluster_up_rq_active"
+          "envoy_cluster_up_rq_pending_active"
         ],
         "span": 3,
         "rowSpan": 2,
@@ -63,19 +128,6 @@
         "format": "int"
       },
       {
-        "id": "membership_healthy",
-        "title": "Membership Healthy",
-        "tip": "Healthy endpoints across all outbound/inbound clusters (envoy_cluster_membership_healthy).",
-        "type": "line",
-        "unit": "endpoints",
-        "expressions": [
-          "envoy_cluster_membership_healthy"
-        ],
-        "span": 3,
-        "rowSpan": 2,
-        "format": "int"
-      },
-      {
         "id": "up_cx_incr",
         "title": "Upstream Connection Increase",
         "tip": "New upstream connections opened per minute (envoy_cluster_up_cx_incr).",
@@ -89,15 +141,33 @@
         "format": "int"
       },
       {
-        "id": "up_rq_pending",
-        "title": "Upstream Request Pending",
-        "tip": "Requests pending in upstream queues (envoy_cluster_up_rq_pending_active).",
+        "id": "up_rq_incr",
+        "title": "Upstream Request Increase",
+        "tip": "New upstream requests per minute (envoy_cluster_up_rq_incr).",
         "type": "line",
-        "unit": "reqs",
+        "unit": "/min",
         "expressions": [
-          "envoy_cluster_up_rq_pending_active"
+          "envoy_cluster_up_rq_incr"
         ],
         "span": 3,
+        "rowSpan": 2,
+        "format": "int"
+      },
+      {
+        "id": "worker_threads_trend",
+        "title": "Worker Threads (current vs max)",
+        "tip": "Concurrent worker threads in use vs the window max (envoy_worker_threads / envoy_worker_threads_max).",
+        "type": "line",
+        "unit": "threads",
+        "expressions": [
+          "envoy_worker_threads",
+          "envoy_worker_threads_max"
+        ],
+        "expressionLabels": [
+          "current",
+          "max"
+        ],
+        "span": 6,
         "rowSpan": 2,
         "format": "int"
       },
@@ -125,63 +195,6 @@
         ],
         "span": 6,
         "rowSpan": 3
-      },
-      {
-        "id": "bug_failures",
-        "title": "Bug Failures",
-        "tip": "Envoy internal bug-failure counter \u2014 non-zero indicates an assertion / debug check tripped (envoy_bug_failures).",
-        "type": "line",
-        "unit": "count",
-        "expressions": [
-          "envoy_bug_failures"
-        ],
-        "span": 3,
-        "rowSpan": 2,
-        "format": "int"
-      },
-      {
-        "id": "worker_threads",
-        "title": "Worker Threads",
-        "tip": "Concurrent worker threads in use vs the window max (envoy_worker_threads / envoy_worker_threads_max).",
-        "type": "line",
-        "unit": "threads",
-        "expressions": [
-          "envoy_worker_threads",
-          "envoy_worker_threads_max"
-        ],
-        "expressionLabels": [
-          "current",
-          "max"
-        ],
-        "span": 3,
-        "rowSpan": 2,
-        "format": "int"
-      },
-      {
-        "id": "up_cx_active",
-        "title": "Upstream Connection Active",
-        "tip": "Active upstream connections (envoy_cluster_up_cx_active).",
-        "type": "line",
-        "unit": "conns",
-        "expressions": [
-          "envoy_cluster_up_cx_active"
-        ],
-        "span": 3,
-        "rowSpan": 2,
-        "format": "int"
-      },
-      {
-        "id": "up_rq_incr",
-        "title": "Upstream Request Increase",
-        "tip": "New upstream requests per minute (envoy_cluster_up_rq_incr).",
-        "type": "line",
-        "unit": "/min",
-        "expressions": [
-          "envoy_cluster_up_rq_incr"
-        ],
-        "span": 3,
-        "rowSpan": 2,
-        "format": "int"
       }
     ]
   },
