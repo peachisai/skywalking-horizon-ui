@@ -159,10 +159,17 @@ watch(landingRows, (rows) => {
     setSelectedService(first.serviceId);
   }
 }, { immediate: true });
-// Drop the stale instance whenever the service changes — the new
-// service's instance list almost never matches the previous pick.
+// Drop the stale instance whenever the service ACTUALLY changes —
+// the new service's instance list almost never matches the previous
+// pick. The transition `null → "service-name"` (initial landing
+// resolution) is NOT a service change and must not clear the URL
+// `?instance=` — doing so blew away the operator's URL pick before
+// the auto-pick / fallback path could even read it, and the dashboard
+// query then waited for the next instance list + auto-pick cycle.
+// Only fire when both ends of the transition are real service names.
 watch(serviceName, (next, prev) => {
-  if (prev !== undefined && next !== prev && selectedInstance.value) {
+  if (!prev || !next) return;
+  if (next !== prev && selectedInstance.value) {
     setSelectedInstance(null);
   }
 });
@@ -264,9 +271,12 @@ watchEffect(() => {
     setSelectedEndpoint(list[0].name);
   }
 });
-// Drop stale endpoint when service changes.
+// Drop stale endpoint when service ACTUALLY changes — same rule as
+// the instance counterpart above: the `null → name` landing-resolution
+// transition must not clear the URL `?endpoint=`.
 watch(serviceName, (next, prev) => {
-  if (prev !== undefined && next !== prev && selectedEndpoint.value) {
+  if (!prev || !next) return;
+  if (next !== prev && selectedEndpoint.value) {
     setSelectedEndpoint(null);
   }
 });
