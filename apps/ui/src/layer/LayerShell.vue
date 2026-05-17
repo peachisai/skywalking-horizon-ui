@@ -44,11 +44,22 @@ import { parseServiceName } from '@/utils/serviceName';
 const route = useRoute();
 const router = useRouter();
 const layerKey = computed(() => String(route.params.layerKey ?? ''));
-const { layers } = useLayers();
+const { layers, isLoading: layersLoading } = useLayers();
 const layer = computed<LayerDef | null>(() => {
   const found = layers.value.find((l) => l.key === layerKey.value);
   return found ?? null;
 });
+// Distinguishes "still loading" from "truly absent" so the "Layer
+// not found" card doesn't flash during a login → layer-URL redirect
+// (the menu fetch is in-flight and `layers.value` is briefly []).
+// We treat the layer as missing only after the menu request has
+// settled AND the layer key still isn't in the result.
+const layerMissing = computed<boolean>(
+  () => !layersLoading.value && layers.value.length > 0 && layer.value === null,
+);
+const menuStillLoading = computed<boolean>(
+  () => !layer.value && (layersLoading.value || layers.value.length === 0),
+);
 
 // Auto-redirect when the URL targets a sub-route the layer doesn't
 // support — e.g. `/layer/mesh_dp/service` on a layer with
@@ -363,7 +374,22 @@ const serviceKpis = computed<HeaderKpi[]>(() => {
       @select="pickService"
     />
 
-    <div v-if="!layer" class="missing">
+    <!-- Loading state for the menu fetch — appears in the login →
+         layer-URL redirect window where the menu is still in flight
+         and we can't yet tell whether the layer exists. -->
+    <div v-if="menuStillLoading" class="missing">
+      <div class="sw-card missing-card">
+        <Icon name="event" :size="18" />
+        <div>
+          <h2>Loading layers…</h2>
+          <p>Resolving <code>{{ layerKey }}</code> against the OAP layer registry.</p>
+        </div>
+      </div>
+    </div>
+    <!-- Truly not in the registry. Only shown once the menu fetch
+         has settled with a non-empty result; avoids the post-login
+         "Layer not found" flash. -->
+    <div v-else-if="layerMissing" class="missing">
       <div class="sw-card missing-card">
         <Icon name="alert" :size="18" />
         <div>
