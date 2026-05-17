@@ -537,6 +537,17 @@ function isVisible(
     <div v-else-if="widgets.length === 0" class="empty">
       No widgets defined for this layer. Phase 7 admin will let operators add their own.
     </div>
+    <!-- Single page-level loading state while the widget batch is
+         in flight without a prior result. Replaces the per-widget
+         "loading…" cards from f9866cf — the dashboard query is
+         batched so the widgets all land together; one indicator is
+         cleaner than N. Once the result is in `data`, the grid
+         takes over and shows each widget's value / no-data / error
+         normally. Background refetches (auto-refresh) keep showing
+         the prior data, no flash. -->
+    <div v-else-if="isFetching && data === null" class="empty reading">
+      <span class="reading-dot" /> Reading data…
+    </div>
     <div v-else class="grid">
       <div
         v-for="w in widgets.filter((wi) => isVisible(wi, resultsById.get(wi.id)))"
@@ -650,6 +661,24 @@ function isVisible(
   text-align: center;
   color: var(--sw-fg-3);
   font-size: 12px;
+}
+.empty.reading {
+  color: var(--sw-fg-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.reading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sw-accent);
+  animation: reading-pulse 1.1s ease-in-out infinite;
+}
+@keyframes reading-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.7); }
+  50%      { opacity: 1;    transform: scale(1);   }
 }
 .instance-bar {
   padding: 0;

@@ -17,7 +17,6 @@
 
 import { computed, type Ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { useAutoRefreshSubscribe } from '../controls/useAutoRefreshSubscribe';
 import type { LandingConfig, LandingResponse, LayerDef } from '@skywalking-horizon-ui/api-client';
 import { bffClient } from '@/api/client';
 
@@ -62,6 +61,13 @@ export function useLayerLanding(
     return `${r.step}:${Math.floor(r.startMs / 60_000)}:${Math.floor(r.endMs / 60_000)}`;
   });
 
+  // Service list is fetched ONCE per (layer, cfg, range) and stays
+  // cached. No `refetchInterval`, no `refetchOnWindowFocus`, not
+  // wired into the global auto-refresh ticker: the operator-facing
+  // contract is "service list doesn't move under you". Manual
+  // refresh is the `q.refetch()` handle exposed below — wired to
+  // a refresh button in LayerShell so operators can pull a fresh
+  // list on demand.
   const q = useQuery({
     queryKey: ['layer-landing', layerKey, cfgHash, rangeKey],
     queryFn: () =>
@@ -70,13 +76,10 @@ export function useLayerLanding(
         cfg.value,
         rangeRef.value ?? undefined,
       ),
-    staleTime: 45_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
     retry: 1,
   });
-
-  useAutoRefreshSubscribe(() => q.refetch());
 
   const data = computed<LandingResponse | null>(() => q.data.value ?? null);
   const rows = computed(() => data.value?.rows ?? []);

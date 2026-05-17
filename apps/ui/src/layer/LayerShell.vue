@@ -348,6 +348,19 @@ const serviceKpis = computed<HeaderKpi[]>(() => {
           <span v-if="selectedGroup" class="svc-group">{{ selectedGroup }}</span>
           <span class="svc-name">{{ selectedName }}</span>
         </button>
+        <!-- Manual refresh — the service list is fetched once per
+             (layer, cfg, range) and stays cached afterwards, so the
+             operator needs an explicit affordance to pull a fresh
+             list. Spins while the refetch is in flight. -->
+        <button
+          class="sw-btn ghost svc-refresh"
+          type="button"
+          :title="landing.isFetching.value ? 'Refreshing service list…' : 'Refresh service list'"
+          :disabled="landing.isFetching.value"
+          @click="() => landing.refetch()"
+        >
+          <Icon name="refresh" :class="{ spin: landing.isFetching.value }" />
+        </button>
         <div v-if="serviceKpis.length > 0" class="kpi-strip service-kpis">
           <div v-for="(k, i) in serviceKpis" :key="i" class="kpi compact">
             <span class="kpi-label inline">
@@ -411,6 +424,21 @@ const serviceKpis = computed<HeaderKpi[]>(() => {
 </template>
 
 <style scoped>
+.svc-refresh {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.svc-refresh :deep(svg.spin) {
+  animation: svc-refresh-spin 0.9s linear infinite;
+}
+@keyframes svc-refresh-spin {
+  to { transform: rotate(360deg); }
+}
+
 .layer-shell {
   padding: 16px 20px 48px;
   max-width: 1440px;
