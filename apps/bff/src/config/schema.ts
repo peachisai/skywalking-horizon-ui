@@ -17,10 +17,22 @@
 
 import { z } from 'zod';
 
+// Env-var-overridable bind defaults. The Docker image sets
+// `HORIZON_SERVER_HOST=0.0.0.0` so a zero-config `docker run -p 8081:8081
+// horizon-ui:local` reaches the BFF (the YAML default `127.0.0.1` would
+// bind container-loopback and silently 502 from the host side). An
+// explicit `server.host`/`server.port` in horizon.yaml always wins.
+const serverHostDefault = process.env.HORIZON_SERVER_HOST ?? '127.0.0.1';
+const serverPortDefault = (() => {
+  const raw = process.env.HORIZON_SERVER_PORT;
+  if (!raw) return 8081;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 8081;
+})();
 const serverSchema = z
   .object({
-    host: z.string().default('127.0.0.1'),
-    port: z.number().int().positive().default(8081),
+    host: z.string().default(serverHostDefault),
+    port: z.number().int().positive().default(serverPortDefault),
     staticDir: z.string().optional(),
   })
   .strict();

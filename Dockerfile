@@ -59,6 +59,8 @@ RUN mkdir -p /data && chown horizon:horizon /data
 VOLUME ["/data"]
 
 ENV NODE_ENV=production \
+    HORIZON_SERVER_HOST=0.0.0.0 \
+    HORIZON_SERVER_PORT=8081 \
     HORIZON_STATIC_DIR=/app/static \
     HORIZON_CONFIG=/app/horizon.yaml \
     HORIZON_AUDIT_FILE=/data/horizon-audit.jsonl \
