@@ -19,12 +19,19 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as monaco from 'monaco-editor';
 import { setupMonaco, RR_THEME_NAME } from '../../../monaco/setup.js';
 
-const props = defineProps<{
-  /** "before" — what's currently on the server (or bundled). */
-  original: string;
-  /** "after" — what the user has in the buffer. */
-  modified: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** "before" — what's currently on the server (or bundled). */
+    original: string;
+    /** "after" — what the user has in the buffer. */
+    modified: string;
+    /** Monaco language id for syntax highlighting. Defaults to `yaml`
+     *  because the rule editor (the original caller) is YAML; the
+     *  template-diff modal passes `json`. */
+    language?: string;
+  }>(),
+  { language: 'yaml' },
+);
 
 const host = ref<HTMLDivElement | null>(null);
 let diff: monaco.editor.IStandaloneDiffEditor | null = null;
@@ -35,8 +42,8 @@ onMounted(() => {
   if (!host.value) return;
   setupMonaco();
 
-  originalModel = monaco.editor.createModel(props.original, 'yaml');
-  modifiedModel = monaco.editor.createModel(props.modified, 'yaml');
+  originalModel = monaco.editor.createModel(props.original, props.language);
+  modifiedModel = monaco.editor.createModel(props.modified, props.language);
 
   diff = monaco.editor.createDiffEditor(host.value, {
     theme: RR_THEME_NAME,

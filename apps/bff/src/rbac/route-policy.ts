@@ -187,6 +187,15 @@ export const ROUTE_POLICY: Record<string, RoutePolicy> = {
   'POST /api/admin/overview-templates/:id':        'overview:write',
   'DELETE /api/admin/overview-templates/:id':      'overview:write',
 
+  // ── Template sync (admin) — OAP UI-template REST overlay ─────────
+  // Read = anyone with overview:read can see status. Write actions
+  // (push-bundled, save, resync) need overview:write because save is
+  // the only path that mutates OAP UI-templates.
+  'GET /api/admin/templates/sync-status':          'overview:read',
+  'POST /api/admin/templates/resync':              'overview:write',
+  'POST /api/admin/templates/save':                'overview:write',
+  'POST /api/admin/templates/:name/push-bundled':  'overview:write',
+
   // ── Auth/admin self-introspection ────────────────────────────────
   'GET /api/admin/auth-status':                    'auth:read',
   'POST /api/admin/auth-status/probe':             'auth:read',

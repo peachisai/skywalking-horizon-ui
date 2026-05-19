@@ -37,11 +37,19 @@ import type {
   TopologyConfig,
   TopologyMetricDef,
 } from '@skywalking-horizon-ui/api-client';
-import { bffClient } from '@/api/client';
+import { bff, bffClient } from '@/api/client';
 import TimeChart from '@/components/charts/TimeChart.vue';
 import TopList from '@/components/charts/TopList.vue';
 import { fmtMetric } from '@/utils/formatters';
 import { mockCardValue, mockLineSeries, mockRecordRows, mockTopGroups } from './widget-mock';
+import SyncStatusBanner from '@/features/admin/_shared/SyncStatusBanner.vue';
+import TemplateStatusBadge from '@/features/admin/_shared/TemplateStatusBadge.vue';
+import TemplateDiffModal from '@/features/admin/_shared/TemplateDiffModal.vue';
+import { useTemplateSync } from '@/features/admin/_shared/useTemplateSync';
+
+// OAP UI-template sync status for layer dashboards. Drives the banner +
+// Save gating + per-row badge below.
+const sync = useTemplateSync({ kind: 'layer' });
 
 const SCOPES: DashboardScope[] = [
   'service',
@@ -446,18 +454,42 @@ function textToExpressions(s: string): string[] {
     .filter((x) => x.length > 0);
 }
 
+// Diverged-row diff & reset: when OAP's copy of the selected layer
+// differs from bundled, opening the diff modal shows a side-by-side
+// and lets the operator reset OAP back to bundled (with
+// destructive-confirm — must type the layer key).
+const selectedStatus = computed(() =>
+  selectedKey.value ? sync.badgeFor(`horizon.layer.${selectedKey.value}`) : null,
+);
+const isDiverged = computed(() => selectedStatus.value === 'diverged');
+const diffModalOpen = ref(false);
+function openDiffModal(): void { diffModalOpen.value = true; }
+function onDiffReset(): void {
+  saveMsg.value = 'OAP reset to bundled. Reload to see widget changes.';
+  setTimeout(() => (saveMsg.value = null), 2400);
+}
+
 async function save(): Promise<void> {
   if (!draft.template || isSaving.value) return;
+  if (sync.readOnly.value) {
+    saveMsg.value = 'cannot save — OAP is unreachable, page is read-only';
+    return;
+  }
   isSaving.value = true;
   saveMsg.value = null;
   try {
-    const res = await bffClient.layerTemplates.save(draft.template);
-    // Splice the returned template back into the list so subsequent
-    // dirty diffs are against the persisted state.
+    // Save goes to OAP via the template-sync proxy (bundled is
+    // immutable at runtime). The BFF wraps draft.template in the
+    // canonical envelope before PUTting to OAP.
+    await bff.templateSync.save(`horizon.layer.${draft.template.key}`, draft.template);
+    // After OAP write, mirror the change into the in-memory editor
+    // list so the local diff baseline updates immediately.
     const idx = templates.value.findIndex((t) => t.key === selectedKey.value);
-    if (idx >= 0 && res.template) templates.value[idx] = res.template;
+    if (idx >= 0) {
+      templates.value[idx] = JSON.parse(JSON.stringify(draft.template));
+    }
     syncDraft();
-    saveMsg.value = 'Saved.';
+    saveMsg.value = 'Saved to OAP.';
     setTimeout(() => (saveMsg.value = null), 2400);
   } catch (err) {
     saveMsg.value = err instanceof Error ? err.message : String(err);
@@ -813,10 +845,13 @@ const namingTest = computed<NamingTestResult>(() => {
         <p class="lede">
           Each layer ships with a JSON template (alias, components, metric columns, widgets).
           Pick a layer on the left, switch scopes (service / instance / endpoint / trace /
-          profiling), edit widgets in place, and save back to the JSON.
+          profiling), edit widgets in place. Edits write to OAP via the UI-template REST
+          surface — bundled JSON is the seed + read-only fallback.
         </p>
       </div>
     </header>
+
+    <SyncStatusBanner :banner="sync.banner.value" />
 
     <div v-if="error" class="banner err">{{ error }}</div>
     <div v-if="isLoading" class="empty">Loading templates…</div>
@@ -848,6 +883,7 @@ const namingTest = computed<NamingTestResult>(() => {
           >
             <span class="dot" :style="{ background: t.color || 'var(--sw-fg-3)' }" />
             <span class="name">{{ t.alias || t.key }}</span>
+            <TemplateStatusBadge :status="sync.badgeFor(`horizon.layer.${t.key}`)" />
           </button>
         </template>
         <!-- Collapsed mode shows just colored dots for navigation; click
@@ -888,12 +924,22 @@ const namingTest = computed<NamingTestResult>(() => {
                 Reset
               </button>
               <button
+                v-if="isDiverged && !sync.readOnly.value"
+                class="sw-btn"
+                type="button"
+                title="Show side-by-side diff vs OAP, and reset OAP back to bundled (with confirmation)."
+                @click="openDiffModal"
+              >
+                Show diff &amp; reset
+              </button>
+              <button
                 class="sw-btn is-primary"
                 type="button"
-                :disabled="!dirty || isSaving"
+                :disabled="!dirty || isSaving || sync.readOnly.value"
+                :title="sync.readOnly.value ? 'OAP unreachable — page is read-only' : ''"
                 @click="save"
               >
-                {{ isSaving ? 'Saving…' : 'Save' }}
+                {{ isSaving ? 'Saving…' : sync.readOnly.value ? 'Read-only' : 'Save to OAP' }}
               </button>
             </div>
           </div>
@@ -1749,6 +1795,15 @@ const namingTest = computed<NamingTestResult>(() => {
         </section>
       </main>
     </div>
+
+    <TemplateDiffModal
+      v-if="selectedKey"
+      :open="diffModalOpen"
+      :name="`horizon.layer.${selectedKey}`"
+      :confirm-key="selectedKey"
+      @close="diffModalOpen = false"
+      @reset="onDiffReset"
+    />
   </div>
 </template>
 

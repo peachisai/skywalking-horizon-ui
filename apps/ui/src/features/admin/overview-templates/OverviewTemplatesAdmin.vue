@@ -36,7 +36,7 @@
   decisions, not config tweaks.
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, watchEffect } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import type {
   OverviewDashboard,
@@ -45,6 +45,14 @@ import type {
 } from '@skywalking-horizon-ui/api-client';
 import { bff } from '@/api/client';
 import { useLayers } from '@/shell/useLayers';
+import SyncStatusBanner from '@/features/admin/_shared/SyncStatusBanner.vue';
+import TemplateStatusBadge from '@/features/admin/_shared/TemplateStatusBadge.vue';
+import TemplateDiffModal from '@/features/admin/_shared/TemplateDiffModal.vue';
+import { useTemplateSync } from '@/features/admin/_shared/useTemplateSync';
+
+// OAP UI-template sync status for the Overview kind. Drives the
+// page-level banner + read-only mode + per-row badge lookup.
+const sync = useTemplateSync({ kind: 'overview' });
 
 const listQuery = useQuery({
   queryKey: ['admin/overview-templates'],
@@ -56,21 +64,24 @@ const dashboards = computed(() => listQuery.data.value?.dashboards ?? []);
 const selectedId = ref<string>('');
 /* Auto-select rule: if nothing is selected (cold start), pick the
  * first dashboard. If the currently-selected id disappears from the
- * list (just deleted by the operator), fall back to the new first. */
-watch(
-  () => dashboards.value,
-  (list) => {
-    if (list.length === 0) {
-      selectedId.value = '';
-      return;
-    }
-    const stillExists = list.some((d) => d.id === selectedId.value);
-    if (!selectedId.value || !stillExists) {
-      selectedId.value = list[0]!.id;
-    }
-  },
-  { immediate: true },
-);
+ * list (just deleted by the operator), fall back to the new first.
+ *
+ * `watchEffect` instead of `watch(immediate:true)` because the watch
+ * variant missed the transition when `listQuery` was already cached
+ * by vue-query at mount time (staleTime: 60_000) — the watcher fired
+ * once with the populated list and once with the empty fallback, in
+ * an order that left selectedId blank. watchEffect re-runs eagerly
+ * whenever its reactive deps change AND on first paint. */
+watchEffect(() => {
+  const list = dashboards.value;
+  if (list.length === 0) {
+    if (selectedId.value !== '') selectedId.value = '';
+    return;
+  }
+  if (!selectedId.value || !list.some((d) => d.id === selectedId.value)) {
+    selectedId.value = list[0]!.id;
+  }
+});
 
 // ── New-dashboard composer ─────────────────────────────────────────
 const newDashOpen = ref(false);
@@ -300,13 +311,37 @@ const isDirty = computed<boolean>(() => {
   return JSON.stringify(cur) !== JSON.stringify(orig);
 });
 
+// Diverged-row controls: shown only when OAP's copy differs from
+// bundled for the currently-selected dashboard. The "show diff &
+// reset" modal opens a Monaco side-by-side and the destructive
+// confirm UI (operator types the dashboard id to arm Reset).
+const selectedStatus = computed(() =>
+  selectedId.value ? sync.badgeFor(`horizon.overview.${selectedId.value}`) : null,
+);
+const isDiverged = computed(() => selectedStatus.value === 'diverged');
+const diffModalOpen = ref(false);
+function openDiffModal(): void { diffModalOpen.value = true; }
+async function onDiffReset(): Promise<void> {
+  await detailQuery.refetch();
+  setFlash('OAP reset to bundled · reload the overview to see widget changes');
+}
+
 async function onSave(): Promise<void> {
   if (!draft.value || !selectedId.value) return;
+  if (sync.readOnly.value) {
+    setFlash('cannot save — OAP is unreachable, page is read-only');
+    return;
+  }
   saving.value = true;
   try {
-    await bff.overview.adminSave(selectedId.value, draft.value);
+    // Save goes to OAP via the BFF template-sync proxy (not to disk).
+    // The new `/api/admin/templates/save` endpoint wraps content in
+    // the canonical envelope and PUTs it to OAP. Bundled JSON stays
+    // immutable at runtime — it's a code-shape decision, not an
+    // operator one.
+    await bff.templateSync.save(`horizon.overview.${selectedId.value}`, draft.value);
     await detailQuery.refetch();
-    setFlash('saved · reload the overview to see widget changes');
+    setFlash('saved to OAP · reload the overview to see widget changes');
   } catch (err) {
     setFlash(err instanceof Error ? `error: ${err.message}` : 'save failed');
   } finally {
@@ -458,14 +493,16 @@ function widgetKindLabel(type: OverviewWidget['type']): string {
         <div class="ot__kicker">Dashboard setup · Overviews</div>
         <h1>Overview templates</h1>
         <p class="ot__lede">
-          Per-widget editor for the bundled overview dashboards. Each widget kind shows only
-          the fields it consumes — e.g. <code>kpi-tile</code> exposes its KPI row list with
-          number / progress-bar style; <code>alarms</code> exposes the row limit. Type and
-          widget set are code-shape decisions and stay frozen; edits write back to
-          <code>bundled_templates/overviews/*.json</code> and refresh the BFF cache.
+          Per-widget editor for the overview dashboards. Each widget kind shows only the fields
+          it consumes — e.g. <code>kpi-tile</code> exposes its KPI row list with number /
+          progress-bar style; <code>alarms</code> exposes the row limit. Type and widget set
+          are code-shape decisions and stay frozen; edits write to OAP via the UI-template
+          REST surface (bundled JSON is the seed + read-only fallback).
         </p>
       </div>
     </header>
+
+    <SyncStatusBanner :banner="sync.banner.value" />
 
     <div v-if="listQuery.isPending.value" class="ot__empty">loading…</div>
 
@@ -484,6 +521,7 @@ function widgetKindLabel(type: OverviewWidget['type']): string {
             <code>{{ d.id }}</code>
             <span>{{ d.widgetCount }} widget{{ d.widgetCount === 1 ? '' : 's' }}</span>
             <span v-if="!d.editable" class="ot__readonly-tag">no source file</span>
+            <TemplateStatusBadge :status="sync.badgeFor(`horizon.overview.${d.id}`)" />
           </div>
         </li>
         <li v-if="dashboards.length === 0" class="ot__list-empty">No overview templates loaded.</li>
@@ -492,6 +530,8 @@ function widgetKindLabel(type: OverviewWidget['type']): string {
             v-if="!newDashOpen"
             type="button"
             class="ot__add-trigger ot__add-trigger--list"
+            :disabled="sync.readOnly.value"
+            :title="sync.readOnly.value ? 'OAP unreachable — cannot create' : ''"
             @click="openNewDash"
           >+ New dashboard</button>
           <div v-else class="ot__newdash">
@@ -563,7 +603,8 @@ function widgetKindLabel(type: OverviewWidget['type']): string {
             <button
               type="button"
               class="ot__head-btn ot__head-btn--danger"
-              :title="`Delete dashboard ${draft.id}`"
+              :disabled="sync.readOnly.value"
+              :title="sync.readOnly.value ? 'OAP unreachable — cannot delete' : `Delete dashboard ${draft.id}`"
               @click="deleteCurrentDash"
             >delete</button>
           </header>
@@ -995,17 +1036,36 @@ function widgetKindLabel(type: OverviewWidget['type']): string {
               reset
             </button>
             <button
+              v-if="isDiverged && !sync.readOnly.value"
+              type="button"
+              class="ot__btn"
+              title="Show side-by-side diff vs OAP, and reset OAP back to bundled (with confirmation)."
+              @click="openDiffModal"
+            >
+              show diff &amp; reset
+            </button>
+            <button
               type="button"
               class="ot__btn ot__btn--primary"
-              :disabled="!isDirty || saving"
+              :disabled="!isDirty || saving || sync.readOnly.value"
+              :title="sync.readOnly.value ? 'OAP unreachable — page is read-only' : ''"
               @click="onSave"
             >
-              {{ saving ? 'saving…' : 'save' }}
+              {{ saving ? 'saving…' : sync.readOnly.value ? 'read-only' : 'save to OAP' }}
             </button>
           </div>
         </template>
       </section>
     </div>
+
+    <TemplateDiffModal
+      v-if="selectedId"
+      :open="diffModalOpen"
+      :name="`horizon.overview.${selectedId}`"
+      :confirm-key="selectedId"
+      @close="diffModalOpen = false"
+      @reset="onDiffReset"
+    />
   </div>
 </template>
 

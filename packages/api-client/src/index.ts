@@ -193,6 +193,13 @@ export {
   type InstanceAlarmStatus,
 } from './alarm-status.js';
 export {
+  UITemplateClient,
+  UITemplateApiError,
+  type UITemplateClientOptions,
+  type UITemplateRow,
+  type TemplateChangeStatus,
+} from './ui-template.js';
+export {
   OalClient,
   type OalClientOptions,
   type OalFilesResponse,

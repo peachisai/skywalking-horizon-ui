@@ -54,6 +54,10 @@ import { registerAlarmsConfigRoutes } from './http/config/alarms.js';
 import { registerSetupRoutes } from './http/config/setup.js';
 import { registerOverviewRoutes } from './http/config/overview.js';
 import { registerConfigBundleRoute } from './http/config/bundle.js';
+import { registerTemplateSyncAdminRoutes } from './http/admin/template-sync.js';
+import { buildOapClients } from './client/index.js';
+import { bootSeed } from './logic/templates/sync.js';
+import { iterateBundledTemplates } from './logic/templates/aggregator.js';
 // Admin (operational tools)
 import { registerDslCatalogRoutes } from './http/admin/dsl/catalog.js';
 import { registerDslRuleRoutes } from './http/admin/dsl/rule.js';
@@ -166,7 +170,11 @@ if (process.env.NODE_ENV !== 'test') startLayerTemplateWatcher();
 registerAlarmsConfigRoutes(app, { config: source, sessions, audit, store: alarmsStore, serviceLayer });
 registerSetupRoutes(app, { config: source, sessions, audit, store: setupStore });
 registerOverviewRoutes(app, { config: source, sessions });
-registerConfigBundleRoute(app, { config: source, sessions });
+registerConfigBundleRoute(app, {
+  config: source,
+  sessions,
+  uiTemplateClient: () => buildOapClients(source.current).uiTemplate(),
+});
 
 // ── Admin ──────────────────────────────────────────────────────────
 registerDslCatalogRoutes(app, { config: source, sessions, audit });
@@ -180,6 +188,11 @@ registerAlarmRulesRoutes(app, { config: source, sessions });
 registerOverviewTemplatesAdminRoutes(app, { config: source, sessions });
 registerAuthStatusRoutes(app, { config: source, ldapHealth, sessions });
 registerAdminUsersRoute(app, { config: source, seenCache });
+registerTemplateSyncAdminRoutes(app, {
+  config: source,
+  sessions,
+  uiTemplateClient: () => buildOapClients(source.current).uiTemplate(),
+});
 
 // Serve the built SPA out of the BFF when a static dir is configured.
 // Two paths to set it:
@@ -208,18 +221,50 @@ if (staticDir && existsSync(staticDir)) {
 
 app.get('/api/health', async () => ({
   status: 'ok',
-  version: process.env.HORIZON_VERSION ?? '0.1.0',
+  version: process.env.HORIZON_VERSION ?? '0.4.0',
   sessions: sessions.size(),
 }));
 
 const { host, port } = source.current.server;
 app.listen({ host, port }).then(
-  () => logger.info(`BFF listening on http://${host}:${port}`),
+  () => {
+    logger.info(`BFF listening on http://${host}:${port}`);
+    // Fire-and-forget the boot-time OAP template seed: list OAP, POST any
+    // bundled template that's missing on the OAP side. This is the ONLY
+    // path that writes implicitly to OAP — runtime sync is read-only.
+    // Failures are non-fatal: the BFF stays up, the UI falls back to
+    // bundled templates and shows the read-only banner.
+    void bootSeed({
+      client: buildOapClients(source.current).uiTemplate(),
+      bundled: () => iterateBundledTemplates(),
+      logger,
+    })
+      .then((status) => {
+        if (status.unreachable) {
+          logger.warn(
+            { lastSuccessfulSyncAt: status.lastSuccessfulSyncAt },
+            'OAP UI-template boot seed: admin unreachable, rendering bundled (admin pages will be read-only until OAP comes back)',
+          );
+        } else {
+          const counts = countByStatus(status.rows);
+          logger.info(counts, 'OAP UI-template boot seed: complete');
+        }
+      })
+      .catch((err) => {
+        logger.error({ err }, 'OAP UI-template boot seed: unexpected error');
+      });
+  },
   (err) => {
     logger.fatal({ err }, 'failed to start BFF');
     process.exit(1);
   },
 );
+
+function countByStatus(rows: Array<{ status: string }>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of rows) out[r.status] = (out[r.status] ?? 0) + 1;
+  return out;
+}
 
 async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down');

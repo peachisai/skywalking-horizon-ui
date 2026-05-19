@@ -66,6 +66,7 @@ import { LayerTemplatesApi } from './scopes/layer-template';
 import { ConfigsApi } from './scopes/configs';
 import { AdminAuthApi } from './scopes/admin-auth';
 import { AdminUsersApi } from './scopes/admin-users';
+import { TemplateSyncApi } from './scopes/template-sync';
 
 // ── Wire types re-exported from @skywalking-horizon-ui/api-client ────
 // Re-exported so consumers can import everything from this module.
@@ -613,6 +614,7 @@ export class BffClient {
   readonly configs = new ConfigsApi(this);
   readonly adminAuth = new AdminAuthApi(this);
   readonly adminUsers = new AdminUsersApi(this);
+  readonly templateSync = new TemplateSyncApi(this);
 }
 
 export const bffClient = new BffClient();

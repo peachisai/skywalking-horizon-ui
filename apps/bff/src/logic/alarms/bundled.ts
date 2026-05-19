@@ -1,0 +1,63 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * Bundled defaults for the Alert page-setup template. Lives next to the
+ * layer and overview bundled JSON so the sync orchestrator can treat all
+ * three families uniformly — there's exactly one alert template
+ * (`horizon.alert.page-setup`) and it ships with the BFF.
+ *
+ * Resolved via the same path-search as the layer loader: dev source tree
+ * first, then the packaged dist layout. Keeps the file readable and
+ * editable in dev without forcing a rebuild step.
+ */
+
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { AlarmsConfig } from './store.js';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+let cached: AlarmsConfig | null = null;
+
+export function loadBundledAlertPageSetup(): AlarmsConfig {
+  if (cached) return cached;
+  const file = locateAlertBundle();
+  const raw = readFileSync(file, 'utf8');
+  const parsed = JSON.parse(raw) as AlarmsConfig;
+  cached = parsed;
+  return parsed;
+}
+
+export function invalidateAlertBundleCache(): void {
+  cached = null;
+}
+
+function locateAlertBundle(): string {
+  const candidates = [
+    resolve(HERE, '../../bundled_templates/alert/page-setup.json'),
+    resolve(HERE, '../bundled_templates/alert/page-setup.json'),
+    resolve(HERE, '../../../bundled_templates/alert/page-setup.json'),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  throw new Error(
+    `bundled alert page-setup not found in: ${candidates.join(', ')}`,
+  );
+}

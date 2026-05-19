@@ -29,6 +29,7 @@ import {
   OalClient,
   RuntimeRuleClient,
   StatusClient,
+  UITemplateClient,
   type FetchLike,
 } from '@skywalking-horizon-ui/api-client';
 import type { HorizonConfig } from '../config/schema.js';
@@ -61,6 +62,10 @@ export interface OapClients {
   /** Alarm-status client — `/status/alarm/*` admin REST. OAP itself
    *  aggregates cluster-wide; one fire is enough. */
   alarmStatus(): AlarmStatusClient;
+  /** UI-template REST client — `/ui-management/templates*` on the admin
+   *  port. Read + write for dashboard / page-setup blobs that Horizon
+   *  syncs to OAP under the `horizon.*` name prefix. */
+  uiTemplate(): UITemplateClient;
   /** The configured admin URL (single). DNS-resolved on demand by
    *  features that want per-node visibility (live-debug status). */
   adminUrl(): string;
@@ -114,6 +119,9 @@ export function buildOapClients(
     },
     alarmStatus(): AlarmStatusClient {
       return new AlarmStatusClient({ adminUrl: primaryUrl, fetch, timeoutMs, headers });
+    },
+    uiTemplate(): UITemplateClient {
+      return new UITemplateClient({ adminUrl: primaryUrl, fetch, timeoutMs, headers });
     },
     adminUrl(): string {
       return config.oap.adminUrl;

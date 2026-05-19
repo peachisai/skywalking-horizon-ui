@@ -36,6 +36,15 @@ import {
   bff,
   type AlarmsConfig,
 } from '@/api/client';
+import SyncStatusBanner from '@/features/admin/_shared/SyncStatusBanner.vue';
+import TemplateDiffModal from '@/features/admin/_shared/TemplateDiffModal.vue';
+import { useTemplateSync } from '@/features/admin/_shared/useTemplateSync';
+
+// OAP UI-template sync status for the alert page-setup template
+// (`horizon.alert.page-setup`). Drives the read-only banner + Save
+// gating + the diff-and-reset modal (defined later, after the local
+// fns it references are in scope).
+const sync = useTemplateSync({ kind: 'alert' });
 
 /* Cap matches the BFF's `configSaveSchema.max(8)` — keeps the header
  * row from wrapping into a second line at typical widths. */
@@ -99,6 +108,17 @@ function setFlash(msg: string): void {
   }, 4000);
 }
 
+// Diff & reset modal — alert page-setup is a singleton, so the
+// trigger lives near the Save button instead of per-row.
+const alertStatus = computed(() => sync.badgeFor('horizon.alert.page-setup'));
+const alertDiverged = computed(() => alertStatus.value === 'diverged');
+const diffModalOpen = ref(false);
+function openDiffModal(): void { diffModalOpen.value = true; }
+function onDiffReset(): void {
+  setFlash('OAP reset to bundled · reload to see header changes');
+  void q.refetch();
+}
+
 /* Layers the operator can still add — known to OAP AND not already
  * pinned. Pinned-but-unknown layers (e.g. an older install removed a
  * layer that's still in the saved config) stay rendered as pinned
@@ -129,18 +149,28 @@ function moveLayer(i: number, dir: -1 | 1): void {
 
 async function onSave(): Promise<void> {
   if (!validateLimit()) return;
+  if (sync.readOnly.value) {
+    setFlash('cannot save — OAP is unreachable, page is read-only');
+    return;
+  }
   saving.value = true;
   try {
-    const saved = await bff.alarms.saveConfig({
+    const next: AlarmsConfig = {
       pinnedLayers: draft.value,
       defaultWindowMs: draftWindowMs.value,
       overviewAlarmsLimit: Number(draftLimit.value),
-    });
-    draft.value = [...saved.pinnedLayers];
-    draftWindowMs.value = saved.defaultWindowMs;
-    draftLimit.value = saved.overviewAlarmsLimit;
+    };
+    // Save to OAP via the template-sync proxy (canonical envelope
+    // wrapped server-side). The local AlarmsStore is still the read
+    // source for /api/alarms/config; the BFF refreshes it after the
+    // OAP write succeeds.
+    await bff.templateSync.save('horizon.alert.page-setup', next);
+    await bff.alarms.saveConfig(next);
+    draft.value = [...next.pinnedLayers];
+    draftWindowMs.value = next.defaultWindowMs;
+    draftLimit.value = next.overviewAlarmsLimit;
     setFlash(
-      `saved · ${saved.pinnedLayers.length} pinned · ${WINDOW_LABELS[saved.defaultWindowMs] ?? '—'} · limit ${saved.overviewAlarmsLimit}`,
+      `saved · ${next.pinnedLayers.length} pinned · ${WINDOW_LABELS[next.defaultWindowMs] ?? '—'} · limit ${next.overviewAlarmsLimit}`,
     );
   } catch (err) {
     setFlash(err instanceof Error ? `error: ${err.message}` : 'save failed');
@@ -195,6 +225,8 @@ function prettyLayer(k: string): string {
         </p>
       </div>
     </header>
+
+    <SyncStatusBanner :banner="sync.banner.value" />
 
     <div v-if="q.isPending.value" class="aps__empty">loading…</div>
 
@@ -328,12 +360,28 @@ function prettyLayer(k: string): string {
         @click="onReset"
       >reset</button>
       <button
+        v-if="alertDiverged && !sync.readOnly.value"
+        type="button"
+        class="aps__btn"
+        title="Show side-by-side diff vs OAP, and reset OAP back to bundled (with confirmation)."
+        @click="openDiffModal"
+      >show diff &amp; reset</button>
+      <button
         type="button"
         class="aps__btn aps__btn--primary"
-        :disabled="!isDirty || saving"
+        :disabled="!isDirty || saving || sync.readOnly.value"
+        :title="sync.readOnly.value ? 'OAP unreachable — page is read-only' : ''"
         @click="onSave"
-      >{{ saving ? 'saving…' : 'save' }}</button>
+      >{{ saving ? 'saving…' : sync.readOnly.value ? 'read-only' : 'save to OAP' }}</button>
     </div>
+
+    <TemplateDiffModal
+      :open="diffModalOpen"
+      name="horizon.alert.page-setup"
+      confirm-key="page-setup"
+      @close="diffModalOpen = false"
+      @reset="onDiffReset"
+    />
   </div>
 </template>
 

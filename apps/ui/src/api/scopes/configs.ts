@@ -25,11 +25,49 @@ export type BundleScopeMap = Partial<
   Record<'service' | 'instance' | 'endpoint', DashboardWidget[]>
 >;
 
+/** What kind of template a sync-status row describes. Three reserved
+ *  kinds — see the BFF's `apps/bff/src/logic/templates/names.ts`. */
+export type TemplateKind = 'overview' | 'layer' | 'alert';
+
+/** Status of a single template, mirrored from the BFF sync orchestrator.
+ *  - `synced`           — bundled == remote, byte-equal
+ *  - `diverged`         — both present, NOT byte-equal (operator edited
+ *                          remote; show inline diff)
+ *  - `disabled`         — remote present but disabled on OAP; hidden
+ *  - `remote-only`      — remote present, no matching bundled (operator
+ *                          added a template the BFF doesn't ship)
+ *  - `bundled-fallback` — remote absent at runtime; rendering bundled
+ *  - `unknown`          — defensive; shouldn't appear */
+export type TemplateStatus =
+  | 'synced'
+  | 'diverged'
+  | 'disabled'
+  | 'remote-only'
+  | 'bundled-fallback'
+  | 'unknown';
+
+export interface TemplateBadge {
+  name: string;
+  kind: TemplateKind;
+  key: string;
+  status: TemplateStatus;
+}
+
+/** Bundle-level sync envelope. When `unreachable`, all rows fall back to
+ *  bundled and the admin pages render the global read-only banner. */
+export interface BundleSyncStatus {
+  unreachable: boolean;
+  lastSuccessfulSyncAt: number | null;
+  generatedAt: number;
+  badges: TemplateBadge[];
+}
+
 export interface ConfigBundle {
   etag: string;
   generatedAt: number;
   layers: Record<string, BundleScopeMap>;
   overviews: OverviewDashboard[];
+  syncStatus: BundleSyncStatus;
 }
 
 /** `bff.configs` — preload of dashboard + overview configs. The SPA

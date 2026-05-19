@@ -35,10 +35,14 @@
 import { ref, computed, type ComputedRef, type Ref } from 'vue';
 import { bffClient } from '@/api/client';
 import { pushEvent } from '@/controls/eventLog';
+import { debug } from '@/utils/debug';
 import type { ConfigBundle, BundleScopeMap } from '@/api/scopes/configs';
 import type { DashboardWidget, OverviewDashboard } from '@skywalking-horizon-ui/api-client';
 
-const STORAGE_KEY = 'horizon:configBundle:v1';
+// Bumped to v2 in 2026-05 when the bundle gained `syncStatus` (OAP
+// UI-template overlay). v1 cached bundles lack the field; loading them
+// would crash the admin pages reading badges.
+const STORAGE_KEY = 'horizon:configBundle:v2';
 const state = ref<ConfigBundle | null>(null);
 let loadPromise: Promise<void> | null = null;
 
@@ -48,7 +52,9 @@ function readStorage(): ConfigBundle | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ConfigBundle;
-    if (!parsed?.etag || !parsed?.layers) return null;
+    // Strict shape check: a v2 bundle MUST carry syncStatus. Older v1
+    // shapes are silently discarded — the next bundle fetch repopulates.
+    if (!parsed?.etag || !parsed?.layers || !parsed?.syncStatus) return null;
     return parsed;
   } catch {
     return null;
@@ -91,8 +97,10 @@ export function ensureConfigBundle(): Promise<void> {
           'ok',
           `Pre-loaded ${Object.keys(fresh.layers).length} layer configs + ${fresh.overviews.length} overviews`,
         );
+        logSyncSummary(fresh);
       } else {
         pushEvent('preload', 'ok', 'Configs unchanged · using cached copy');
+        if (state.value) logSyncSummary(state.value);
       }
     } catch (err) {
       pushEvent(
@@ -131,4 +139,23 @@ export function useConfigBundle(): {
     bundle: state,
     loaded: computed<boolean>(() => state.value !== null),
   };
+}
+
+function logSyncSummary(b: ConfigBundle): void {
+  const s = b.syncStatus;
+  if (s.unreachable) {
+    debug(
+      'templates',
+      `OAP unreachable — admin pages will render bundled read-only. Last successful sync: ${
+        s.lastSuccessfulSyncAt ? new Date(s.lastSuccessfulSyncAt).toISOString() : 'never'
+      }`,
+    );
+    return;
+  }
+  const counts: Record<string, number> = {};
+  for (const b of s.badges) counts[b.status] = (counts[b.status] ?? 0) + 1;
+  const parts = Object.entries(counts)
+    .map(([k, v]) => `${v} ${k}`)
+    .join(', ');
+  debug('templates', `sync: ${parts}`);
 }

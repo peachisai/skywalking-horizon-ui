@@ -1,0 +1,5 @@
+{
+  "pinnedLayers": ["GENERAL", "MESH"],
+  "defaultWindowMs": 1200000,
+  "overviewAlarmsLimit": 200
+}
