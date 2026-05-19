@@ -38,26 +38,91 @@ import { useConfigBundle } from '@/controls/configBundle';
 import { debug } from '@/utils/debug';
 import type { TemplateBadge } from '@/api/scopes/configs';
 
-export type ThemeId = 'horizon' | 'obsidian' | 'aurora' | 'meridian' | 'daybreak';
+export type ThemeId = 'horizon' | 'meridian' | 'obsidian' | 'daybreak' | 'aurora';
 
-/** The five bundled themes (design-specified names). Matches the
- *  `[data-theme="..."]` selectors in
- *  `packages/design-tokens/src/themes.css`. The first three are dark;
- *  the last two are light. */
-export const AVAILABLE_THEMES: ReadonlyArray<{
+/** Full per-theme metadata — lifted from the design bundle's
+ *  `screens/style-setup.jsx`. The token values here are duplicated
+ *  with the CSS in `packages/design-tokens/src/themes.css` BECAUSE
+ *  the theme picker preview cards need inline-style access to the
+ *  swatches (canvas / SVG can't read `var(--…)` synchronously).
+ *  Runtime rendering still goes through the CSS — this table is for
+ *  preview / preview-only consumption. */
+export interface ThemeDef {
   id: ThemeId;
   label: string;
-  description: string;
-  /** `dark` themes use the white SkyWalking logo; `light` themes use
-   *  the blue (`#1368B3`) variant. Read by the brand-logo CSS to know
-   *  which inline SVG to show. */
-  appearance: 'dark' | 'light';
-}> = [
-  { id: 'horizon',  label: 'Horizon',  description: 'Flagship dark — canyon orange accent on deep blue-grey. Default.', appearance: 'dark' },
-  { id: 'obsidian', label: 'Obsidian', description: 'Dark, blue accent.',  appearance: 'dark' },
-  { id: 'aurora',   label: 'Aurora',   description: 'Dark, pink accent.',  appearance: 'dark' },
-  { id: 'meridian', label: 'Meridian', description: 'Dark, purple accent.', appearance: 'dark' },
-  { id: 'daybreak', label: 'Daybreak', description: 'White light theme.',   appearance: 'light' },
+  tag: string;          // small chip text (e.g. "default", "high-contrast")
+  tagline: string;      // one-line palette description
+  description: string;  // operator-facing sentence
+  appearance: 'dark' | 'light';  // drives logo + light-bg-specific code paths
+  font: string;
+  radius: number;
+  density: 'Compact' | 'Spacious' | 'Comfortable';
+  // Token snapshot (mirrors themes.css per id).
+  bg0: string; bg1: string; bg2: string; line: string;
+  fg0: string; fg1: string; fg2: string; fg3: string;
+  accent: string; accentSoft: string; accentLine: string;
+  info: string; purple: string; ok: string; err: string; warn: string;
+  /** Hero background CSS for the preview card hero strip. Mirrors
+   *  the design's `heroTint` plus the optional photo. */
+  heroTint: string;
+}
+
+export const AVAILABLE_THEMES: readonly ThemeDef[] = [
+  {
+    id: 'horizon', label: 'Horizon', tag: 'default',
+    tagline: 'Dark · amber accent · canyon hero',
+    description: 'The shipped SkyWalking NG look. Dense, warm, observability-first.',
+    appearance: 'dark', font: 'Inter', radius: 6, density: 'Compact',
+    bg0: '#0a0d12', bg1: '#0f131a', bg2: '#151a23', line: '#232a37',
+    fg0: '#e8ecf3', fg1: '#b6bdcc', fg2: '#818a9c', fg3: '#5b6373',
+    accent: '#f97316', accentSoft: 'rgba(249,115,22,0.14)', accentLine: 'rgba(249,115,22,0.4)',
+    info: '#38bdf8', purple: '#a855f7', ok: '#22c55e', err: '#ef4444', warn: '#eab308',
+    heroTint: 'linear-gradient(180deg, rgba(10,13,18,0.10) 0%, rgba(10,13,18,0.85) 100%), radial-gradient(700px 460px at 20% 30%, rgba(249,115,22,0.22), transparent 60%)',
+  },
+  {
+    id: 'meridian', label: 'Meridian', tag: 'dense',
+    tagline: 'Navy ground · indigo accent',
+    description: 'Cooler navy palette with an indigo accent. Tightly packed for SREs who live in tables.',
+    appearance: 'dark', font: 'Inter', radius: 4, density: 'Compact',
+    bg0: '#0b0f1a', bg1: '#101421', bg2: '#171c2e', line: '#232a3c',
+    fg0: '#eef0f7', fg1: '#aeb4c7', fg2: '#7c8295', fg3: '#525a73',
+    accent: '#7a5af8', accentSoft: 'rgba(122,90,248,0.16)', accentLine: 'rgba(122,90,248,0.4)',
+    info: '#60a5fa', purple: '#c084fc', ok: '#34d399', err: '#f87171', warn: '#fbbf24',
+    heroTint: 'radial-gradient(700px 500px at 50% 35%, rgba(122,90,248,0.20), transparent 60%), linear-gradient(180deg, #11142a, #0a0d1c)',
+  },
+  {
+    id: 'obsidian', label: 'Obsidian', tag: 'high-contrast',
+    tagline: 'True-black · cyan accent · monospaced',
+    description: 'True-black backdrop and a cyan punch. Pixel-precise readouts; comfortable on OLED.',
+    appearance: 'dark', font: 'IBM Plex Mono', radius: 2, density: 'Compact',
+    bg0: '#000000', bg1: '#0a0a0a', bg2: '#141414', line: '#222222',
+    fg0: '#f4f4f5', fg1: '#c4c4c4', fg2: '#888888', fg3: '#5a5a5a',
+    accent: '#22d3ee', accentSoft: 'rgba(34,211,238,0.15)', accentLine: 'rgba(34,211,238,0.45)',
+    info: '#7dd3fc', purple: '#d946ef', ok: '#84cc16', err: '#f43f5e', warn: '#facc15',
+    heroTint: 'linear-gradient(180deg, #000 0%, #060606 100%), radial-gradient(500px 350px at 50% 50%, rgba(34,211,238,0.12), transparent 60%)',
+  },
+  {
+    id: 'daybreak', label: 'Daybreak', tag: 'light',
+    tagline: 'Light ground · violet accent · airy',
+    description: 'Daytime palette with generous spacing and soft shadows. For shared screens and printouts.',
+    appearance: 'light', font: 'Inter', radius: 10, density: 'Spacious',
+    bg0: '#f7f7fa', bg1: '#ffffff', bg2: '#f0f1f5', line: '#e3e4ec',
+    fg0: '#0a0d12', fg1: '#3a3f4c', fg2: '#6e7382', fg3: '#9ba0af',
+    accent: '#6366f1', accentSoft: 'rgba(99,102,241,0.10)', accentLine: 'rgba(99,102,241,0.32)',
+    info: '#0ea5e9', purple: '#a855f7', ok: '#16a34a', err: '#dc2626', warn: '#d97706',
+    heroTint: 'linear-gradient(180deg, #eef0fa 0%, #f7f7fa 100%), radial-gradient(700px 460px at 70% 30%, rgba(99,102,241,0.18), transparent 60%)',
+  },
+  {
+    id: 'aurora', label: 'Aurora', tag: 'showcase',
+    tagline: 'Glass chrome · magenta/cyan gradient',
+    description: 'Glass-morphic chrome with a magenta-to-cyan gradient accent. Made for demos and product tours.',
+    appearance: 'dark', font: 'Inter', radius: 12, density: 'Comfortable',
+    bg0: '#0b0d18', bg1: '#11142a', bg2: '#181b35', line: '#262a48',
+    fg0: '#f1f3ff', fg1: '#b9bee0', fg2: '#828abe', fg3: '#525a8a',
+    accent: '#ec4899', accentSoft: 'rgba(236,72,153,0.16)', accentLine: 'rgba(236,72,153,0.4)',
+    info: '#22d3ee', purple: '#a855f7', ok: '#22d3ee', err: '#f43f5e', warn: '#fbbf24',
+    heroTint: 'radial-gradient(600px 420px at 25% 30%, rgba(236,72,153,0.30), transparent 60%), radial-gradient(600px 420px at 75% 70%, rgba(34,211,238,0.25), transparent 60%), linear-gradient(180deg, #0b0d18, #131534)',
+  },
 ];
 
 const USER_KEY = 'horizon:theme:user';

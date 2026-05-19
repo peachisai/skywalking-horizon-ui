@@ -35,7 +35,13 @@ import SyncStatusBanner from '@/features/admin/_shared/SyncStatusBanner.vue';
 import TemplateStatusBadge from '@/features/admin/_shared/TemplateStatusBadge.vue';
 import TemplateDiffModal from '@/features/admin/_shared/TemplateDiffModal.vue';
 import { useTemplateSync } from '@/features/admin/_shared/useTemplateSync';
-import { AVAILABLE_THEMES, type ThemeId } from '@/state/theme';
+import { AVAILABLE_THEMES, useThemeStore, type ThemeId } from '@/state/theme';
+import ThemePreviewCard from './ThemePreviewCard.vue';
+
+// Theme store — for distinguishing the currently-ACTIVE theme (what the
+// renderer is showing right now, combining user override + org default
+// + bundled) from the operator's pending SELECTION in this picker.
+const themeStoreRef = useThemeStore();
 
 // Two kinds in scope; we union by reading them both as separate sync
 // calls (`useTemplateSync` is per-kind, so we call it twice).
@@ -239,26 +245,19 @@ async function onDiffReset(): Promise<void> {
         </header>
         <p class="gd__sec-lede">
           Five bundled themes ship with Horizon. The org default is the
-          starting theme every user sees on first visit. Users keep their
-          own override afterwards.
+          starting theme every user sees on first visit. Each user can
+          override locally via the topbar theme chip (stored in
+          <code>localStorage['horizon:theme:user']</code>).
         </p>
-        <div class="gd__themes">
-          <label
+        <div class="gd__theme-grid">
+          <ThemePreviewCard
             v-for="t in AVAILABLE_THEMES"
             :key="t.id"
-            class="gd__theme"
-            :class="{ active: themeDraft === t.id }"
-          >
-            <input
-              v-model="themeDraft"
-              type="radio"
-              name="themeDraft"
-              :value="t.id"
-              :disabled="readOnly"
-            />
-            <span class="gd__theme-id">{{ t.label }}</span>
-            <span class="gd__theme-desc">{{ t.description }}</span>
-          </label>
+            :theme="t"
+            :selected="themeDraft === t.id"
+            :active="themeStoreRef.active === t.id"
+            @pick="!readOnly && (themeDraft = t.id)"
+          />
         </div>
       </section>
 
@@ -444,37 +443,10 @@ async function onDiffReset(): Promise<void> {
   color: var(--sw-fg-0);
 }
 
-.gd__themes {
+.gd__theme-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px;
-}
-.gd__theme {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 8px;
-  align-items: start;
-  padding: 10px 12px;
-  border: 1px solid var(--sw-line);
-  border-radius: 4px;
-  background: var(--sw-bg-2);
-  cursor: pointer;
-}
-.gd__theme.active {
-  border-color: var(--sw-accent-line);
-  background: var(--sw-accent-soft);
-}
-.gd__theme input { grid-row: span 2; margin-top: 2px; }
-.gd__theme-id {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--sw-fg-0);
-}
-.gd__theme-desc {
-  grid-column: 2;
-  font-size: 11px;
-  color: var(--sw-fg-2);
-  line-height: 1.45;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 .gd__presets {
