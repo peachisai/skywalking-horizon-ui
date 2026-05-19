@@ -2,7 +2,7 @@
 
 Path: `/admin/inspect`. Verb: `inspect:read` (granted by maintainer, operator, admin).
 
-The Inspect page lets the operator browse OAP's live metric catalog and enumerate the entities (services, instances, endpoints, processes, …) that have data for a given metric. It is built on the **Inspect API** (SWIP-14), which is **OAP 11.x only** — the page does not render on v10.
+The Inspect page lets the operator browse OAP's live metric catalog and enumerate the entities (services, instances, endpoints, processes, …) that have data for a given metric. It is built on OAP's **Inspect API**, which is **v11-only** — the page does not render on v10.
 
 ## What the page is for
 
@@ -116,4 +116,3 @@ The BFF is a thin proxy — caching is per-request, not cross-request. The Inspe
 - [Compatibility → OAP Version](../compatibility/oap-version.md) — why v11.
 - [Compatibility → Required OAP Modules](../compatibility/required-modules.md) — `SW_INSPECT` enablement.
 - [Customization → Layer Dashboard Templates](../customization/layer-templates.md) — where the metrics you find here end up being used.
-- OAP's [SWIP-14 (Inspect API)](https://github.com/apache/skywalking/blob/master/docs/en/swip/swip-14.md) — upstream design.

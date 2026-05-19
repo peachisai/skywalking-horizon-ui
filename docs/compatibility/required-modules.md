@@ -18,7 +18,7 @@ The admin-port endpoints are gated by per-module selectors on the OAP side. Hori
 
 All four are recommended on v11. **admin-server** is non-optional for the v11 admin surface; the rest can be left off if you do not need the corresponding feature, but the Cluster Status page will surface warnings.
 
-The entire admin-port surface (all four modules) is **OAP 11.x only**. They appeared in the 10.5 development snapshot but **there is no OAP 10.5 release** — the SWIPs that introduced them shipped in 11.0. On OAP 10.x the data-plane stack (dashboards, traces, logs, topology, alarms, profiling) works fine; the admin-port features (DSL Management, Live Debugger, Alarm Rule editor, Cluster Status → Admin pane, Inspect, OAP UI-template sync) are unavailable and the corresponding sidebar entries are hidden. See [OAP Version](oap-version.md) for the full feature-vs-version matrix.
+The entire admin-port surface (all four modules) is **OAP 11.x only**. On OAP 10.x the data-plane stack — dashboards, traces, logs, topology, alarms, profiling — works fine; the admin-port features (DSL Management, Live Debugger, Alarm Rule editor, Cluster Status → Admin pane, Inspect, OAP UI-template sync) are unavailable and the corresponding sidebar entries are hidden. See [OAP Version](oap-version.md) for the full feature-vs-version matrix.
 
 ## How Horizon detects module state
 

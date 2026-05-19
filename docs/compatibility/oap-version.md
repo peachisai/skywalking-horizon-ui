@@ -4,8 +4,6 @@
 
 Horizon UI is **built natively against Apache SkyWalking OAP 11.x** — the full feature set assumes v11. **OAP 10.x is partially supported**: the data-plane stack (dashboards, traces, logs, topology, alarms, profiling) renders correctly because it only touches the query GraphQL port. Everything that lives on OAP's **admin port** — Inspect, DSL Management, Live Debugger, Alarm Rule editor, Cluster Status → Admin pane, OAP UI-template sync — depends on modules (`admin-server`, `receiver-runtime-rule`, `dsl-debugging`, `inspect`) that only exist in v11. On v10 those sidebar entries are hidden and the admin pages fall back to bundled read-only.
 
-> Note: those four modules appeared in OAP's 10.5 development snapshot, but **there is no OAP 10.5 release** — the SWIPs that introduced them shipped in 11.0. Treat any "10.5" reference in old docs as "v11."
-
 Older 9.x OAPs are not supported — the layer concept, the MQE language baseline Horizon assumes, and the admin port layout all settled later.
 
 ### Feature matrix vs OAP version
