@@ -53,6 +53,32 @@ const host = ref<HTMLDivElement | null>(null);
 const selectedCallId = ref<string | null>(null);
 
 // ── Hex geometry (flat-top) ─────────────────────────────────────────
+const SQRT3 = Math.sqrt(3);
+/** Flat-top axial → pixel. Neighbour centres land √3·r apart, so a cell
+ *  hexagon of radius r tiles (touches) its neighbours — a honeycomb. */
+function axialToPixel(ax: number, ay: number, r: number, o: Pt): Pt {
+  return { x: 1.5 * ax * r + o.x, y: ((SQRT3 / 2) * ax + SQRT3 * ay) * r + o.y };
+}
+/** Axial coords in spiral order from the centre — packs a compact
+ *  honeycomb cluster (centre cell, then rings around it). */
+function spiralHex(n: number): Array<{ x: number; y: number }> {
+  const dirs = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+  const out = [{ x: 0, y: 0 }];
+  let k = 1;
+  while (out.length < n) {
+    let cx = dirs[4][0] * k;
+    let cy = dirs[4][1] * k;
+    for (let side = 0; side < 6 && out.length < n + 6; side++) {
+      for (let step = 0; step < k; step++) {
+        out.push({ x: cx, y: cy });
+        cx += dirs[side][0];
+        cy += dirs[side][1];
+      }
+    }
+    k++;
+  }
+  return out.slice(0, n);
+}
 function hexCellPath(cx: number, cy: number, R: number): string {
   const v: [number, number][] = [];
   for (let i = 0; i < 6; i++) {
@@ -80,21 +106,17 @@ function layout(o: Pt, w: number, h: number): PositionedNode[] {
   const inside = props.nodes.filter(isInside).map((n) => ({ ...n }) as PositionedNode);
   const outside = props.nodes.filter((n) => !isInside(n)).map((n) => ({ ...n }) as PositionedNode);
 
-  // Inside processes: centred LEFT-RIGHT rows (not an arc). Columns bias
-  // slightly wide so the block reads horizontally; the last row is
-  // centred on its own count.
+  // Inside processes: a compact honeycomb cluster (cells touch), packed
+  // spiral-from-centre. Cell size scales down as the cluster grows.
   const n = inside.length;
-  const cols = Math.max(1, Math.min(n, Math.ceil(Math.sqrt(n * 1.7))));
-  const rows = Math.max(1, Math.ceil(n / cols));
-  cellRadius = Math.max(16, Math.min(34, 240 / (Math.max(cols, rows) + 1)));
-  const dx = cellRadius * 1.95;
-  const dy = cellRadius * 2.0;
+  const rings = Math.max(1, Math.ceil((-3 + Math.sqrt(9 + 12 * Math.max(1, n - 1))) / 6));
+  cellRadius = Math.max(26, Math.min(50, 130 / (rings + 0.5)));
+  const cells = spiralHex(n);
   inside.forEach((node, i) => {
-    const r = Math.floor(i / cols);
-    const c = i % cols;
-    const rowCount = r < rows - 1 ? cols : n - cols * (rows - 1);
-    node.x = o.x + (c - (rowCount - 1) / 2) * dx;
-    node.y = o.y + (r - (rows - 1) / 2) * dy;
+    const c = cells[i] ?? { x: 0, y: 0 };
+    const p = axialToPixel(c.x, c.y, cellRadius, o);
+    node.x = p.x;
+    node.y = p.y;
   });
 
   // External peers spread on a canvas-filling ellipse (skipping the
@@ -143,26 +165,34 @@ function buildCalls(byId: Map<string, PositionedNode>): PositionedCall[] {
   }
   return out;
 }
-function controlPoint(s: Pt, t: Pt, lowerArc: boolean): Pt {
-  const dx = t.x - s.x;
-  const dy = t.y - s.y;
-  const theta = Math.atan2(dy, dx) - Math.PI / 2;
-  const len = (Math.sqrt(dx * dx + dy * dy) / 2) * 0.5;
-  const cx = (s.x + t.x) / 2 + len * Math.cos(theta);
-  let cy = (s.y + t.y) / 2 + len * Math.sin(theta);
-  if (lowerArc) cy = s.y + t.y - cy;
-  return { x: cx, y: cy };
+/** Straight-line endpoints. A reverse-direction edge of the same pair is
+ *  shifted onto a parallel track so the two directed lines stay visible
+ *  instead of overlapping. */
+function edgeEnds(c: PositionedCall): { sx: number; sy: number; tx: number; ty: number } {
+  let sx = c.source.x;
+  let sy = c.source.y;
+  let tx = c.target.x;
+  let ty = c.target.y;
+  if (c.lowerArc) {
+    const dx = tx - sx;
+    const dy = ty - sy;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = (-dy / len) * 7;
+    const ny = (dx / len) * 7;
+    sx += nx;
+    sy += ny;
+    tx += nx;
+    ty += ny;
+  }
+  return { sx, sy, tx, ty };
 }
 function edgePath(c: PositionedCall): string {
-  const cp = controlPoint(c.source, c.target, c.lowerArc);
-  return `M ${c.source.x} ${c.source.y} Q ${cp.x} ${cp.y} ${c.target.x} ${c.target.y}`;
+  const e = edgeEnds(c);
+  return `M ${e.sx} ${e.sy} L ${e.tx} ${e.ty}`;
 }
 function edgeMid(c: PositionedCall): Pt {
-  const cp = controlPoint(c.source, c.target, c.lowerArc);
-  return {
-    x: 0.25 * c.source.x + 0.5 * cp.x + 0.25 * c.target.x,
-    y: 0.25 * c.source.y + 0.5 * cp.y + 0.25 * c.target.y,
-  };
+  const e = edgeEnds(c);
+  return { x: (e.sx + e.tx) / 2, y: (e.sy + e.ty) / 2 };
 }
 
 // ── Node info popover (floating window) ─────────────────────────────
@@ -364,14 +394,23 @@ function render(): void {
     .attr('fill-opacity', (d) => (isInside(d) ? 0.85 : 0.75))
     .attr('stroke', 'var(--sw-bg-0, #0d0f14)')
     .attr('stroke-width', 1.5);
+  // Inside cells touch, so their labels alternate BELOW / ABOVE the
+  // honeycomb by index (cell 0 below, cell 1 above, cell 2 below, …) to
+  // avoid colliding with neighbours. External peers always label below
+  // their (isolated) cell. `positioned` is [inside…, outside…] so the
+  // datum index `i` is the inside index for inside cells.
+  function labelY(d: PositionedNode, i: number): number {
+    if (!isInside(d)) return 30;
+    return i % 2 === 1 ? -(cellRadius + 8) : cellRadius + 16;
+  }
   nodeSel
     .append('text')
     .attr('x', 0)
-    .attr('y', (d) => (isInside(d) ? cellRadius + 11 : 30))
+    .attr('y', labelY)
     .attr('text-anchor', 'middle')
     .attr('fill', 'var(--sw-fg-1, #d4d6dd)')
     .style('font-family', 'var(--sw-mono, monospace)')
-    .style('font-size', '16px')
+    .style('font-size', '12px')
     .style('font-weight', '600')
     .text((d) => {
       const base = d.name.split('.')[0];

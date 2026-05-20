@@ -54,6 +54,10 @@ const props = withDefaults(
      *  values to integers (pod counts, replica counts, error counts).
      *  Defaults to the compact-readable rule. */
     format?: 'int' | 'decimal' | 'compact';
+    /** Explicit x-axis bucket labels. When provided (and length-matched)
+     *  these replace the default relative `-Nm` markers — e.g. a caller
+     *  with a known window can pass `mm:ss` elapsed labels. */
+    xLabels?: string[];
   }>(),
   {
     height: 180,
@@ -112,7 +116,10 @@ function buildOption(): echarts.EChartsCoreOption {
   // implied to be MINUTE-stepped over the last 15m), so we label the
   // axis with relative "-Nm" markers.
   const length = props.series[0]?.data.length ?? 0;
-  const xLabels = Array.from({ length }, (_, i) => `-${length - i - 1}m`);
+  const xLabels =
+    props.xLabels && props.xLabels.length === length
+      ? props.xLabels
+      : Array.from({ length }, (_, i) => `-${length - i - 1}m`);
   return {
     backgroundColor: 'transparent',
     tooltip: {

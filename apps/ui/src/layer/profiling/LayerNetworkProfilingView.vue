@@ -31,7 +31,7 @@
     └──────────────┴─────────────────────────────────────────────┘
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLayerInstances } from '@/layer/useLayerInstances';
 import { useSelectedService } from '@/layer/useSelectedService';
@@ -224,6 +224,34 @@ const sourceProcessName = computed(
 const targetProcessName = computed(
   () => (selectedCall.value && nodeById(selectedCall.value.target)?.name) || '—',
 );
+
+/** Edge-chart x-axis labels as elapsed `mm:ss` across the profiling
+ *  window — compact and meaningful regardless of how long the task ran
+ *  (relative `-Nm` markers blow up for multi-hour tasks). Derived from
+ *  the metric series length + the task's run window. */
+const edgeXLabels = computed<string[]>(() => {
+  const m = relationMetrics.value;
+  const n = m?.client[0]?.values.length ?? m?.server[0]?.values.length ?? 0;
+  if (n <= 0) return [];
+  const task = currentTask.value;
+  const spanMs =
+    task?.taskStartTime && task.fixedTriggerDuration
+      ? task.fixedTriggerDuration * 1000
+      : windowMinutes.value * 60_000;
+  const stepMs = n > 1 ? spanMs / (n - 1) : spanMs;
+  return Array.from({ length: n }, (_, i) => {
+    const sec = Math.round((i * stepMs) / 1000);
+    const mm = Math.floor(sec / 60);
+    const ss = sec % 60;
+    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  });
+});
+
+function onEdgeKeydown(ev: KeyboardEvent): void {
+  if (ev.key === 'Escape' && selectedCall.value) closeEdge();
+}
+onMounted(() => window.addEventListener('keydown', onEdgeKeydown));
+onBeforeUnmount(() => window.removeEventListener('keydown', onEdgeKeydown));
 
 async function keepAlive(): Promise<void> {
   if (!currentTask.value) return;
@@ -426,7 +454,8 @@ function fmtTime(ms: number): string {
                 </div>
                 <TimeChart
                   :series="[{ label: m.label, data: m.values, unit: m.unit }]"
-                  :height="120"
+                  :x-labels="edgeXLabels"
+                  :height="150"
                   :unit="m.unit"
                 />
               </div>
@@ -759,9 +788,11 @@ function fmtTime(ms: number): string {
   font-size: 10.5px;
   color: var(--sw-fg-1);
 }
-/* Edge dashboard modal — wide; client | server side-by-side, each side
-   a 2-up widget grid → 4 widgets per row (2 client + 2 server). */
-.edge-dlg { width: 1600px; max-width: 96vw; max-height: 90vh; }
+/* Edge dashboard modal — near-fullscreen; client | server side-by-side,
+   each side a 2-up widget grid → 4 widgets per row (2 client + 2 server). */
+/* `.dlg.edge-dlg` (not `.edge-dlg`) so this beats the base `.dlg`
+ * width:560px regardless of rule order. */
+.dlg.edge-dlg { width: 92vw; max-width: 92vw; height: 92vh; max-height: 92vh; }
 .edge-dlg-title {
   display: flex;
   align-items: center;
@@ -779,7 +810,7 @@ function fmtTime(ms: number): string {
   border-radius: 10px;
   padding: 1px 8px;
 }
-.edge-dlg-body { overflow-y: auto; padding: 12px 14px; }
+.edge-dlg-body { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 12px 14px; }
 .edge-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
