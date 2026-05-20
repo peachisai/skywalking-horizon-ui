@@ -27,7 +27,7 @@ import type { ConfigSource } from '../../config/loader.js';
 import type { SessionStore } from '../../user/sessions.js';
 import { requireAuth } from '../../user/middleware.js';
 import { buildOapOpts, graphqlPost, type GraphqlOptions } from '../../client/graphql.js';
-import { getLayerTemplate, type LayerComponentFlags } from '../../logic/layers/loader.js';
+import { allLayerTemplates, getLayerTemplate, type LayerComponentFlags } from '../../logic/layers/loader.js';
 
 /**
  * Map the JSON config's `components.*` flags onto the wire `caps`
@@ -65,19 +65,11 @@ export interface MenuRouteDeps {
   fetch?: FetchLike;
 }
 
-// One round-trip, three aliased queries.
+// `listLayers` — active layers in this deployment.
+// `listLayerLevels` — catalog level per layer (sidebar hierarchy).
 const MENU_QUERY = /* GraphQL */ `
   query HorizonMenu {
     layers: listLayers
-    items: getMenuItems {
-      title
-      icon
-      layer
-      activate
-      description
-      documentLink
-      i18nKey
-    }
     levels: listLayerLevels {
       layer
       level
@@ -102,15 +94,6 @@ function canonical(layer: string): string {
 
 interface MenuRaw {
   layers: string[];
-  items: Array<{
-    title: string;
-    icon?: string | null;
-    layer: string;
-    activate?: boolean | null;
-    description?: string | null;
-    documentLink?: string | null;
-    i18nKey?: string | null;
-  }>;
   levels: Array<{ layer: string; level: number }>;
 }
 
@@ -174,17 +157,16 @@ function deriveLayer(
   level: number | null,
   serviceCount: number,
   normal: boolean | null,
-  items: MenuRaw['items'],
 ): LayerDef {
-  const item = items.find((i) => canonical(i.layer) === rawKey);
-  // JSON template wins when present — alias / color / slots / caps all
-  // come from there. Hardcoded LAYER_DEFAULTS stays as the fallback for
-  // layers without a template (older OAP layers, custom layers).
+  // JSON template wins when present — alias / color / slots / caps /
+  // documentLink all come from there. Hardcoded LAYER_DEFAULTS stays as
+  // the fallback for layers without a template (older OAP layers,
+  // custom layers).
   const tpl = getLayerTemplate(rawKey);
   if (tpl) {
     return {
       key: rawKey.toLowerCase(),
-      name: tpl.alias || item?.title?.trim() || rawKey,
+      name: tpl.alias || rawKey,
       color: tpl.color || 'var(--sw-fg-2)',
       serviceCount,
       active,
@@ -192,7 +174,7 @@ function deriveLayer(
       normal,
       group: tpl.group,
       visibility: tpl.visibility,
-      documentLink: tpl.documentLink ?? item?.documentLink ?? undefined,
+      documentLink: tpl.documentLink ?? undefined,
       slots: tpl.slots,
       caps: componentsToCaps(tpl.components),
       header: tpl.header,
@@ -206,13 +188,12 @@ function deriveLayer(
   const def = LAYER_DEFAULTS[rawKey] ?? DEFAULT_FOR_UNKNOWN_LAYER;
   return {
     key: rawKey.toLowerCase(),
-    name: item?.title?.trim() || rawKey.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
+    name: rawKey.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()),
     color: def.color,
     serviceCount,
     active,
     level,
     normal,
-    documentLink: item?.documentLink ?? undefined,
     slots: def.slots,
     caps: def.caps,
   };
@@ -286,14 +267,14 @@ export function registerMenuRoute(app: FastifyInstance, deps: MenuRouteDeps): vo
         }
       }
 
-      // Catalog order = the order OAP returned `getMenuItems` (mirrors
-      // menu.yaml). Active-only keys not in the catalog get appended at
-      // the end so nothing disappears.
+      // Catalog order = the order the JSON layer templates are loaded
+      // (filesystem order under bundled_templates/layers/, alphabetical
+      // by basename). Active OAP-reported layers that have no template
+      // get appended at the end so nothing disappears from the sidebar.
       const ordered: string[] = [];
       const seen = new Set<string>();
-      for (const item of raw.items) {
-        if (!item.layer) continue;
-        const k = canonical(item.layer);
+      for (const tpl of allLayerTemplates()) {
+        const k = canonical(tpl.key.toUpperCase());
         if (seen.has(k)) continue;
         seen.add(k);
         ordered.push(k);
@@ -306,9 +287,9 @@ export function registerMenuRoute(app: FastifyInstance, deps: MenuRouteDeps): vo
       }
 
       // Layers we deliberately drop from the sidebar even when OAP
-      // surfaces them. BanyanDB is OAP's storage backend — it shows
-      // up as a Layer in `getMenuItems`, but the operator monitors it
-      // via the OAP self-observability dashboard (CPU / memory / GC
+      // surfaces them. BanyanDB is OAP's storage backend — it shows up
+      // as a Layer in `listLayers`, but the operator monitors it via
+      // the OAP self-observability dashboard (CPU / memory / GC
       // metrics there cover the storage node too). Keeping it as a
       // standalone Databases-ish row was confusing per operator
       // feedback. Add more keys here if other internal-only layers
@@ -323,7 +304,6 @@ export function registerMenuRoute(app: FastifyInstance, deps: MenuRouteDeps): vo
             levelByCanonical.has(key) ? (levelByCanonical.get(key) ?? null) : null,
             countByCanonical.get(key) ?? (activeCanonical.has(key) ? 0 : -1),
             normalByCanonical.get(key) ?? null,
-            raw.items,
           ),
         );
 
