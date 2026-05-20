@@ -122,9 +122,9 @@ auth:
 rbac:
   enabled: true
   roles:
-    # Data catalog only. Deliberately NOT `*:read` so a viewer can't
-    # accidentally see rule definitions, live-debug sessions, setup
-    # screens, or platform internals.
+    # Data catalog + read-only overview dashboards. Deliberately NOT
+    # `*:read` so a viewer can't accidentally see rule definitions,
+    # live-debug sessions, setup screens, or platform internals.
     viewer:
       - metrics:read
       - alarms:read
@@ -132,6 +132,7 @@ rbac:
       - logs:read
       - topology:read
       - profile:read
+      - overview:read
 
     # Viewer + platform monitoring (OAP cluster + module inspector).
     maintainer:
@@ -141,6 +142,7 @@ rbac:
       - logs:read
       - topology:read
       - profile:read
+      - overview:read
       - cluster:read
       - inspect:read
 

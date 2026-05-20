@@ -58,6 +58,36 @@ function hasVerb(grants: readonly string[], required: string): boolean {
 
 const roleNames = computed(() => Object.keys(status.value?.rbac.roles ?? {}).sort(rolePriority));
 
+/** Grants for a role from the live policy. */
+function grantsFor(role: string): readonly string[] {
+  return status.value?.rbac.roles?.[role] ?? [];
+}
+/** Sidebar menu → the read verb that gates its visibility (mirrors
+ *  AppSidebar.vue). Drives the visibility matrix so operators can read,
+ *  per role, exactly which navigation items appear. `null` verb = shown
+ *  to any signed-in user (the core data layers, cap-gated only). */
+const MENU_GATES: ReadonlyArray<{ label: string; verb: string | null }> = [
+  { label: 'Layers (per-layer data)', verb: null },
+  { label: 'Alarms', verb: 'alarms:read' },
+  { label: 'Overviews', verb: 'overview:read' },
+  { label: 'Cluster status', verb: 'cluster:read' },
+  { label: 'Metrics Inspect', verb: 'inspect:read' },
+  { label: 'Alerting rules', verb: 'alarm-rule:read' },
+  { label: 'Live debugger · Capture history', verb: 'live-debug:read' },
+  { label: 'DSL Management', verb: 'rule:read' },
+  { label: 'Overview templates', verb: 'overview:read' },
+  { label: 'Layer dashboards', verb: 'dashboard:read' },
+  { label: 'Alert page', verb: 'alarm-setup:read' },
+  { label: 'Global defaults', verb: 'setup:read' },
+  { label: 'Users', verb: 'user:read' },
+  { label: 'Auth status', verb: 'auth:read' },
+  { label: 'Roles & permissions', verb: 'role:read' },
+];
+/** Is the menu row visible to the role? `null` verb ⇒ any signed-in user. */
+function menuVisible(role: string, verb: string | null): boolean {
+  return verb === null ? true : hasVerb(grantsFor(role), verb);
+}
+
 function rolePriority(a: string, b: string): number {
   const order = ['viewer', 'maintainer', 'operator', 'admin'];
   const ia = order.indexOf(a);
@@ -298,6 +328,39 @@ function grantsOf(role: string): string[] {
             <span class="pill" :class="rolePill(r)">{{ r }}</span>
             <p class="role-blurb">{{ roleBlurb(r) }}</p>
           </div>
+        </div>
+      </section>
+
+      <!-- Menu visibility matrix: which sidebar items each role sees.
+           Computed live from the policy via the same verb gates the
+           sidebar uses, so it stays honest if roles are reconfigured. -->
+      <section class="sw-card menu-matrix">
+        <header class="card-head">
+          <h3>Menu visibility</h3>
+          <span class="muted">which sidebar items each role sees · gated by the read verb in the last column (UI hides; the BFF enforces the same server-side)</span>
+        </header>
+        <div class="matrix-scroll">
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th class="m-menu">Menu</th>
+                <th v-for="r in roleNames" :key="r" class="m-role">
+                  <span class="pill" :class="rolePill(r)">{{ r }}</span>
+                </th>
+                <th class="m-verb">Read verb</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in MENU_GATES" :key="row.label">
+                <td class="m-menu">{{ row.label }}</td>
+                <td v-for="r in roleNames" :key="r" class="m-cell">
+                  <span v-if="menuVisible(r, row.verb)" class="yes" title="visible">✔</span>
+                  <span v-else class="no" title="hidden">—</span>
+                </td>
+                <td class="m-verb"><code>{{ row.verb ?? 'any signed-in' }}</code></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -610,4 +673,30 @@ function grantsOf(role: string): string[] {
 }
 .rule-k { font-size: 11.5px; font-weight: 600; color: var(--sw-fg-0); }
 .rule-v { font-size: 11.5px; color: var(--sw-fg-2); margin-top: 4px; line-height: 1.55; }
+
+.menu-matrix { margin-bottom: 14px; }
+.matrix-scroll { overflow-x: auto; }
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.matrix th,
+.matrix td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--sw-line);
+  text-align: center;
+  white-space: nowrap;
+}
+.matrix thead th { border-bottom: 2px solid var(--sw-line); }
+.matrix .m-menu { text-align: left; color: var(--sw-fg-0); }
+.matrix .m-verb { text-align: left; }
+.matrix .m-verb code {
+  font-family: var(--sw-mono);
+  font-size: 10.5px;
+  color: var(--sw-fg-3);
+}
+.matrix tbody tr:hover { background: var(--sw-bg-2); }
+.matrix .yes { color: var(--sw-ok, #34d399); font-weight: 700; }
+.matrix .no { color: var(--sw-fg-3); }
 </style>
