@@ -15,18 +15,14 @@
   limitations under the License.
 -->
 <!--
-  Process-level topology for network profiling — honeycomb + namespace
-  grouping, the same vocabulary as the k8s service topology.
+  Process-level topology for network profiling.
 
   - Inside-pod processes (`isReal` / synthetic `UNKNOWN_LOCAL`) and
-    external peers are each rendered as a flat-top hexagon CELL packed
-    in a honeycomb (inside) or on rings (outside) within / around the
-    pod-boundary hexagon.
-  - Nodes are grouped by NAMESPACE: by default the text after the last
-    `.` in the name (`demo-oap-xxx.skywalking-showcase` → `skywalking-
-    showcase`); an optional `groupExpression` regex overrides it (first
-    capture group wins). Each namespace gets a tinted region backdrop +
-    label + a colour in the legend.
+    external peers are each rendered as a flat-top hexagon CELL. Inside
+    cells pack a honeycomb around the centre; external peers ring it.
+  - A dashed hexagon boundary wraps the inside processes as tightly as
+    possible (auto-fit to the inside cells) and is recomputed live while
+    a node is dragged.
   - Edges are directed, animated (dashes flow source→target to show
     traffic direction) and clickable.
   - Clicking a node shows a floating info popover; clicking an edge
@@ -41,7 +37,7 @@ import * as d3 from 'd3';
 import type { ProcessCall, ProcessNode } from '@/api/client';
 
 interface Pt { x: number; y: number }
-type PositionedNode = ProcessNode & Pt & { ns: string };
+type PositionedNode = ProcessNode & Pt;
 interface PositionedCall {
   id: string;
   source: PositionedNode;
@@ -50,43 +46,14 @@ interface PositionedCall {
   lowerArc: boolean;
 }
 
-const props = defineProps<{
-  nodes: ProcessNode[];
-  calls: ProcessCall[];
-  groupExpression?: string;
-}>();
+const props = defineProps<{ nodes: ProcessNode[]; calls: ProcessCall[] }>();
 const emit = defineEmits<{ (e: 'select-call', c: ProcessCall | null): void }>();
 
 const host = ref<HTMLDivElement | null>(null);
 const selectedCallId = ref<string | null>(null);
 
-// ── Namespace grouping ──────────────────────────────────────────────
-const NS_LOCAL = '·local';
-function namespaceOf(name: string): string {
-  const expr = props.groupExpression?.trim();
-  if (expr) {
-    try {
-      const m = new RegExp(expr).exec(name);
-      if (m) return m[1] || m[0] || NS_LOCAL;
-    } catch {
-      /* invalid regex — fall through to the dot heuristic */
-    }
-  }
-  const i = name.lastIndexOf('.');
-  return i > 0 ? name.slice(i + 1) : NS_LOCAL;
-}
-function hueOf(ns: string): number {
-  let h = 0;
-  for (let i = 0; i < ns.length; i++) h = (h * 31 + ns.charCodeAt(i)) | 0;
-  return Math.abs(h) % 360;
-}
-function groupColor(ns: string): string {
-  return ns === NS_LOCAL ? 'var(--sw-accent, #f97316)' : `hsl(${hueOf(ns)}, 55%, 56%)`;
-}
-
 // ── Hex geometry (flat-top) ─────────────────────────────────────────
 const SQRT3 = Math.sqrt(3);
-const HEX_RADIUS = 210;
 function axialToPixel(ax: number, ay: number, r: number, o: Pt): Pt {
   return { x: (1.5 * ax) * r + o.x, y: ((SQRT3 / 2) * ax + SQRT3 * ay) * r + o.y };
 }
@@ -124,10 +91,7 @@ function hexCellPath(cx: number, cy: number, R: number): string {
     const a = Math.PI * 2 * (i / 6);
     v.push([cx + Math.cos(a) * R, cy + Math.sin(a) * R]);
   }
-  return (d3.line().curve(d3.curveLinearClosed)(v) ?? '');
-}
-function hexBoundaryPath(r: number, o: Pt): string {
-  return hexCellPath(o.x, o.y, r);
+  return d3.line().curve(d3.curveLinearClosed)(v) ?? '';
 }
 
 function isInside(n: ProcessNode): boolean {
@@ -141,23 +105,17 @@ function protocolOf(c: ProcessCall): string {
   return 'TCP';
 }
 
-// Live legend entries (namespace → colour) for the overlay.
-const legend = ref<Array<{ ns: string; color: string; count: number }>>([]);
 let cellRadius = 26;
+let positioned: PositionedNode[] = [];
 
 function layout(o: Pt): PositionedNode[] {
-  const withNs = (n: ProcessNode): PositionedNode =>
-    ({ ...n, ns: namespaceOf(n.name) }) as PositionedNode;
-  // Sort by namespace so the spiral / ring fill keeps a group contiguous.
-  const byNs = (a: PositionedNode, b: PositionedNode) => a.ns.localeCompare(b.ns) || a.name.localeCompare(b.name);
+  const inside = props.nodes.filter(isInside).map((n) => ({ ...n }) as PositionedNode);
+  const outside = props.nodes.filter((n) => !isInside(n)).map((n) => ({ ...n }) as PositionedNode);
 
-  const inside = props.nodes.filter(isInside).map(withNs).sort(byNs);
-  const outside = props.nodes.filter((n) => !isInside(n)).map(withNs).sort(byNs);
-
-  // Inside honeycomb. Pick a cell size that fits the spiral inside the
-  // pod boundary: the outermost ring index ~ sqrt(count).
-  const rings = Math.max(1, Math.ceil((-3 + Math.sqrt(9 + 12 * (inside.length - 1))) / 6));
-  cellRadius = Math.max(14, Math.min(34, (HEX_RADIUS * 0.82) / ((rings + 0.6) * SQRT3)));
+  // Inside honeycomb. Cell size scales down as the spiral grows so the
+  // packed cluster stays compact.
+  const rings = Math.max(1, Math.ceil((-3 + Math.sqrt(9 + 12 * Math.max(1, inside.length - 1))) / 6));
+  cellRadius = Math.max(16, Math.min(34, 150 / (rings + 0.6)));
   const cells = spiralHex(inside.length);
   inside.forEach((n, i) => {
     const c = cells[i] ?? { x: 0, y: 0 };
@@ -166,8 +124,9 @@ function layout(o: Pt): PositionedNode[] {
     n.y = p.y;
   });
 
-  // Outside peers on expanding rings.
-  let r = HEX_RADIUS + 60;
+  // Outside peers ring the (tight) inside cluster.
+  const startR = insideExtent(inside, o) + 90;
+  let r = startR;
   let ring = circlePoints(r, 26, o);
   outside.forEach((n, i) => {
     if (!ring[i]) {
@@ -179,14 +138,28 @@ function layout(o: Pt): PositionedNode[] {
     n.y = p.y;
   });
 
-  // Build legend (sorted, local group last).
-  const counts = new Map<string, number>();
-  for (const n of [...inside, ...outside]) counts.set(n.ns, (counts.get(n.ns) ?? 0) + 1);
-  legend.value = [...counts.entries()]
-    .sort((a, b) => (a[0] === NS_LOCAL ? 1 : b[0] === NS_LOCAL ? -1 : a[0].localeCompare(b[0])))
-    .map(([ns, count]) => ({ ns, color: groupColor(ns), count }));
-
   return [...inside, ...outside];
+}
+
+/** Max distance from `o` to any inside cell centre. */
+function insideExtent(inside: PositionedNode[], o: Pt): number {
+  let r = 0;
+  for (const n of inside) r = Math.max(r, Math.hypot(n.x - o.x, n.y - o.y));
+  return r;
+}
+
+/** Smallest flat-top hexagon (centre + circumradius) that wraps the
+ *  inside cells. Circumradius is inflated past the cell extent because a
+ *  flat-top hexagon's inradius (along its flat edges) is only √3/2 of
+ *  the circumradius — so cells sitting near a flat edge still fit. */
+function insideBoundary(): { cx: number; cy: number; r: number } {
+  const inside = positioned.filter(isInside);
+  if (inside.length === 0) return { cx: 0, cy: 0, r: cellRadius * 1.4 };
+  const cx = d3.mean(inside, (n) => n.x) ?? 0;
+  const cy = d3.mean(inside, (n) => n.y) ?? 0;
+  let maxD = 0;
+  for (const n of inside) maxD = Math.max(maxD, Math.hypot(n.x - cx, n.y - cy));
+  return { cx, cy, r: (maxD + cellRadius) * 1.16 + 4 };
 }
 
 function buildCalls(byId: Map<string, PositionedNode>): PositionedCall[] {
@@ -244,6 +217,8 @@ const popStyle = computed(() => {
 let edgeSel: d3.Selection<SVGPathElement, PositionedCall, SVGGElement, unknown> | null = null;
 let pillSel: d3.Selection<SVGGElement, PositionedCall, SVGGElement, unknown> | null = null;
 let nodeSel: d3.Selection<SVGGElement, PositionedNode, SVGGElement, unknown> | null = null;
+let boundarySel: d3.Selection<SVGPathElement, unknown, null, undefined> | null = null;
+let boundaryLabelSel: d3.Selection<SVGTextElement, unknown, null, undefined> | null = null;
 
 function instanceLabel(): string {
   return props.nodes.find(isInside)?.serviceInstanceName ?? '';
@@ -254,6 +229,11 @@ function restyleEdges(): void {
       d.id === selectedCallId.value ? 'var(--sw-accent, #f97316)' : 'var(--sw-line-2, #3a3d47)',
     )
     .attr('stroke-width', (d) => (d.id === selectedCallId.value ? 2.6 : 1.5));
+}
+function redrawBoundary(): void {
+  const b = insideBoundary();
+  boundarySel?.attr('d', hexCellPath(b.cx, b.cy, b.r));
+  boundaryLabelSel?.attr('x', b.cx).attr('y', b.cy + b.r + 16);
 }
 function refreshPositions(): void {
   edgeSel?.attr('d', edgePath);
@@ -273,7 +253,7 @@ function render(): void {
   const h = rect.height || 520;
   const o: Pt = { x: 0, y: 0 };
 
-  const positioned = layout(o);
+  positioned = layout(o);
   const byId = new Map(positioned.map((n) => [n.id, n]));
   const calls = buildCalls(byId);
 
@@ -307,54 +287,25 @@ function render(): void {
     .attr('d', 'M0,-5 L10,0 L0,5')
     .attr('fill', 'var(--sw-fg-3, #6c7080)');
 
-  // Pod boundary.
-  g.append('path')
-    .attr('d', hexBoundaryPath(HEX_RADIUS, o))
+  // Pod boundary — auto-fit to the inside cells, redrawn on drag.
+  const b0 = insideBoundary();
+  boundarySel = g
+    .append('path')
+    .attr('d', hexCellPath(b0.cx, b0.cy, b0.r))
     .attr('fill', 'var(--sw-bg-1, #15171c)')
     .attr('fill-opacity', 0.3)
     .attr('stroke', 'var(--sw-line, #2a2d36)')
     .attr('stroke-dasharray', '4 4')
     .attr('stroke-width', 1.5);
-  g.append('text')
-    .attr('x', o.x)
-    .attr('y', o.y + HEX_RADIUS + 18)
+  boundaryLabelSel = g
+    .append('text')
+    .attr('x', b0.cx)
+    .attr('y', b0.cy + b0.r + 16)
     .attr('text-anchor', 'middle')
     .attr('fill', 'var(--sw-fg-2, #b4b7c2)')
     .style('font-family', 'var(--sw-mono, monospace)')
     .style('font-size', '11px')
     .text(instanceLabel());
-
-  // Namespace group regions (bounding circle behind each group's cells)
-  // + label, drawn beneath nodes — the k8s-topology grouping idiom.
-  const groups = d3.group(positioned, (n) => n.ns);
-  const groupG = g.append('g').attr('class', 'groups');
-  for (const [ns, members] of groups) {
-    if (ns === NS_LOCAL) continue; // pod-local processes already sit in the boundary
-    const cx = d3.mean(members, (m) => m.x) ?? 0;
-    const cy = d3.mean(members, (m) => m.y) ?? 0;
-    const rad = Math.max(...members.map((m) => Math.hypot(m.x - cx, m.y - cy))) + cellRadius + 8;
-    groupG
-      .append('circle')
-      .attr('cx', cx)
-      .attr('cy', cy)
-      .attr('r', rad)
-      .attr('fill', groupColor(ns))
-      .attr('fill-opacity', 0.07)
-      .attr('stroke', groupColor(ns))
-      .attr('stroke-opacity', 0.35)
-      .attr('stroke-dasharray', '3 3')
-      .attr('stroke-width', 1);
-    groupG
-      .append('text')
-      .attr('x', cx)
-      .attr('y', cy - rad - 4)
-      .attr('text-anchor', 'middle')
-      .attr('fill', groupColor(ns))
-      .style('font-family', 'var(--sw-mono, monospace)')
-      .style('font-size', '10px')
-      .style('font-weight', '600')
-      .text(ns);
-  }
 
   // Edges (animated flow).
   const linkG = g.append('g').attr('class', 'links');
@@ -407,7 +358,7 @@ function render(): void {
     .style('font-size', '9px')
     .text((d) => d.protocol);
 
-  // Nodes — hex cells tinted by namespace.
+  // Nodes — hex cells (inside = accent, external = grey).
   nodeSel = g
     .append('g')
     .attr('class', 'nodes')
@@ -426,18 +377,21 @@ function render(): void {
     .call(
       d3
         .drag<SVGGElement, PositionedNode>()
-        .on('start', () => { nodePop.node = null; })
+        .on('start', () => {
+          nodePop.node = null;
+        })
         .on('drag', (ev, d) => {
           d.x = ev.x;
           d.y = ev.y;
           refreshPositions();
+          if (isInside(d)) redrawBoundary();
         }) as never,
     );
   nodeSel
     .append('path')
     .attr('d', (d) => hexCellPath(0, 0, isInside(d) ? cellRadius * 0.92 : 18))
-    .attr('fill', (d) => groupColor(d.ns))
-    .attr('fill-opacity', (d) => (isInside(d) ? 0.85 : 0.65))
+    .attr('fill', (d) => (isInside(d) ? 'var(--sw-accent, #f97316)' : 'var(--sw-bg-3, #2a2d36)'))
+    .attr('fill-opacity', (d) => (isInside(d) ? 0.85 : 0.75))
     .attr('stroke', 'var(--sw-bg-0, #0d0f14)')
     .attr('stroke-width', 1.5);
   nodeSel
@@ -458,7 +412,7 @@ function render(): void {
 }
 
 onMounted(render);
-watch(() => [props.nodes, props.calls, props.groupExpression], render);
+watch(() => [props.nodes, props.calls], render);
 onBeforeUnmount(() => {
   if (host.value) host.value.innerHTML = '';
 });
@@ -467,21 +421,12 @@ onBeforeUnmount(() => {
 <template>
   <div class="topo-wrap">
     <div ref="host" class="topo-host"></div>
-    <!-- Namespace legend -->
-    <div v-if="legend.length" class="topo-legend">
-      <div v-for="l in legend" :key="l.ns" class="lg-row">
-        <span class="lg-swatch" :style="{ background: l.color }"></span>
-        <span class="lg-ns">{{ l.ns }}</span>
-        <span class="lg-count">{{ l.count }}</span>
-      </div>
-    </div>
     <!-- Node info floating popover -->
     <Teleport to="body">
       <div v-if="nodePop.node" class="topo-nodepop" :style="popStyle" role="tooltip">
         <div class="np-name">{{ nodePop.node.name }}</div>
         <dl class="np-rows">
           <div class="np-row"><dt>Kind</dt><dd>{{ nodePop.node.isReal ? 'process' : 'virtual peer' }}</dd></div>
-          <div class="np-row"><dt>Namespace</dt><dd>{{ nodePop.node.ns }}</dd></div>
           <div class="np-row"><dt>Service</dt><dd>{{ nodePop.node.serviceName }}</dd></div>
           <div class="np-row"><dt>Instance</dt><dd>{{ nodePop.node.serviceInstanceName }}</dd></div>
         </dl>
@@ -507,23 +452,6 @@ onBeforeUnmount(() => {
 @keyframes topo-flow {
   to { stroke-dashoffset: -11; }
 }
-.topo-legend {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  max-height: calc(100% - 16px);
-  overflow-y: auto;
-  background: color-mix(in srgb, var(--sw-bg-1) 88%, transparent);
-  border: 1px solid var(--sw-line);
-  border-radius: 6px;
-  padding: 6px 8px;
-  font-size: 10.5px;
-  pointer-events: none;
-}
-.lg-row { display: grid; grid-template-columns: 12px 1fr auto; gap: 6px; align-items: center; padding: 1px 0; }
-.lg-swatch { width: 10px; height: 10px; border-radius: 2px; }
-.lg-ns { color: var(--sw-fg-1); font-family: var(--sw-mono); }
-.lg-count { color: var(--sw-fg-3); font-variant-numeric: tabular-nums; }
 </style>
 
 <style>

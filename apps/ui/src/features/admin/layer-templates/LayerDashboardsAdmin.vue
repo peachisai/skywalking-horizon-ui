@@ -636,16 +636,6 @@ const processEdgeClientMetrics = computed(() =>
 const processEdgeServerMetrics = computed(() =>
   activeScope.value === 'networkProfiling' ? getMetricList('edgeServer') : [],
 );
-const processGroupExpression = computed<string>({
-  get: () =>
-    activeScope.value === 'networkProfiling'
-      ? (draft.template?.processTopology?.groupExpression ?? '')
-      : '',
-  set: (v: string) => {
-    const t = ensureProcessTopology();
-    t.groupExpression = v.trim() || undefined;
-  },
-});
 
 /* Trace backend selector. `traces.source` decides which trace store the
  * per-layer Trace tab dispatches to: `native` (SkyWalking query-protocol),
@@ -1588,18 +1578,6 @@ const namingTest = computed<NamingTestResult>(() => {
           <div class="card-head">
             <h4>Network profiling — process-relation config</h4>
             <span class="sub">edge MQE for the process-topology detail panel. Queried under ProcessRelation when an operator clicks a process→process call.</span>
-          </div>
-          <div class="naming-prefix-row">
-            <label class="mf mf-wide">
-              <span>Group expression</span>
-              <input
-                v-model="processGroupExpression"
-                type="text"
-                class="mf-input mono"
-                placeholder="(optional regex — 1st capture = namespace; default: text after last '.')"
-              />
-            </label>
-            <span class="naming-prefix-hint">Groups the topology honeycomb by namespace (k8s <code>name.namespace</code> convention).</span>
           </div>
           <div class="topo-cfg-body">
             <div class="topo-cfg-section">

@@ -119,12 +119,6 @@ export interface ProcessTopologyConfig {
   /** Per-edge MQE under ProcessRelation, server side
    *  (`process_relation_server_*`). */
   edgeServerMetrics: TopologyMetricDef[];
-  /** Optional regex used to derive the namespace each process node is
-   *  grouped under in the topology honeycomb. The first capture group
-   *  wins; when absent (or no match) the renderer falls back to the
-   *  text after the last `.` in the process name (the k8s
-   *  `name.namespace` convention). */
-  groupExpression?: string;
 }
 
 /** One resolved process-relation metric series for the edge panel. */

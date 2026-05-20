@@ -35,11 +35,9 @@ import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLayerInstances } from '@/layer/useLayerInstances';
 import { useSelectedService } from '@/layer/useSelectedService';
-import { useLayers } from '@/shell/useLayers';
 import { bffClient } from '@/api/client';
 import type {
   EBPFTask,
-  LayerDef,
   NetworkProfilingSampling,
   ProcessCall,
   ProcessNode,
@@ -53,10 +51,6 @@ import Icon from '@/components/icons/Icon.vue';
 const route = useRoute();
 const layerKey = computed(() => String(route.params.layerKey ?? ''));
 const { selectedId: serviceId } = useSelectedService();
-const { layers } = useLayers();
-const layer = computed<LayerDef | null>(
-  () => layers.value.find((l) => l.key === layerKey.value) ?? null,
-);
 
 // Instance picker (binds to ?serviceInstance= via plain ref state — the
 // network view needs an *instance* to be useful, so we don't reuse the
@@ -375,7 +369,6 @@ function fmtTime(ms: number): string {
           v-if="nodes.length"
           :nodes="nodes"
           :calls="calls"
-          :group-expression="layer?.processTopology?.groupExpression"
           @select-call="onSelectCall"
         />
         <div v-else-if="!topologyLoading" class="topology-empty">

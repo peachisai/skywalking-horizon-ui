@@ -258,11 +258,6 @@ export interface LayerDef {
    *  spans (Envoy ALS, rover) so they set `source: 'zipkin'`; agent-
    *  traced layers default to `native`. */
   traces?: { source?: 'native' | 'zipkin' | 'both' };
-  /** Network-profiling process-topology hints the UI needs client-side.
-   *  Only `groupExpression` rides along (the MQE metric lists are
-   *  resolved server-side by the BFF). Drives the namespace grouping in
-   *  the process-topology honeycomb. */
-  processTopology?: { groupExpression?: string };
   /** Per-layer service-name parsing rule. When present, the UI runs
    *  every service name through this regex to derive `{ display, cluster }`
    *  and clusters topology nodes by cluster. Absent ⇒ no clustering. */

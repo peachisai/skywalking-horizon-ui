@@ -182,9 +182,6 @@ function deriveLayer(
       overview: tpl.overview,
       log: tpl.log,
       traces: tpl.traces,
-      processTopology: tpl.processTopology
-        ? { groupExpression: tpl.processTopology.groupExpression }
-        : undefined,
       naming: tpl.naming,
     };
   }
