@@ -84,7 +84,7 @@ export async function runPreflight(
 ): Promise<PreflightResult> {
   const adminUrl = config.oap.adminUrl;
   const generatedAt = Date.now();
-  const dump = await fetchConfigDump(adminUrl, fetch, config.oap.timeoutMs);
+  const dump = await fetchConfigDump(adminUrl, fetch, config.oap.timeoutMs, config.oap.auth);
 
   if (!dump.ok) {
     return {
@@ -140,9 +140,15 @@ async function fetchConfigDump(
   adminUrl: string,
   fetch: FetchLike,
   timeoutMs: number,
+  auth?: { username: string; password: string },
 ): Promise<DumpOk | DumpErr> {
   const url = `${adminUrl.replace(/\/$/, '')}/debugging/config/dump`;
-  let init: RequestInit = { method: 'GET', headers: { Accept: 'application/json' } };
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (auth) {
+    const b64 = Buffer.from(`${auth.username}:${auth.password}`, 'utf8').toString('base64');
+    headers.authorization = `Basic ${b64}`;
+  }
+  let init: RequestInit = { method: 'GET', headers };
   let timer: ReturnType<typeof setTimeout> | null = null;
   if (timeoutMs > 0) {
     const ctrl = new AbortController();

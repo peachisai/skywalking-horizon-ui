@@ -15,7 +15,7 @@
   limitations under the License.
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import Icon, { type IconName } from '@/components/icons/Icon.vue';
 // Full "SkyWalking" wordmark + moon. The shipped file is white-fill
@@ -134,6 +134,11 @@ function isActiveExact(path: string): boolean {
   return route.path === path;
 }
 
+// Only the layer the route currently points at is auto-expanded. We do
+// NOT pre-expand the first layer (General) on a non-layer landing —
+// expanding a section is an explicit user action (a click), and a
+// default-open accordion misleads operators into thinking that layer is
+// "selected" when they've navigated nowhere.
 watch(
   [() => route.path, orderedLayers],
   ([path, rows]) => {
@@ -142,14 +147,21 @@ watch(
       const key = m[1];
       const L = rows.find((l) => l.key === key);
       if (L) expandedLayer.value = key;
-      return;
-    }
-    if (!expandedLayer.value && rows.length > 0) {
-      expandedLayer.value = rows[0].key;
     }
   },
   { immediate: true },
 );
+
+// On first paint, bring the route's selected nav item into view — on a
+// long sidebar the active layer/tab can land below the fold, so landing
+// deep-linked (or after a reload) would otherwise show no visible
+// selection. Wait a tick so the route-driven expand above has rendered
+// the L2 children that may contain the active row.
+const navRef = ref<HTMLElement | null>(null);
+onMounted(async () => {
+  await nextTick();
+  navRef.value?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
+});
 
 interface NavRow {
   icon: IconName;
@@ -213,7 +225,7 @@ const sections: NavSection[] = [
   {
     kicker: 'Dashboard setup',
     links: [
-      { icon: 'set', label: 'Overview templates', to: '/admin/overview-templates', verb: 'overview:read' },
+      { icon: 'set', label: 'Overview templates', to: '/admin/overview-templates', verb: 'overview:write' },
       { icon: 'metric', label: 'Layer dashboards', to: '/admin/layer-dashboards', verb: 'dashboard:read' },
       { icon: 'alert', label: 'Alert page', to: '/admin/alert-page-setup', verb: 'alarm-setup:read' },
       { icon: 'set', label: 'Global defaults', to: '/admin/global-defaults', verb: 'setup:read' },
@@ -284,7 +296,7 @@ watch(
       <small>Horizon</small>
     </RouterLink>
 
-    <nav class="sw-nav">
+    <nav ref="navRef" class="sw-nav">
       <!-- Overviews are gated by `overview:read` (operator / admin). -->
       <template v-if="auth.hasVerb('overview:read')">
         <div class="sw-nav-section sw-nav-section--icon">
@@ -611,7 +623,11 @@ watch(
         </div>
       </template>
 
-      <template v-if="operateLayers.length > 0">
+      <!-- Platform monitoring (OAP self-observability layers) is the
+           maintainer tier, not the viewer data catalog. Gate on
+           `cluster:read` — the verb horizon.yaml grants maintainer /
+           operator / admin but not viewer. -->
+      <template v-if="operateLayers.length > 0 && auth.hasVerb('cluster:read')">
         <div class="sw-nav-section sw-nav-section--icon">
           <Icon :name="sectionIcon('Platform monitoring')" />
           <span>Platform monitoring</span>

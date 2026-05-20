@@ -1038,7 +1038,7 @@ function buildOption(w: Widget): echarts.EChartsOption {
 
   const showLegend = series.length > 1;
   return {
-    grid: { left: 32, right: 6, top: showLegend ? 22 : 6, bottom: 18 },
+    grid: { left: 32, right: 6, top: showLegend ? 30 : 6, bottom: 18 },
     tooltip: {
       trigger: 'axis',
       backgroundColor: '#1c2630',
@@ -1048,10 +1048,15 @@ function buildOption(w: Widget): echarts.EChartsOption {
     legend: showLegend
       ? {
           top: 0, left: 0, right: 0, type: 'scroll',
-          textStyle: { color: '#8a96a3', fontSize: 9, fontFamily: mono },
-          itemHeight: 5, itemWidth: 8,
-          pageIconColor: '#5e6c79',
-          pageTextStyle: { color: '#5e6c79', fontSize: 9 },
+          textStyle: { color: '#c2cbd4', fontSize: 11, fontFamily: mono },
+          itemHeight: 8, itemWidth: 14, itemGap: 16,
+          // Active page direction bright; the unavailable one (e.g. the
+          // left arrow on page 1) clearly dim so it doesn't read as
+          // clickable.
+          pageIconColor: '#c2cbd4',
+          pageIconInactiveColor: '#3a4651',
+          pageIconSize: 11,
+          pageTextStyle: { color: '#8a96a3', fontSize: 10 },
         }
       : undefined,
     xAxis: {
@@ -1756,7 +1761,11 @@ function scopeShort(scope: InspectScope): string {
   row-gap: 6px;
   position: relative;
   min-width: 0;
-  overflow: hidden;
+  /* `visible`, not `hidden`: the entity editor popout is absolutely
+   * positioned at `top:100%` and must escape the card to overlay
+   * neighbours below. The card's own children (title, pills, chart)
+   * each clip themselves, so the card doesn't need to. */
+  overflow: visible;
 }
 .card__head {
   display: grid;
@@ -1818,10 +1827,10 @@ function scopeShort(scope: InspectScope): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 10px;
   font-family: var(--rr-font-mono);
-  font-size: 11.5px;
-  padding: 3px 7px;
+  font-size: 13px;
+  padding: 4px 9px;
   background: var(--rr-bg);
   color: var(--rr-ink);
   border: 1px solid var(--rr-border);
@@ -1838,25 +1847,35 @@ function scopeShort(scope: InspectScope): string {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  letter-spacing: 0.01em;
 }
 .entity__decoded--empty { color: var(--rr-dim); font-style: italic; }
-.entity__idx { font-size: 10px; color: var(--rr-dim); flex-shrink: 0; }
+.entity__idx { font-size: 11px; color: var(--rr-dim); flex-shrink: 0; }
+/* Clickable = bright + accent border (high-emphasis affordance);
+ * disabled = dim/gray with a faint border. The earlier styling read
+ * inverted — muted ink for live arrows, which looked like the
+ * disabled state. */
 .entity-nav {
   font-family: var(--rr-font-mono);
-  font-size: 10px;
-  padding: 2px 6px;
+  font-size: 12px;
+  padding: 3px 8px;
   background: transparent;
-  color: var(--rr-ink2);
-  border: 1px solid var(--rr-border);
+  color: var(--rr-heading);
+  border: 1px solid var(--rr-border2);
   border-radius: var(--rr-radius-sm);
   cursor: pointer;
   line-height: 1.4;
 }
 .entity-nav:hover:not(:disabled) {
-  color: var(--rr-heading);
-  border-color: var(--rr-border2);
+  color: var(--rr-accent);
+  border-color: var(--rr-accent);
 }
-.entity-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.entity-nav:disabled {
+  color: var(--rr-dim);
+  border-color: var(--rr-border);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .link {
   background: transparent;
   border: 0;

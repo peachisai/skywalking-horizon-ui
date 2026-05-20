@@ -54,6 +54,9 @@ export interface ExecDeps {
   fetch: FetchLike;
   /** Per-call timeout (ms). 0 disables. */
   timeoutMs: number;
+  /** Basic-auth for the OAP GraphQL endpoint — same credentials the
+   *  rest of the client layer uses. Omit when OAP is unauthenticated. */
+  auth?: { username: string; password: string };
 }
 
 /* SkyWalking's MQE entry point is on `Query`, not `Mutation`
@@ -155,12 +158,17 @@ export async function fireMqe(
       debug: req.debug ?? false,
     },
   };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (deps.auth) {
+    headers.authorization =
+      'Basic ' + Buffer.from(`${deps.auth.username}:${deps.auth.password}`, 'utf8').toString('base64');
+  }
   let init: RequestInit = {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
+    headers,
     body: JSON.stringify(payload),
   };
   let timer: ReturnType<typeof setTimeout> | null = null;

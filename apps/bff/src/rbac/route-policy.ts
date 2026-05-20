@@ -183,8 +183,12 @@ export const ROUTE_POLICY: Record<string, RoutePolicy> = {
   'GET /api/admin/alarm-rules/:id':                'alarm-rule:read',
 
   // ── Overview-template editor (admin) ─────────────────────────────
-  'GET /api/admin/overview-templates':             'overview:read',
-  'GET /api/admin/overview-templates/:id':         'overview:read',
+  // The admin editor is an operate-only surface — even reading the
+  // template catalog here needs `overview:write` (operator / admin).
+  // Plain viewers/maintainers consume rendered overviews via
+  // `GET /api/overview/dashboards`, which stays `overview:read`.
+  'GET /api/admin/overview-templates':             'overview:write',
+  'GET /api/admin/overview-templates/:id':         'overview:write',
   'POST /api/admin/overview-templates':            'overview:write',
   // POST /api/admin/overview-templates/:id removed — operator updates
   // now go through `/api/admin/templates/save` (OAP-backed). Bundled

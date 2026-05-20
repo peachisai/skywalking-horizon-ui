@@ -94,6 +94,20 @@ const adminGeneratedAt = computed<string>(() => {
   return new Date(ts).toLocaleTimeString();
 });
 
+// Zipkin / OTLP trace endpoint. Probed on the same poll as Pane A but
+// independently — it only feeds the Zipkin/OTLP trace menu, so a red
+// dot here is NOT a cluster-wide outage. Reachability is undefined
+// until the first /api/oap/info lands.
+const zipkinReachable = computed<boolean | undefined>(() => info.value?.zipkinReachable);
+const zipkinBadgeState = computed<'ok' | 'err' | 'unknown'>(() => {
+  if (zipkinReachable.value === undefined) return 'unknown';
+  return zipkinReachable.value ? 'ok' : 'err';
+});
+const zipkinBadgeLabel = computed<string>(() => {
+  if (zipkinReachable.value === undefined) return 'loading…';
+  return zipkinReachable.value ? 'reachable' : 'unreachable';
+});
+
 function refreshAll(): void {
   void refetchInfo();
   void refetchPreflight();
@@ -109,8 +123,9 @@ function refreshAll(): void {
         <p class="lede">
           Two-port view of the OAP backend horizon is connected to.
           Query / GraphQL (<code>:12800</code>) drives every observability page;
-          the admin host (<code>:17128</code>) gates DSL Management, Live Debugger, Inspect, and Dump.
-          Both are polled independently — if one shows red the other can still be green.
+          the admin host (<code>:17128</code>) gates DSL Management, Live Debugger, Inspect, and Dump;
+          the Zipkin / OTLP endpoint feeds only the Zipkin trace menu.
+          All three are polled independently — if one shows red the others can still be green.
         </p>
       </div>
       <button type="button" class="refresh" @click="refreshAll">refresh both</button>
@@ -216,6 +231,45 @@ function refreshAll(): void {
           </tr>
         </tbody>
       </table>
+    </section>
+
+    <!-- ── Pane C · Zipkin / OTLP trace endpoint ─────────────────── -->
+    <section class="pane">
+      <header class="pane-head">
+        <h2>Zipkin / OTLP traces <span class="port">v2 REST</span></h2>
+        <span class="sw-badge" :class="`is-${zipkinBadgeState}`">
+          <span class="state-dot" />{{ zipkinBadgeLabel }}
+        </span>
+      </header>
+
+      <p class="pane-lede">
+        OAP's Zipkin v2 endpoint, source for the <strong>OpenTelemetry &amp; Zipkin</strong>
+        trace menu (shown when a layer's trace source is <code>zipkin</code> or <code>both</code>).
+        This is the <em>only</em> page affected — if it's unreachable, native traces and every
+        other observability page keep working.
+      </p>
+
+      <div class="grid">
+        <div class="sw-card kpi">
+          <div class="sw-card-head"><h4>Endpoint</h4></div>
+          <div class="kpi-body">
+            <div class="kpi-value mono">{{ zipkinBadgeLabel }}</div>
+            <div class="kpi-label">{{ info?.zipkinUrl ?? '—' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="zipkinReachable === false" class="last-error block">
+        <strong>Zipkin endpoint unreachable</strong>
+        <code v-if="info?.zipkinError">{{ info.zipkinError }}</code>
+        <p class="hint">
+          Tried <code>{{ info?.zipkinUrl }}/api/v2/services</code>.
+          Confirm OAP's Zipkin receiver / query is enabled and the
+          <code>oap.zipkinUrl</code> in horizon's config points at the right host:port
+          (shared GraphQL port → <code>&lt;queryUrl&gt;/zipkin</code>; standalone → <code>:9412/zipkin</code>).
+          Only the Zipkin trace menu is affected.
+        </p>
+      </div>
     </section>
   </div>
 </template>

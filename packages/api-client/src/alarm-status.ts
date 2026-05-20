@@ -51,9 +51,10 @@ export interface InstanceAlarmStatus<T> {
   /** gRPC address of the OAP node — `host:port` for peers, `Self()`
    *  literal for the node serving the HTTP request. */
   address: string;
-  /** Failure reason for THIS node only. Null when the node responded
-   *  successfully (status field is then populated). */
-  errorMsg: string | null;
+  /** Failure reason for THIS node only. Null/absent when the node
+   *  responded successfully (status field is then populated) — OAP
+   *  omits the key entirely on success rather than sending `null`. */
+  errorMsg?: string | null;
   status: T | null;
 }
 

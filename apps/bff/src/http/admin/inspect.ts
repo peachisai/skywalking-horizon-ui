@@ -235,6 +235,7 @@ export function registerInspectRoutes(app: FastifyInstance, deps: InspectRouteDe
         const result = await fireMqe(target, body, {
           fetch: fetchImpl,
           timeoutMs: cfg.oap.timeoutMs,
+          ...(cfg.oap.auth ? { auth: cfg.oap.auth } : {}),
         });
         return reply.send(result);
       } catch (err) {

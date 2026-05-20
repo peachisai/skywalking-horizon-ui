@@ -98,9 +98,22 @@ async function resolveMqeTarget(deps: ResolveDeps): Promise<MqeTarget> {
     };
   }
 
-  // Otherwise we need the config dump.
+  // No override: the configured GraphQL query endpoint IS the MQE
+  // surface — `execExpression` is a query-protocol query served by the
+  // same `/graphql` the rest of the app uses. Use `oap.queryUrl`
+  // verbatim so scheme (http/https), host, port, and the basic-auth the
+  // GraphQL client already carries all line up. Rediscovering a REST
+  // host:port from the admin dump only rebuilds this same endpoint while
+  // dropping the scheme + auth (it always emits `http://` and a bind
+  // host that's often a wildcard / cluster-internal IP).
+  if (configured.host === undefined && configured.port === undefined) {
+    return { baseUrl: cfg.queryUrl.replace(/\/$/, ''), via: 'oap.queryUrl', configured };
+  }
+
+  // Partial override (only host OR only port) — discover the missing
+  // half from the admin config dump and combine.
   const adminUrl = cfg.adminUrl;
-  const dump = await fetchConfigDump(adminUrl, deps.fetch, cfg.timeoutMs);
+  const dump = await fetchConfigDump(adminUrl, deps.fetch, cfg.timeoutMs, cfg.auth);
   const adminHost = new URL(adminUrl).hostname;
 
   const picked = pickFromDump(dump, adminHost);
@@ -173,10 +186,16 @@ async function fetchConfigDump(
   adminUrl: string,
   fetch: FetchLike,
   timeoutMs: number,
+  auth?: { username: string; password: string },
 ): Promise<Record<string, string>> {
   const base = adminUrl.replace(/\/$/, '');
   const url = `${base}/debugging/config/dump`;
-  let init: RequestInit = { method: 'GET', headers: { Accept: 'application/json' } };
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (auth) {
+    const b64 = Buffer.from(`${auth.username}:${auth.password}`, 'utf8').toString('base64');
+    headers.authorization = `Basic ${b64}`;
+  }
+  let init: RequestInit = { method: 'GET', headers };
   let timer: ReturnType<typeof setTimeout> | null = null;
   if (timeoutMs > 0) {
     const ctrl = new AbortController();

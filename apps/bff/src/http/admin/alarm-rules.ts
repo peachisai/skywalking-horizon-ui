@@ -116,7 +116,7 @@ function pivot(
 ): Pick<AlertingRulesListResponse, 'rules' | 'nodes'> {
   const nodes = listResp.oapInstances.map((i) => ({
     address: i.address,
-    ok: i.errorMsg === null && !!i.status,
+    ok: !i.errorMsg && !!i.status,
     error: i.errorMsg ?? undefined,
   }));
   const totalNodes = nodes.length || 1;
@@ -152,7 +152,7 @@ function pivot(
       detail: bestDetail,
       nodes: listResp.oapInstances.map((i) => ({
         address: i.address,
-        ok: i.errorMsg === null && !!i.status,
+        ok: !i.errorMsg && !!i.status,
         error: i.errorMsg ?? undefined,
         loaded: loadedAddrs.has(i.address),
       })),
@@ -254,7 +254,7 @@ export function registerAlarmRulesRoutes(
         detail: AlarmRuleDetail | null;
       }>((i: InstanceAlarmStatus<AlarmRuleDetail>) => ({
         address: i.address,
-        ok: i.errorMsg === null && !!i.status,
+        ok: !i.errorMsg && !!i.status,
         error: i.errorMsg ?? undefined,
         detail: i.status ?? null,
       }));

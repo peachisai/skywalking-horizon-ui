@@ -43,6 +43,16 @@ export interface OapInfo {
    *  query shapes (e.g. `getAlarm` vs `queryAlarms`). */
   capabilities?: OapCapabilities;
   error?: string;
+  /** OAP's Zipkin v2 REST base URL (`oap.zipkinUrl`). Only the Zipkin /
+   *  OTLP trace menu reads from it — an unreachable Zipkin endpoint does
+   *  NOT degrade any other page, so the cluster-status pane scopes it
+   *  to the trace component explicitly. */
+  zipkinUrl?: string;
+  /** Whether `GET {zipkinUrl}/api/v2/services` answered 2xx. Probed in
+   *  parallel with the GraphQL info call and independent of `reachable`
+   *  (query port can be up while Zipkin is off, and vice versa). */
+  zipkinReachable?: boolean;
+  zipkinError?: string;
 }
 
 export interface OapCapabilities {
