@@ -56,6 +56,24 @@ const root = ref<HTMLDivElement | null>(null);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let chart: any = null;
 
+// Origin id of the click-selected frame. Drives the persistent outline
+// (the zoom itself is d3-flame-graph's default click behavior).
+const selectedOriginId = ref<string | null>(null);
+function applySelectionHighlight(): void {
+  if (!root.value) return;
+  const sel = selectedOriginId.value;
+  d3.select(root.value)
+    .selectAll<SVGGElement, { data?: { originId?: string } }>('g')
+    .each(function (d) {
+      const isSel = !!sel && d?.data?.originId === sel;
+      d3.select(this)
+        .select('rect')
+        .attr('stroke', isSel ? '#ffffff' : null)
+        .attr('stroke-width', isSel ? 2 : null)
+        .attr('stroke-opacity', isSel ? 0.95 : null);
+    });
+}
+
 function metricFor(el: ProfileAnalyzationElement): number {
   if (props.metricKey === 'duration') return Math.max(0, el.duration);
   return Math.max(0, el.count);
@@ -168,7 +186,17 @@ function draw(): void {
     });
 
   chart.tooltip(false);
+  // Click selects + zooms. d3-flame-graph zooms to the clicked frame by
+  // default (the "expand"); we additionally pin a persistent outline on
+  // the selected frame so the operator can see WHICH cell is focused —
+  // re-applied after the zoom transition rebuilds the visible frames.
+  chart.onClick((d: { data?: { originId?: string } }) => {
+    selectedOriginId.value = d?.data?.originId ?? null;
+    applySelectionHighlight();
+    window.setTimeout(applySelectionHighlight, 470);
+  });
   d3.select(root.value).datum(tree).call(chart);
+  applySelectionHighlight();
   const svg = root.value.querySelector('svg');
   if (svg) {
     // Hover a frame → render a cursor-following info card (悬浮信息).
@@ -204,15 +232,26 @@ const hoveredFrame = ref<FlameNode | null>(null);
 const tipPos = reactive({ x: 0, y: 0 });
 let svgHandlers: { svg: SVGElement; onMove: (e: MouseEvent) => void; onLeave: () => void } | null = null;
 
-const rootCountForPct = computed<number>(() => {
+// "% of root" denominator = the whole profile's total, measured with
+// the SAME metric that sizes the boxes (count for trace, duration for
+// async / eBPF / pprof). Each top-level frame's value is cumulative
+// (includes its descendants), so the profile total is the sum across
+// the top-level roots. (The virtual-root node's own `count`/`duration`
+// stay 0 — only `value` is rolled up for d3 layout — so we must sum the
+// children here rather than read the virtual root.)
+function frameMetric(n: FlameNode): number {
+  return props.metricKey === 'duration' ? n.duration : n.count;
+}
+const rootTotalForPct = computed<number>(() => {
   const tree = buildVirtualRoot();
-  return tree?.count ?? 0;
+  if (!tree?.children?.length) return 0;
+  return tree.children.reduce((s, c) => s + Math.max(0, frameMetric(c)), 0);
 });
 const hoveredPctRoot = computed<string>(() => {
   const f = hoveredFrame.value;
-  const total = rootCountForPct.value;
+  const total = rootTotalForPct.value;
   if (!f || total === 0) return '0';
-  return ((f.count / total) * 100).toFixed(2);
+  return ((frameMetric(f) / total) * 100).toFixed(2);
 });
 
 // Tip position with viewport-edge clamping. Width is capped via CSS
@@ -237,9 +276,10 @@ onMounted(() => {
   draw();
 });
 watch(() => [props.trees, props.metricKey], () => {
-  // Drop any stale hover state when the data changes — keeps the card
-  // from briefly pointing at a frame that no longer exists.
+  // Drop any stale hover + selection when the data changes — keeps the
+  // card and the outline from pointing at a frame that no longer exists.
   hoveredFrame.value = null;
+  selectedOriginId.value = null;
   draw();
 });
 onBeforeUnmount(() => {
