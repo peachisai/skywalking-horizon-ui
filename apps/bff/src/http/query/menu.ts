@@ -314,8 +314,22 @@ export function registerMenuRoute(app: FastifyInstance, deps: MenuRouteDeps): vo
       };
       return reply.send(body);
     } catch (err) {
+      // OAP unreachable — fall back to the bundled layer templates so the
+      // sidebar still renders navigation (each page surfaces its own
+      // OAP-down state). Service counts are unknown (-1) and layers are
+      // marked inactive; everything else (alias / color / slots / caps)
+      // comes from the template, exactly like the live path.
+      const HIDDEN_LAYERS = new Set(['BANYANDB']);
+      const seen = new Set<string>();
+      const layers: LayerDef[] = [];
+      for (const tpl of allLayerTemplates()) {
+        const key = canonical(tpl.key.toUpperCase());
+        if (seen.has(key) || HIDDEN_LAYERS.has(key)) continue;
+        seen.add(key);
+        layers.push(deriveLayer(key, false, null, -1, null));
+      }
       const body: MenuResponse = {
-        layers: [],
+        layers,
         generatedAt: Date.now(),
         oap: {
           reachable: false,
