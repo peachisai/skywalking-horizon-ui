@@ -203,17 +203,22 @@ function readPkgJson(pkgPath) {
 // Read the copyright year from the committed root NOTICE so the generated
 // binary NOTICE is reproducible (a wall-clock year would drift every Jan 1
 // and break the CI diff).
+// Apache SkyWalking entered the ASF in 2017 — the fixed founding year that
+// opens every SkyWalking copyright span. Only the end year advances.
+const FOUNDING_YEAR = 2017;
+
 function noticeYear() {
   try {
     const txt = readFileSync(resolve(repoRoot, 'NOTICE'), 'utf8');
-    // Capture the full copyright span (e.g. `2017-2026`), not just the
-    // first year — Apache SkyWalking dates from its 2017 ASF inception.
+    // The committed root NOTICE is the source of truth (keeps the binary
+    // NOTICE reproducible). Capture the full span (e.g. `2017-2026`).
     const m = txt.match(/Copyright\s+(\d{4}(?:-\d{4})?)\s+The Apache Software Foundation/);
     if (m) return m[1];
   } catch {
-    /* fall through */
+    /* fall through to the founding-year-anchored fallback */
   }
-  return String(new Date().getUTCFullYear());
+  const now = new Date().getUTCFullYear();
+  return now > FOUNDING_YEAR ? `${FOUNDING_YEAR}-${now}` : String(FOUNDING_YEAR);
 }
 
 // Apache-produced dependencies whose NOTICE is just the generic ASF
