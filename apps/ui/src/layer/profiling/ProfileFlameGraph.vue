@@ -186,6 +186,13 @@ function draw(): void {
     });
 
   chart.tooltip(false);
+  // Suppress the library's native <title> tooltip ("name (pct%, N
+  // samples)"). With the d3-tip tooltip off, d3-flame-graph still
+  // appends an <svg:title> per cell filled from the label handler —
+  // it collided with our richer cursor-following .fg-tip card. An empty
+  // handler leaves the title text blank (no browser tooltip). Cast: the
+  // method exists at runtime but isn't in the shipped d3-flame-graph types.
+  (chart as unknown as { setLabelHandler(fn: () => string): unknown }).setLabelHandler(() => '');
   // Click selects + zooms. d3-flame-graph zooms to the clicked frame by
   // default (the "expand"); we additionally pin a persistent outline on
   // the selected frame so the operator can see WHICH cell is focused —
