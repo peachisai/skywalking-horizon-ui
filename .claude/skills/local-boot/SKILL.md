@@ -36,14 +36,29 @@ env | grep -iE '^(http_proxy|https_proxy|all_proxy)=' && echo "local proxy detec
 
 The browser uses its OWN proxy settings (not the shell's), so the developer must also let `127.0.0.1` / `localhost` go direct (ClashX "bypass localhost" / system proxy no-proxy list). The env-level bypass below only fixes CLI tools and Vite's own fetches.
 
+## The stale-process trap (why a config switch "didn't take")
+
+`tsx watch` keeps the old BFF alive, so a freshly launched BFF with a NEW config silently dies on `EADDRINUSE: 127.0.0.1:8081` while the OLD process keeps serving the OLD OAP. Symptom: you switch local↔demo, everything looks fine, but the UI still shows the previous OAP's data.
+
+Killing matters in two ways:
+- `pkill -f "tsx watch src/server.ts"` may miss the actual listener — also `pkill -f "tsx/dist/cli.mjs watch"`, and **verify the port is actually free with `lsof` before relaunching** (loop until free; the watcher can respawn a child).
+- After boot, **confirm which OAP the LIVE process is using** — don't trust that your new process won the port. The authoritative check:
+  ```bash
+  curl -s --noproxy '*' -b /tmp/sw.cookies http://127.0.0.1:8081/api/oap/config | grep -oE '"adminUrl":"[^"]*"'
+  # local => http://localhost:12800 ; demo => https://demo.skywalking.apache.org:17128
+  ```
+  Also grep the boot log for `EADDRINUSE` and the `configPath` line. If the adminUrl is wrong, a stale BFF is still bound — kill it, confirm `:8081` is free, relaunch.
+
 ## Boot against the local OAP
 
 ```bash
 REPO="$(git rev-parse --show-toplevel)"
-# 1. Make sure nothing stale holds the BFF port (a wrong-config process
-#    on :8081 makes a fresh one fail with EADDRINUSE and you keep hitting
-#    the old one). Kill any prior dev servers first:
-pkill -f "tsx watch src/server.ts" 2>/dev/null; pkill -f vite 2>/dev/null; sleep 1
+# 1. Kill prior dev servers AND confirm :8081 is actually free — a stale
+#    BFF holding the port makes the new one die on EADDRINUSE while the
+#    old config keeps serving (see "stale-process trap"):
+pkill -f "tsx watch src/server.ts" 2>/dev/null
+pkill -f "tsx/dist/cli.mjs watch" 2>/dev/null; pkill -f vite 2>/dev/null
+until ! lsof -nP -iTCP:8081 -sTCP:LISTEN >/dev/null 2>&1; do sleep 1; done
 
 # 2. BFF — absolute config path is mandatory (see gotcha above):
 HORIZON_CONFIG="$REPO/.claude/skills/local-boot/horizon.local.yaml" \
@@ -68,7 +83,9 @@ developer for it and export it before booting:
 REPO="$(git rev-parse --show-toplevel)"
 read -rsp "Demo OAP password: " OAP_PASSWORD && export OAP_PASSWORD && echo
 
-pkill -f "tsx watch src/server.ts" 2>/dev/null; pkill -f vite 2>/dev/null; sleep 1
+pkill -f "tsx watch src/server.ts" 2>/dev/null
+pkill -f "tsx/dist/cli.mjs watch" 2>/dev/null; pkill -f vite 2>/dev/null
+until ! lsof -nP -iTCP:8081 -sTCP:LISTEN >/dev/null 2>&1; do sleep 1; done
 HORIZON_CONFIG="$REPO/.claude/skills/local-boot/horizon.demo.yaml" \
   pnpm --filter @skywalking-horizon-ui/bff run dev &
 ( cd "$REPO/apps/ui" && \
