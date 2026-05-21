@@ -165,21 +165,25 @@ for pj in package.json packages/api-client/package.json packages/design-tokens/p
 done
 check_file_has_version "apps/bff/src/server.ts" "'${CURRENT_VERSION}'"
 
-# Docs reference the LAST RELEASED image tag — derive it from the most
-# recent git tag (`vX.Y.Z`). We don't bump docs on main between releases;
-# the next-version PR (run after the vote passes) is what advances them.
+# Docs normally reference the last released image tag on main, then the
+# release commit advances them to the new tag. If the docs were already
+# prepared for the release version, accept that too.
 PRIOR_RELEASE=$(cd "${PROJECT_DIR}" && git tag --list 'v*' --sort=-version:refname | head -1 | sed 's/^v//')
 if [ -z "${PRIOR_RELEASE}" ]; then
     err "No prior release tag (vX.Y.Z) found. Tag the first release manually before using this script."
     exit 1
 fi
-check_file_has_version "docs/setup/container-image.md" "ghcr.io/apache/skywalking-horizon-ui:${PRIOR_RELEASE}"
+if ! file_has "${PROJECT_DIR}/docs/setup/container-image.md" "ghcr.io/apache/skywalking-horizon-ui:${PRIOR_RELEASE}" &&
+   ! file_has "${PROJECT_DIR}/docs/setup/container-image.md" "ghcr.io/apache/skywalking-horizon-ui:${RELEASE_VERSION}"; then
+    err "docs/setup/container-image.md must reference either prior image tag ${PRIOR_RELEASE} or release tag ${RELEASE_VERSION}."
+    CONSISTENT=false
+fi
 
 if ! $CONSISTENT; then
     err "Version drift across files. Fix before continuing."
     exit 1
 fi
-echo "Code markers all at ${CURRENT_VERSION}; docs at last-released ${PRIOR_RELEASE}."
+echo "Code markers all at ${CURRENT_VERSION}; container docs are release-check compatible."
 
 # ========================== Step 5: Doc + Changelog check ==========================
 note "Step 5 — Docs + CHANGELOG check"
@@ -391,6 +395,18 @@ note "Step 13 — Upload to ${SVN_DEV_URL}/${RELEASE_VERSION}"
 read -r -p "Apache SVN username: " SVN_USER
 read -r -s -p "Apache SVN password: " SVN_PASS
 echo ""
+
+# The dev parent dir (dist/dev/skywalking/horizon-ui) may not exist yet on
+# the first SVN-published release. `svn co` of a missing URL fails, so
+# check-and-create the parent chain before checking it out.
+if ! svn ls --username "${SVN_USER}" --password "${SVN_PASS}" \
+        --non-interactive --no-auth-cache "${SVN_DEV_URL}" >/dev/null 2>&1; then
+    echo "Dev staging dir does not exist — creating ${SVN_DEV_URL}/"
+    svn mkdir --parents --username "${SVN_USER}" --password "${SVN_PASS}" \
+        --non-interactive --no-auth-cache \
+        -m "Create Horizon UI dev staging directory" \
+        "${SVN_DEV_URL}"
+fi
 
 SVN_STAGE="${WORK_DIR}/svn-staging"
 rm -rf "${SVN_STAGE}"

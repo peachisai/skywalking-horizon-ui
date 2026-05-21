@@ -19,17 +19,16 @@
 #   - any `v*` tag    (tagged with the version + the full commit SHA)
 #
 # Architecture story
-#   The image is a pure copy-in of `./dist/` (no compile or network
-#   inside `docker build`). The `dist/node_modules/` carries `argon2`'s
-#   native binding — that binding is platform-specific, so a single
-#   amd64-built dist/ cannot be packaged into an arm64-correct image.
+#   The Dockerfile builds `dist/` from source inside the image. The
+#   resulting `node_modules/` carries `argon2`'s native binding — that
+#   binding is platform-specific, so the build must run per-architecture.
 #   We build each architecture on its own native GitHub runner
-#   (`ubuntu-latest` for amd64, `ubuntu-24.04-arm` for arm64), push a
-#   per-arch SHA-suffix tag, and a final `manifest` job stitches them
-#   into a single SHA-canonical OCI manifest list. Pulling the canonical
-#   tag from any host (Apple Silicon, AWS Graviton, plain x86_64)
-#   selects the right arch automatically — no Rosetta / QEMU emulation
-#   needed at run time.
+#   (`ubuntu-latest` for amd64, `ubuntu-24.04-arm` for arm64) so the
+#   compile is native (no QEMU), push a per-arch SHA-suffix tag, and a
+#   final `manifest` job stitches them into a single SHA-canonical OCI
+#   manifest list. Pulling the canonical tag from any host (Apple Silicon,
+#   AWS Graviton, plain x86_64) selects the right arch automatically — no
+#   Rosetta / QEMU emulation needed at run time.
 #
 # Tagging
 #   - `:<40-char-sha>`           always (canonical, immutable)
@@ -42,7 +41,7 @@
 #     pull a specific arch directly. The manifest job is the only thing
 #     that exposes the canonical tag without an arch suffix.
 #
-# Only login / setup-buildx / setup-node are pulled from third-party
+# Only login / setup-buildx / checkout are pulled from third-party
 # actions — everything else (tag computation, buildx build+push,
 # manifest stitching) is shell-driven to stay within ASF infra's
 # third-party-action allow-list. SHAs are vetted at the org level.
@@ -104,10 +103,11 @@ jobs:
           echo "::notice::Canonical SHA: ${sha}"
           echo "::notice::Moving tags: ${moving}"
 
-  # ── Per-arch native build. Each runner produces its own `./dist/`
-  # ── (with the correct argon2 native binding) and pushes
-  # ── `<base>:<sha>-<arch>`. The manifest job below stitches the
-  # ── `:<sha>-amd64` + `:<sha>-arm64` pair into the canonical tag set.
+  # ── Per-arch native build. The Dockerfile builds `dist/` from source
+  # ── inside the image, so each native runner compiles the correct
+  # ── argon2 binding for its arch and pushes `<base>:<sha>-<arch>`. The
+  # ── manifest job below stitches the `:<sha>-amd64` + `:<sha>-arm64`
+  # ── pair into the canonical tag set.
   build:
     if: github.repository == 'apache/skywalking-horizon-ui'
     needs: tags
@@ -134,24 +134,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Activate pnpm
-        run: corepack enable && corepack prepare pnpm@10.33.2 --activate
-
-      - name: Install workspace deps
-        run: pnpm install --frozen-lockfile
-
-      - name: Build self-contained ./dist/ (native ${{ matrix.arch }})
-        # `pnpm package` runs `pnpm deploy` whose `node_modules` contains
-        # the argon2 binding for the current runner's architecture.
-        # Running this on `ubuntu-24.04-arm` produces an arm64-correct
-        # tree; on `ubuntu-latest` it's amd64.
-        run: pnpm package
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f

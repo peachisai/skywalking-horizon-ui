@@ -78,8 +78,8 @@ step('Building UI (vite production build)');
 run('pnpm --filter @skywalking-horizon-ui/ui build');
 
 step('Materializing production install tree (pnpm deploy)');
-// `--legacy` is required under pnpm 10+ for non-injected workspaces; see
-// the matching note in the Dockerfile. We deploy directly into ./dist
+// `--legacy` is required under pnpm 10+ for non-injected workspaces.
+// We deploy directly into ./dist
 // (renaming through an intermediate) rather than copying out, because
 // the produced node_modules contains pnpm-style symlinks into an
 // in-tree `.pnpm/` store — copying would either preserve broken

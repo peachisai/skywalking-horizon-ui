@@ -13,48 +13,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Copy-in image. The image does NOT compile anything and does NOT run
-# `pnpm install` — it consumes the pre-built `./dist/` produced by
-# `pnpm package` at the repo root and lays it out under `/app/`. Build
-# the artifact first:
+# From-source, multi-arch image. Single source of truth for every image
+# build: CI (GHCR), local dev, and the manual Docker Hub release push.
 #
-#     pnpm install            # one-time / on lockfile changes
-#     pnpm package            # produces ./dist/ (server.js + node_modules
-#                             # + bundled_templates + static + example yaml)
-#     docker build -t horizon-ui:local .
+# Why from-source (not copy-in): `dist/node_modules` carries argon2's
+# native binding, which is architecture-specific. Building `dist/` INSIDE
+# the image — once per target platform — lets one `buildx --platform
+# linux/amd64,linux/arm64` invocation compile the correct binding for each
+# arch (native on a matching runner, QEMU-emulated otherwise). A copy-in
+# image cannot do this from a single host.
 #
-# Net effect: tiny image (no Node toolchain, no devDeps, no pnpm store,
-# no source), reproducible (the dist/ tarball is the contract), and
-# air-gap-friendly (image build needs zero network).
+#     docker build -t horizon-ui:local .          # single-arch dev build
+#     docker buildx build --platform linux/amd64,linux/arm64 -t … --push .
+#
+# Trade-off: the build needs the network (`pnpm install`) — but only in the
+# throwaway build stage. The final shipped stage is network-free.
 
-FROM node:20-alpine
+# ---- build stage: compile the self-contained dist for THIS platform ----
+# Throwaway BUILD ENVIRONMENT — uses the network (`pnpm install`) and
+# carries the compiler toolchain. Discarded; only the final stage ships.
+FROM node:24-alpine AS build
+WORKDIR /src
+
+# Toolchain for argon2's native build (node-gyp needs python3 + make + g++).
+RUN apk add --no-cache python3 make g++
+
+# corepack ships with node:24; pin pnpm to the workspace version.
+RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
+
+# Copy the whole source tree. `.dockerignore` keeps host-built artifacts
+# (node_modules, dist) out of the context so nothing arch-specific leaks in.
+COPY . .
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm package
+
+# ---- runtime stage: the shipped image — no toolchain, no network ----
+FROM node:24-alpine
 WORKDIR /app
 
-# Run as a non-root user — the BFF doesn't need any privileged access.
 RUN addgroup -S horizon && adduser -S -G horizon horizon
 
-# Pre-built artifact. Layout matches what `node server.js` expects:
-# server.js + bundled_templates + node_modules + static all siblings
-# under /app/. The bundled-template loader probes `__dirname/bundled_
-# templates` first (see apps/bff/src/logic/layers/loader.ts).
-#
-# Read-only artifacts owned by root:
-COPY dist/server.js              ./server.js
-COPY dist/package.json           ./package.json
-COPY dist/node_modules           ./node_modules
-COPY dist/static                 ./static
-COPY dist/horizon.example.yaml   ./horizon.example.yaml
+COPY --from=build /src/dist/server.js              ./server.js
+COPY --from=build /src/dist/package.json           ./package.json
+COPY --from=build /src/dist/node_modules           ./node_modules
+COPY --from=build /src/dist/static                 ./static
+COPY --from=build /src/dist/horizon.example.yaml   ./horizon.example.yaml
 
-# `bundled_templates/` is writable: the admin Layer-Templates and
-# Overview-Templates editors `writeFileSync` into per-key / per-id JSON
-# files. Owned by the `horizon` user so saves don't EACCES.
-COPY --chown=horizon:horizon dist/bundled_templates  ./bundled_templates
+COPY --from=build --chown=horizon:horizon /src/dist/bundled_templates  ./bundled_templates
 
-# `/data` is the writable state directory the BFF writes its runtime
-# files into (audit log, setup state, alarm state, wire debug log).
-# Operators mount a PVC / named volume / host bind here for durable
-# storage. Without a mount the writes go to the container's writable
-# layer (ephemeral).
 RUN mkdir -p /data && chown horizon:horizon /data
 VOLUME ["/data"]
 

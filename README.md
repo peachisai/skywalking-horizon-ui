@@ -44,10 +44,9 @@ pnpm -r test:unit
 pnpm license:check               # CI gate via skywalking-eyes
 ```
 
-Container build (zero-compile-in-image — Dockerfile just copies in the pre-built `dist/`):
+Container build (multi-stage — the Dockerfile builds `dist/` from source inside the image, no host pre-step):
 
 ```bash
-pnpm package                                                        # produces ./dist/
 docker build -t horizon-ui:local .
 docker run --rm -p 8081:8081 -v "$PWD/horizon.yaml:/app/horizon.yaml:ro" horizon-ui:local
 ```

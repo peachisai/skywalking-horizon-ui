@@ -58,7 +58,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Verify binary LICENSE/NOTICE (drift + ASF allow/deny)
@@ -102,7 +102,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r run type-check
@@ -118,7 +118,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @skywalking-horizon-ui/ui build
@@ -134,7 +134,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @skywalking-horizon-ui/bff build
@@ -150,7 +150,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       # `pnpm -r` walks every workspace package and runs `test:unit` —

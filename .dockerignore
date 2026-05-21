@@ -13,13 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Allowlist style: the image is a pure copy-in of `./dist/`, so the
-# Docker context never needs anything else. Excluding everything by
-# default keeps the context tiny, the build deterministic, and
-# eliminates any temptation to reach back into source from a future
-# Dockerfile change.
+# Denylist style: the image builds FROM SOURCE (see Dockerfile), so the
+# context is the source tree. Exclude only what must NOT enter the build —
+# host-built artifacts (arch-specific node_modules + dist), VCS, CI config,
+# local secrets, and scratch dirs. Everything else (source, lockfile,
+# horizon.example.yaml) is needed by `pnpm install` + `pnpm package`.
 
-*
-!dist
-!dist/**
-!Dockerfile
+**/node_modules
+**/dist
+.git
+.github
+.pnpm-store
+**/.DS_Store
+scripts/.release-work
+scripts/.finalize-work
+.claude
+
+# Local runtime config may carry secrets — never ship it. The committed
+# horizon.example.yaml stays (package.mjs reads it into dist/).
+horizon.yaml

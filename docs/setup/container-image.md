@@ -15,7 +15,7 @@ Registry: **GitHub Container Registry (GHCR)** at `ghcr.io/apache/skywalking-hor
 | `main` | Head of `main`. Moves on every merge. | Smoke-test the development branch. |
 
 ```sh
-docker pull ghcr.io/apache/skywalking-horizon-ui:0.4.0
+docker pull ghcr.io/apache/skywalking-horizon-ui:0.5.0
 docker pull ghcr.io/apache/skywalking-horizon-ui:<sha>
 ```
 
@@ -65,7 +65,7 @@ docker run -d \
   --name horizon \
   -p 8081:8081 \
   -v "$PWD/horizon.yaml:/app/horizon.yaml:ro" \
-  ghcr.io/apache/skywalking-horizon-ui:0.4.0
+  ghcr.io/apache/skywalking-horizon-ui:0.5.0
 ```
 
 Notes:
@@ -78,7 +78,7 @@ Notes:
 For immutable single-tenant deployments, build a child image that includes your config:
 
 ```dockerfile
-FROM ghcr.io/apache/skywalking-horizon-ui:0.4.0
+FROM ghcr.io/apache/skywalking-horizon-ui:0.5.0
 COPY horizon.yaml /app/horizon.yaml
 ```
 
@@ -146,7 +146,7 @@ spec:
         fsGroup: 101
       containers:
         - name: horizon
-          image: ghcr.io/apache/skywalking-horizon-ui:0.4.0
+          image: ghcr.io/apache/skywalking-horizon-ui:0.5.0
           ports:
             - containerPort: 8081
           envFrom:
@@ -188,7 +188,7 @@ docker run -d --name horizon \
   -p 8081:8081 \
   -v "$PWD/horizon.yaml:/app/horizon.yaml:ro" \
   -v horizon-state:/data \
-  ghcr.io/apache/skywalking-horizon-ui:0.4.0
+  ghcr.io/apache/skywalking-horizon-ui:0.5.0
 ```
 
 Without a mounted volume the writes still land in the container's writable layer at `/data/` (ephemeral, but at least non-failing). Mounting a volume is what makes them durable.
@@ -239,7 +239,7 @@ NODE_ENV=production LOG_LEVEL=info node dist/server.js
 
 ### Per-request logging
 
-Fastify's request logger is on by default and emits one `incoming request` line + one `request completed` line per HTTP request, both tagged with a stable `reqId`. These are level-`info` (30) events — **suppressed under the production default `error`**. Bump to `LOG_LEVEL=info` to surface them; example pair under that level:
+The server request logger is on by default and emits one `incoming request` line + one `request completed` line per HTTP request, both tagged with a stable `reqId`. These are level-`info` (30) events — **suppressed under the production default `error`**. Bump to `LOG_LEVEL=info` to surface them; example pair under that level:
 
 ```json
 {"level":30,"time":1779109372598,"pid":1,"hostname":"...","reqId":"req-1","req":{"method":"GET","url":"/api/auth/health","host":"127.0.0.1:8081","remoteAddress":"192.168.65.1","remotePort":60655},"msg":"incoming request"}
@@ -299,29 +299,24 @@ so session cookies are flagged `Secure` and the browser refuses to send them ove
 
 ## Building locally
 
-The image is built from the pre-packaged `./dist/` directory in the repo root. Build that artifact first:
+The image is a multi-stage build: it compiles the app from source inside the build stage, so there is no host pre-step — `docker build` is self-contained (it only needs network for `pnpm install` during the build).
 
-```sh
-pnpm install
-pnpm package
-```
-
-Then use the same `docker buildx` invocation shape as CI:
-
-```sh
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -t horizon:local \
-  .
-```
-
-For a single-arch dev build (faster):
+Single-arch dev build:
 
 ```sh
 docker build -t horizon:local .
 docker run --rm -it -p 8081:8081 \
   -v "$PWD/horizon.yaml:/app/horizon.yaml:ro" \
   horizon:local
+```
+
+Multi-arch build (same shape as CI — needs a `docker-container` buildx builder and QEMU for the non-native arch):
+
+```sh
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t horizon:local \
+  .
 ```
 
 ## Health probes
