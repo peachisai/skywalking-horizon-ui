@@ -133,13 +133,18 @@ const shellRoutes: RouteRecordRaw[] = [
   // grouping. Read-only; OAP auto-recovers, no acknowledge / silence.
   { path: 'alarms', name: 'alarms', component: () => import('@/features/alarms/AlarmsView.vue') },
   // Cluster
-  { path: 'operate/cluster', component: () => import('@/features/operate/cluster/ClusterStatusView.vue') },
+  {
+    path: 'operate/cluster',
+    component: () => import('@/features/operate/cluster/ClusterStatusView.vue'),
+    meta: { verb: 'cluster:read' },
+  },
   // Alerting rules — read-only catalog backed by admin /status/alarm/*.
   // Gated on admin-server reachability at the page-body level.
   {
     path: 'operate/alerting-rules',
     name: 'alerting-rules',
     component: () => import('@/features/operate/alerting-rules/AlertingRulesView.vue'),
+    meta: { verb: 'alarm-rule:read' },
   },
   // ── DSL Management ─────────────────────────────────────────────────
   // Static sub-routes are declared first so they aren't shadowed by
@@ -150,22 +155,26 @@ const shellRoutes: RouteRecordRaw[] = [
     path: 'operate/dsl/edit',
     name: 'edit',
     component: () => import('@/features/operate/dsl/DslEditorView.vue'),
+    meta: { verb: 'rule:read' },
   },
   {
     path: 'operate/dsl/dump',
     name: 'dump',
     component: () => import('@/features/operate/dsl/DslDumpView.vue'),
+    meta: { verb: 'rule:read' },
   },
   {
     path: 'operate/dsl/:catalog(otel-rules|telegraf-rules|lal|log-mal-rules)',
     name: 'catalog',
     component: () => import('@/features/operate/dsl/DslCatalogView.vue'),
     props: true,
+    meta: { verb: 'rule:read' },
   },
   {
     path: 'operate/oal',
     name: 'oal-catalog',
     component: () => import('@/features/operate/dsl/OalCatalogView.vue'),
+    meta: { verb: 'rule:read' },
   },
   // Inspect — gated on the `inspect` module (and `receiver-runtime-rule`
   // for rule attribution; degrades cleanly to "unknown" attribution
@@ -174,18 +183,21 @@ const shellRoutes: RouteRecordRaw[] = [
     path: 'operate/inspect',
     name: 'inspect',
     component: () => import('@/features/operate/inspect/InspectView.vue'),
+    meta: { verb: 'inspect:read' },
   },
   // Data retention (TTL) — query-port read of getRecordsTTL/getMetricsTTL.
   {
     path: 'operate/ttl',
     name: 'ttl',
     component: () => import('@/features/operate/ttl/TtlView.vue'),
+    meta: { verb: 'ttl:read' },
   },
   // OAP runtime config — admin-port /debugging/config/dump, read-only.
   {
     path: 'operate/config',
     name: 'oap-config',
     component: () => import('@/features/operate/config/ConfigView.vue'),
+    meta: { verb: 'config:read' },
   },
   // Live debugger — gated on `dsl-debugging`. History is local-only
   // (browser localStorage) so it stays useful even when admin is down.
@@ -194,16 +206,19 @@ const shellRoutes: RouteRecordRaw[] = [
     path: 'operate/live-debug/history',
     name: 'debug-history',
     component: () => import('@/features/operate/live-debug/DebugHistoryView.vue'),
+    meta: { verb: 'live-debug:read' },
   },
   {
     path: 'operate/live-debug/:tab(mal|lal|oal)?',
     name: 'live-debugger',
     component: () => import('@/features/operate/live-debug/LiveDebuggerView.vue'),
+    meta: { verb: 'live-debug:read' },
   },
   // Admin
   {
     path: 'admin/layer-dashboards',
     component: () => import('@/features/admin/layer-templates/LayerDashboardsAdmin.vue'),
+    meta: { verb: 'dashboard:read' },
   },
   // Alert page setup — sits under Dashboard setup in the sidebar but
   // routes off the admin tree since it's an operator-only config view.
@@ -211,6 +226,7 @@ const shellRoutes: RouteRecordRaw[] = [
     path: 'admin/alert-page-setup',
     name: 'alert-page-setup',
     component: () => import('@/features/admin/alert-page/AlertPageSetupView.vue'),
+    meta: { verb: 'alarm-setup:read' },
   },
   // Global defaults — theme + time-defaults combined. Two OAP singletons
   // edited in one place because they share the "set once and leave" cadence.
@@ -218,26 +234,31 @@ const shellRoutes: RouteRecordRaw[] = [
     path: 'admin/global-defaults',
     name: 'global-defaults',
     component: () => import('@/features/admin/global-defaults/GlobalDefaultsAdmin.vue'),
+    meta: { verb: 'setup:read' },
   },
   {
     path: 'admin/overview-templates',
     name: 'overview-templates',
     component: () => import('@/features/admin/overview-templates/OverviewTemplatesAdmin.vue'),
+    meta: { verb: 'overview:write' },
   },
   {
     path: 'admin/users',
     name: 'admin-users',
     component: () => import('@/features/admin/users/UsersAdminView.vue'),
+    meta: { verb: 'user:read' },
   },
   {
     path: 'admin/auth-status',
     name: 'admin-auth-status',
     component: () => import('@/features/admin/auth-status/AuthStatusView.vue'),
+    meta: { verb: 'auth:read' },
   },
   {
     path: 'admin/roles',
     name: 'admin-roles',
     component: () => import('@/features/admin/roles/RolesView.vue'),
+    meta: { verb: 'role:read' },
   },
 ];
 
@@ -275,6 +296,16 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: { redirect: to.fullPath } };
   }
   if (to.name === 'login' && auth.isAuthenticated) {
+    return { path: '/' };
+  }
+  // Verb gate: a route may declare `meta.verb`; an authenticated user
+  // without it is bounced home. Defense-in-depth on top of the sidebar
+  // hiding the link and the BFF enforcing the same verb per data route —
+  // it stops a viewer reaching a maintainer page by URL or the topbar
+  // OAP chip (where the page's data comes from shared `auth` endpoints
+  // the BFF can't gate per-page).
+  const requiredVerb = to.meta.verb as string | undefined;
+  if (requiredVerb && auth.isAuthenticated && !auth.hasVerb(requiredVerb)) {
     return { path: '/' };
   }
 });

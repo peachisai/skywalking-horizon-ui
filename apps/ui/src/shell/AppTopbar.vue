@@ -23,6 +23,7 @@ import { useAlarmCount } from '@/shell/useAlarmCount';
 import { useAutoRefreshStore } from '@/controls/autoRefresh';
 import { useTimeRangeStore, TIME_PRESETS, STEP_LIMITS, isValidRange, type TimeStep } from '@/controls/timeRange';
 import { useThemeStore, AVAILABLE_THEMES, type ThemeId } from '@/state/theme';
+import { useAuthStore } from '@/state/auth';
 import { useTimeDefaultsStore } from '@/state/timeDefaults';
 
 // Per-user "Save as my default" / "Reset to org default" on the time
@@ -69,6 +70,10 @@ function onThemeChipBlur(e: FocusEvent): void {
 const route = useRoute();
 
 const { info, reachable, tzOffsetLabel, healthState } = useOapInfo();
+const auth = useAuthStore();
+// The Cluster Status page is maintainer-tier; only link the chip there
+// when the user can actually read it (matches the route's verb gate).
+const canViewCluster = computed(() => auth.hasVerb('cluster:read'));
 
 /* Alarm badge — independent 60s timer, rolling 20m window. The
  * badge sits next to OAP / time / refresh because alarms are a
@@ -392,7 +397,13 @@ function formatRangeStamp(ms: number, step: TimeStep): string {
          `controls/debugPanel.ts` + `shell/DebugEventPanel.vue`. -->
     <div class="sw-top-spacer" />
     <div class="sw-top-actions">
-      <RouterLink class="sw-btn oap-chip" :class="`is-${healthState}`" :title="oapChipTooltip" to="/operate/cluster">
+      <component
+        :is="canViewCluster ? RouterLink : 'div'"
+        class="sw-btn oap-chip"
+        :class="[`is-${healthState}`, { 'is-static': !canViewCluster }]"
+        :title="oapChipTooltip"
+        v-bind="canViewCluster ? { to: '/operate/cluster' } : {}"
+      >
         <span class="dot" />
         <span v-if="reachable" class="ver">OAP</span>
         <span v-else class="ver">offline</span>
@@ -400,8 +411,9 @@ function formatRangeStamp(ms: number, step: TimeStep): string {
              noise next to the health dot for an operator-rare check.
              The tooltip (`oapChipTooltip`) still surfaces the value
              when reachable, and the Cluster Status page → Query pane
-             shows it prominently. -->
-      </RouterLink>
+             shows it prominently. Non-cluster:read users get a static
+             chip (no link to the maintainer-only Cluster page). -->
+      </component>
       <div ref="timeClusterEl" class="time-cluster">
         <button
           type="button"
@@ -869,6 +881,12 @@ function formatRangeStamp(ms: number, step: TimeStep): string {
   font-variant-numeric: tabular-nums;
   font-size: 10.5px;
   gap: 6px;
+}
+/* Non-clickable health chip for users without cluster:read. */
+.oap-chip.is-static {
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
 }
 .oap-chip .dot {
   width: 6px;
