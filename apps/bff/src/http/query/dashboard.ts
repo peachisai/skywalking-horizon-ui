@@ -399,16 +399,12 @@ export function parseTopList(
  */
 export function parseTable(
   r: MqeResultShape | undefined,
-): Array<{ name: string; value: number | null }> | null {
+): Array<{ labels: Array<{ key: string; value: string }>; value: number | null }> | null {
   if (!r || r.error) return null;
   const results = r.results ?? [];
   if (results.length === 0) return null;
   const rows = results.map((rs) => {
-    const labels = rs.metric?.labels ?? [];
-    const name =
-      labels.length > 0
-        ? labels.map((l) => l.value).join(' · ')
-        : (rs.values?.[0]?.id ?? '—');
+    const labels = (rs.metric?.labels ?? []).map((l) => ({ key: l.key, value: l.value }));
     // `latest(...)` yields one bucket, but be defensive: take the last
     // non-null value across the result's buckets.
     let value: number | null = null;
@@ -417,9 +413,16 @@ export function parseTable(
       const n = Number(v.value);
       if (Number.isFinite(n)) value = n;
     }
-    return { name, value };
+    // No labels (degenerate) → fall back to the value id as a single column.
+    if (labels.length === 0 && rs.values?.[0]?.id) {
+      labels.push({ key: 'name', value: rs.values[0].id as string });
+    }
+    return { labels, value };
   });
-  rows.sort((a, b) => a.name.localeCompare(b.name));
+  // Stable order by the joined label values.
+  rows.sort((a, b) =>
+    a.labels.map((l) => l.value).join('·').localeCompare(b.labels.map((l) => l.value).join('·')),
+  );
   return rows;
 }
 

@@ -29,6 +29,8 @@ import { fmtMetricAs } from '@/utils/formatters';
 const props = withDefaults(
   defineProps<{
     rows: DashboardTableRow[];
+    /** Optional value-column header; the label columns are headed by
+     *  their dimension key. `[, valueHeader]` — first entry unused. */
     headers?: [string, string];
     showValues?: boolean;
     unit?: string;
@@ -37,7 +39,28 @@ const props = withDefaults(
   { showValues: true },
 );
 
-const cols = computed(() => props.headers ?? ['Name', 'Value']);
+/** Ordered union of label dimension keys across all rows — one table
+ *  column per dimension (e.g. `condition`, `node`). */
+const labelKeys = computed<string[]>(() => {
+  const seen = new Set<string>();
+  const keys: string[] = [];
+  for (const r of props.rows) {
+    for (const l of r.labels) {
+      if (!seen.has(l.key)) {
+        seen.add(l.key);
+        keys.push(l.key);
+      }
+    }
+  }
+  return keys;
+});
+function titleCase(k: string): string {
+  return k.replace(/[_.]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+const valueHeader = computed(() => props.headers?.[1] || 'Value');
+function cell(r: DashboardTableRow, key: string): string {
+  return r.labels.find((l) => l.key === key)?.value ?? '—';
+}
 function fmt(v: number | null): string {
   if (v === null || v === undefined) return '—';
   const s = fmtMetricAs(v, props.format);
@@ -50,13 +73,13 @@ function fmt(v: number | null): string {
     <table class="tw__table">
       <thead>
         <tr>
-          <th>{{ cols[0] }}</th>
-          <th v-if="showValues" class="tw__num">{{ cols[1] }}</th>
+          <th v-for="k in labelKeys" :key="k">{{ titleCase(k) }}</th>
+          <th v-if="showValues" class="tw__num">{{ valueHeader }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(r, i) in rows" :key="`${r.name}-${i}`">
-          <td class="tw__name mono" :title="r.name">{{ r.name }}</td>
+        <tr v-for="(r, i) in rows" :key="i">
+          <td v-for="k in labelKeys" :key="k" class="tw__cell mono" :title="cell(r, k)">{{ cell(r, k) }}</td>
           <td v-if="showValues" class="tw__num mono">{{ fmt(r.value) }}</td>
         </tr>
       </tbody>
@@ -87,13 +110,12 @@ function fmt(v: number | null): string {
   border-bottom: 1px solid var(--sw-line-2, var(--sw-line));
   color: var(--sw-fg-1);
 }
-.tw__name {
-  max-width: 0;
-  width: 100%;
+.tw__cell {
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tw__num { text-align: right; white-space: nowrap; color: var(--sw-fg-0); }
+.tw__num { text-align: right; white-space: nowrap; color: var(--sw-fg-0); width: 1%; }
 .tw__table tbody tr:hover td { background: var(--sw-bg-2); }
 </style>

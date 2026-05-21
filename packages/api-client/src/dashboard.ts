@@ -193,10 +193,11 @@ export interface DashboardTopItem {
 }
 
 /** One row of a `table` widget — a single labeled result of a
- *  `latest(...)` metric. `name` is built from the result's label
- *  values (the status / phase / condition / entity dimensions). */
+ *  `latest(...)` metric. Each `labels` entry is one dimension
+ *  (status / phase / condition / entity), rendered as its own column;
+ *  `value` is the optional metric value column. */
 export interface DashboardTableRow {
-  name: string;
+  labels: Array<{ key: string; value: string }>;
   value: number | null;
 }
 
