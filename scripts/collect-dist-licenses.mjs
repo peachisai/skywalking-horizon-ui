@@ -214,6 +214,26 @@ function noticeYear() {
   return String(new Date().getUTCFullYear());
 }
 
+// Apache-produced dependencies whose NOTICE is just the generic ASF
+// attribution. That attribution is already carried by our own root NOTICE
+// (same legal entity), so reproducing it per-dep is redundant noise. The
+// skip is GUARDED by isGenericAsfNotice() below — if a listed dep's NOTICE
+// ever gains a specific attribution it stops matching and is included
+// again, so we never silently drop a required notice.
+const ASF_PRODUCTS = new Set(['echarts']);
+
+// Matches the boilerplate every ASF project ships and nothing more:
+//   Apache <Product>
+//   Copyright <year[-year]> The Apache Software Foundation
+//   This product includes software developed at
+//   The Apache Software Foundation (https://www.apache.org/).
+const GENERIC_ASF_NOTICE =
+  /^Apache .+\s+Copyright\s+\d{4}(?:-\d{4})?\s+The Apache Software Foundation\s+This product includes software developed at\s+The Apache Software Foundation\s+\(https?:\/\/www\.apache\.org\/?\)\.?\s*$/;
+
+function isRedundantAsfNotice(name, noticeText) {
+  return ASF_PRODUCTS.has(name) && GENERIC_ASF_NOTICE.test(noticeText.trim());
+}
+
 const packages = collectPackages();
 
 mkdirSync(distDir, { recursive: true });
@@ -251,14 +271,19 @@ for (const pkg of packages) {
   }
   const noticeFile = pickFile(pkg.path, NOTICE_FILE_PATTERNS);
   if (noticeFile) {
-    if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-    const dest = join(outDir, relative(pkg.path, noticeFile));
-    mkdirSync(dirname(dest), { recursive: true });
-    cpSync(noticeFile, dest);
-    entry.noticeFile = relative(distDir, dest);
-    noticePieces.push(
-      `------ ${pkg.name}@${pkg.version} ------\n${readFileSync(noticeFile, 'utf8').trim()}\n`,
-    );
+    const noticeText = readFileSync(noticeFile, 'utf8');
+    // ASF-product NOTICEs that carry only the generic ASF attribution are
+    // already covered by our root NOTICE — don't reproduce them.
+    if (!isRedundantAsfNotice(pkg.name, noticeText)) {
+      if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
+      const dest = join(outDir, relative(pkg.path, noticeFile));
+      mkdirSync(dirname(dest), { recursive: true });
+      cpSync(noticeFile, dest);
+      entry.noticeFile = relative(distDir, dest);
+      noticePieces.push(
+        `------ ${pkg.name}@${pkg.version} ------\n${noticeText.trim()}\n`,
+      );
+    }
   }
 
   report.push(entry);
