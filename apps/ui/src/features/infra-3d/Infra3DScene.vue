@@ -33,16 +33,25 @@ import { computed, onUnmounted, ref, shallowRef, watch } from 'vue';
 import { TresCanvas } from '@tresjs/core';
 import { OrbitControls, Html } from '@tresjs/cientos';
 import {
+  AdditiveBlending,
   BoxGeometry,
+  CanvasTexture,
   CatmullRomCurve3,
   Color,
   ConeGeometry,
   DoubleSide,
+  EdgesGeometry,
+  LinearFilter,
+  LineBasicMaterial,
   MeshBasicMaterial,
   MeshLambertMaterial,
+  type Object3D,
   PerspectiveCamera,
+  PlaneGeometry,
   Quaternion,
+  RingGeometry,
   SphereGeometry,
+  SpriteMaterial,
   type Texture,
   TubeGeometry,
   Vector3,
@@ -57,6 +66,7 @@ import {
 } from './composables/useDemoTopology';
 import {
   computePlacement,
+  type SceneGroupSpec,
   readTintColor,
   type NodePlacement,
   type PlaneSpec,
@@ -64,14 +74,16 @@ import {
   type ZonePlacement,
   type ZoneTint,
 } from './composables/useScenePlacement';
+import type { ServiceNamingRule } from '@skywalking-horizon-ui/api-client';
 import { colorForLayer, levelForLayer } from './composables/useInfra3dConfig';
+import { resolveServiceIdentity } from '@/utils/serviceName';
 import { layerIcon as layerIconByKey } from '@/shell/icons';
 import {
   disposeLayerIconTextures,
   getLayerIconTexture,
   type LayerIconName,
 } from './composables/useLayerIconTexture';
-import { useInfra3dAlarms } from './composables/useInfra3dAlarms';
+import { useInfra3dAlarms, alarmKey } from './composables/useInfra3dAlarms';
 import { useInfra3dMetrics, formatMetricValue } from './composables/useInfra3dMetrics';
 
 interface Props {
@@ -87,6 +99,23 @@ interface Props {
    *  (re-centers on the zone). The scene lerps the orbit target
    *  toward this each frame for a smooth move. */
   focusTarget: { x: number; y: number; z: number } | null;
+  /** Beacon mode — dim every healthy cube to a dark wireframe ghost and
+   *  let only alarmed cubes glow, so the operator's eye locks onto what
+   *  is firing. */
+  beaconMode?: boolean;
+  /** Logic groups from the config — clustered into one block per group
+   *  on the group's tier. */
+  groups?: SceneGroupSpec[];
+  /** Single-layer focus mode (`/3d/map?layer=<key>`): render ONLY this
+   *  plane's slab so the scene reads as one layer's internal topology
+   *  rather than the full multi-tier map. Null = full map (default). The
+   *  parent also narrows `visibleLayers` to the focused layer, so only
+   *  its zone + cubes draw. */
+  soloPlane?: string | null;
+  /** Per-layer topology-cluster rules (upper-case key → rule). A solo
+   *  layer with a rule yielding ≥2 clusters is laid out cluster-by-
+   *  cluster (k8s/mesh namespace grouping), matching the 2D map. */
+  namingByLayer?: Record<string, ServiceNamingRule | null>;
 }
 const props = defineProps<Props>();
 const emit = defineEmits<{
@@ -105,7 +134,7 @@ const emit = defineEmits<{
 // fallback. `planeOrder` is the source of truth for vertical stacking.
 const topo = loadDemoTopology();
 const graph = buildSceneGraph(topo, levelForLayer);
-const placement = computePlacement(graph, props.planeOrder);
+const placement = computePlacement(graph, props.planeOrder, props.groups, props.namingByLayer);
 
 /** Resolve the per-layer icon glyph. Routed through the same helper
  *  the sidebar uses (`shell/icons.layerIcon`) so the two surfaces
@@ -113,7 +142,7 @@ const placement = computePlacement(graph, props.planeOrder);
  *  Narrowed to the subset the texture baker knows; unknown glyphs
  *  fall back to the generic service mark. */
 const KNOWN_ICONS: ReadonlySet<LayerIconName> = new Set([
-  'mesh', 'cluster', 'sky', 'web', 'fn', 'db', 'cache', 'topic', 'flame', 'svc',
+  'mesh', 'cluster', 'sky', 'skywalking', 'web', 'fn', 'db', 'cache', 'topic', 'flame', 'svc',
 ]);
 function iconForLayer(layerKey: string): LayerIconName {
   const n = layerIconByKey(layerKey);
@@ -128,9 +157,7 @@ function iconForLayer(layerKey: string): LayerIconName {
  *  Materials are cached by `(icon-name, hex)` so two zones with the
  *  same brand mark share one GL material. */
 const iconStampMaterials = new Map<string, MeshBasicMaterial>();
-function iconStampMaterial(layerKey: string, tint: ZoneTint): MeshBasicMaterial {
-  const hex = resolveLayerColor(layerKey, tint);
-  const name = iconForLayer(layerKey);
+function stampMaterial(name: LayerIconName, hex: string): MeshBasicMaterial {
   const key = `${name}|${hex}`;
   let m = iconStampMaterials.get(key);
   if (!m) {
@@ -149,21 +176,36 @@ function iconStampMaterial(layerKey: string, tint: ZoneTint): MeshBasicMaterial 
   }
   return m;
 }
+function iconStampMaterial(layerKey: string, tint: ZoneTint): MeshBasicMaterial {
+  return stampMaterial(iconForLayer(layerKey), resolveLayerColor(layerKey, tint));
+}
+/** Stamp for a logic group — its configured icon (e.g. `skywalking` for
+ *  the SkyWalking brand mark) in the group color. Unknown icon names
+ *  fall back to the generic service glyph. */
+function groupStampMaterial(icon: string, hex: string): MeshBasicMaterial {
+  const name = KNOWN_ICONS.has(icon as LayerIconName) ? (icon as LayerIconName) : 'svc';
+  return stampMaterial(name, hex);
+}
 
 // Past-20m alarm overlay — affected service names get the red alarm
-// material in place of the layer tint. Polled at 30s on a shared
+// material in place of the layer tint. Polled every 1 min on a shared
 // timer (refcount inside the composable).
-const { alarmedServiceNames } = useInfra3dAlarms();
-// Convenience name kept short for the template's per-cube material
-// expression; the actual set value reactively drives Vue re-render.
-const alarmedServiceIds = alarmedServiceNames;
+const { alarmedKeys, alarmedNamesNoLayer } = useInfra3dAlarms();
 
-// Visible cubes that currently carry an active 20m alarm. The cube's
-// own material stays the layer color; the beacon below picks these up
-// to render a small red sphere on the top corner. We compute the
-// subset once per render so the template can iterate ONLY the
-// alarmed cubes (no v-if per cube).
-const alarmedNodes = computed(() => visibleNodes.value.filter((n) => alarmedServiceIds.value.has(n.node.name)));
+// Visible cubes that currently carry an active 20m alarm. Matched on
+// (layer, name) so an alarm reddens only the exact service in the exact
+// tier — never every same-named cube across layers; alarms with no
+// resolved layer fall back to name-only. We compute the subset once per
+// render so the template iterates ONLY the alarmed cubes (no per-cube v-if).
+const alarmedNodes = computed(() =>
+  visibleNodes.value.filter(
+    (n) =>
+      alarmedKeys.value.has(alarmKey(n.node.layerKey, n.node.name)) ||
+      alarmedNamesNoLayer.value.has(n.node.name),
+  ),
+);
+/** Alarmed cube ids — O(1) lookup for the per-cube material pick. */
+const alarmedNodeIds = computed(() => new Set(alarmedNodes.value.map((n) => n.node.nodeId)));
 
 // Live traffic-MQE values produced by stage 5 of the pipeline. Each
 // node optionally gets a small numeric chip below its cube; the chip
@@ -205,7 +247,96 @@ function isVisible(layerKey: string): boolean {
   return props.visibleLayers.has(layerKey);
 }
 
-const visibleZones = computed(() => placement.zones.filter((z) => isVisible(z.layerKey)));
+const visibleZones = computed(() =>
+  placement.zones.filter((z) =>
+    // A group zone shows if any member layer is visible; a solo zone if
+    // its own layer is.
+    z.group ? z.group.layerKeys.some((k) => isVisible(k)) : isVisible(z.layerKey),
+  ),
+);
+
+// Topology-cluster bands (k8s/mesh namespace grouping) of the visible
+// zones, flattened with their plane Y for the floating labels. Absent
+// for layers without a naming rule (most), so this is usually empty.
+const clusterBands = computed(() =>
+  visibleZones.value.flatMap((z) =>
+    (z.clusters ?? []).map((b, i) => ({
+      ...b,
+      y: z.y,
+      colorHex: resolveLayerColor(z.layerKey, z.tint),
+      key: `${z.layerKey}:${i}`,
+    })),
+  ),
+);
+
+// ── Cluster frames + baked-text labels ─────────────────────────────
+// Each topology-cluster band draws as a thin wireframe rectangle on the
+// plane (一个线条的框) with its namespace baked into a flat texture stamp
+// at the frame's bottom-left corner — the same baked-plane treatment as
+// the layer-icon stamps, so the name tilts with the camera in 3D.
+const clusterFrameMat = new LineBasicMaterial({
+  color: new Color('#5a6b86'),
+  transparent: true,
+  opacity: 0.85,
+});
+// Baked namespace labels (cached by text|colour). The canvas is sized to
+// the TEXT (up to a wide cap) so the namespace isn't truncated; the plane
+// then uses the frame width. Mirrors the icon-stamp baker.
+const clusterLabels = new Map<string, { mat: MeshBasicMaterial; aspect: number }>();
+function bakeClusterLabel(text: string, hex: string): { tex: CanvasTexture; aspect: number } | null {
+  if (typeof document === 'undefined') return null;
+  const H = 128, FONT = 84, MAXW = 2048, PAD = 18;
+  const probe = document.createElement('canvas').getContext('2d');
+  if (!probe) return null;
+  const font = `700 ${FONT}px system-ui, -apple-system, sans-serif`;
+  probe.font = font;
+  let t = text;
+  while (probe.measureText(t).width > MAXW - PAD * 2 && t.length > 1) t = `${t.slice(0, -2)}…`;
+  const W = Math.max(Math.ceil(probe.measureText(t).width) + PAD * 2, 64);
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const cx = cv.getContext('2d');
+  if (!cx) return null;
+  cx.font = font;
+  cx.fillStyle = hex;
+  cx.textBaseline = 'middle';
+  cx.textAlign = 'left';
+  cx.fillText(t, PAD, H / 2 + 2);
+  const tex = new CanvasTexture(cv);
+  tex.minFilter = LinearFilter;
+  tex.magFilter = LinearFilter;
+  tex.anisotropy = 4;
+  return { tex, aspect: W / H };
+}
+function clusterLabel(text: string, hex: string): { mat: MeshBasicMaterial; aspect: number } {
+  const key = `${text}|${hex}`;
+  let e = clusterLabels.get(key);
+  if (!e) {
+    const baked = bakeClusterLabel(text, hex);
+    const mat = new MeshBasicMaterial({ map: baked?.tex ?? undefined, transparent: true, depthWrite: false, opacity: 0.95 });
+    e = { mat, aspect: baked?.aspect ?? 4 };
+    clusterLabels.set(key, e);
+  }
+  return e;
+}
+/** Base world height of a cluster label stamp. The width follows the
+ *  frame (left-anchored), capped at the label's natural width so a short
+ *  namespace isn't blown up; aspect keeps the baked text un-stretched. */
+const CLUSTER_LABEL_H = 0.66;
+const clusterFrames = computed(() =>
+  clusterBands.value.map((b) => {
+    const pg = new PlaneGeometry(b.width, b.depth);
+    const geom = new EdgesGeometry(pg);
+    pg.dispose();
+    const { mat, aspect } = clusterLabel(b.label, b.colorHex);
+    const labelW = Math.min(b.width - 0.4, aspect * CLUSTER_LABEL_H);
+    const labelH = labelW / aspect;
+    return { band: b, geom, labelMat: mat, labelW, labelH };
+  }),
+);
+// Free the previous frame batch when a visibility change re-mints the set.
+watch(clusterFrames, (_now, prev) => { for (const f of prev) f.geom.dispose(); }, { flush: 'post' });
 
 interface VisibleNode {
   node: SceneServiceNode;
@@ -219,7 +350,14 @@ interface VisibleNode {
   colorHex: string;
 }
 const visibleNodes = computed<VisibleNode[]>(() => {
-  const zoneByLayer = new Map(placement.zones.map((z) => [z.layerKey, z]));
+  // Map every layer to its zone. A group zone is keyed by the group id,
+  // so fan it out to each member layer key — otherwise grouped layers
+  // (e.g. so11y_*) find no zone and their cubes vanish (empty block).
+  const zoneByLayer = new Map<string, ZonePlacement>();
+  for (const z of placement.zones) {
+    if (z.group) for (const k of z.group.layerKeys) zoneByLayer.set(k, z);
+    else zoneByLayer.set(z.layerKey, z);
+  }
   const out: VisibleNode[] = [];
   for (const L of graph.layers) {
     if (!isVisible(L.key)) continue;
@@ -448,15 +586,41 @@ function resolveLayerColor(layerKey: string, tintFallback: ZoneTint): string {
   return readTintColor(tintFallback);
 }
 
+// Tier "planes" are volumetric glass slabs, not flat sheets — a box of
+// PLANE_THICKNESS whose TOP face sits at the plane's Y (where cubes
+// rest). Transparent slate glass so the slab reads as a physical tray
+// the cubes sit on. Backface culling off so the slab looks solid glass
+// from any angle; depthWrite off so cubes/zones blend through cleanly.
+const PLANE_THICKNESS = 0.5;
 const planeMaterial = new MeshBasicMaterial({
   color: new Color('#151a23'),
   transparent: true,
-  opacity: 0.55,
+  opacity: 0.4,
   side: DoubleSide,
   depthWrite: false,
   polygonOffset: true,
   polygonOffsetFactor: 1,
   polygonOffsetUnits: 1,
+});
+// Bright rim on the slab edges — sells the "pane of glass" read and
+// gives each tier a crisp footprint in the dark scene.
+const planeEdgeMaterial = new LineBasicMaterial({
+  color: new Color('#3a4658'),
+  transparent: true,
+  opacity: 0.8,
+});
+// Slab geometry is per-plane (each tier has its own footprint) and the
+// layout is static, so bake the box + its edge wireframe once. Centred
+// half a thickness BELOW the plane Y so the slab's top face is exactly
+// where the cubes rest.
+const planeSlabs = placement.planes.map((P) => {
+  const box = new BoxGeometry(P.width, PLANE_THICKNESS, P.depth);
+  return {
+    id: P.id,
+    y: P.y - PLANE_THICKNESS / 2,
+    box,
+    edges: new EdgesGeometry(box),
+  };
 });
 
 const zoneMaterials = new Map<string, MeshBasicMaterial>();
@@ -488,7 +652,11 @@ const _hsl = { h: 0, s: 0, l: 0 };
 function mutedCubeColor(hex: string): Color {
   const c = colorByHex(hex).clone();
   c.getHSL(_hsl);
-  c.setHSL(_hsl.h, _hsl.s * 0.6, Math.min(1, _hsl.l * 1.06 + 0.03));
+  // Pastel pull: drop most of the saturation and lift lightness so the
+  // cubes read as soft, gently-lit tints (think frosted candy) rather
+  // than the gaudy fully-saturated tokens. The side-panel swatches keep
+  // the full tint, so the hue stays recognizable.
+  c.setHSL(_hsl.h, _hsl.s * 0.5, Math.min(1, _hsl.l * 1.1 + 0.06));
   return c;
 }
 
@@ -497,7 +665,8 @@ function nodeMaterial(hex: string): MeshLambertMaterial {
   let m = nodeMaterials.get(hex);
   if (!m) {
     const base = mutedCubeColor(hex);
-    m = new MeshLambertMaterial({ color: base, emissive: base.clone().multiplyScalar(0.3) });
+    // Soft self-glow so the pastel reads luminous, not matte-flat.
+    m = new MeshLambertMaterial({ color: base, emissive: base.clone().multiplyScalar(0.22) });
     nodeMaterials.set(hex, m);
   }
   return m;
@@ -523,19 +692,78 @@ function hoverMaterial(hex: string): MeshLambertMaterial {
   return m;
 }
 const selectedMat = new MeshLambertMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.85 });
+// Alarmed cubes burn red (the whole cube, not just a cap) — paired with
+// the radiating ripple below, red is the unmistakable "this service is
+// alarming" signal. Selection still wins so the operator can inspect it.
+const alarmMat = new MeshLambertMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.6 });
 
-// Alarm marker — the top ~20% of an alarmed cube is capped in red.
-// The cube is 1.0 tall, so a 0.22-high flat box at its crown reads as
-// "the top fifth is red". Footprint is a hair larger than the cube
-// (1.32 vs 1.3) so the cap's sides clear the cube faces without
-// z-fighting, and it sits just above the cube's top face. Static red,
-// no pulse — the alert is a state, not an animation; the cube keeps
-// its layer color below the cap.
-const alarmCapGeometry = new BoxGeometry(1.32, 0.22, 1.32);
-const alarmCapMat = new MeshLambertMaterial({
-  color: 0xef4444,
-  emissive: 0xef4444,
-  emissiveIntensity: 0.5,
+// Alarm ripple — a radar / seismic wave radiating out from an alarmed
+// cube across its plane. RIPPLE_PHASES concentric red rings expand and
+// fade on staggered phases so the waves read as a continuous outward
+// pulse. The rings are driven DIRECTLY on the THREE meshes in
+// onSceneLoop (TresJS copies Vector3 props on patch, so a reactive
+// scale binding wouldn't animate per frame) — the same direct-mutation
+// approach the camera and the old beacon pulse use. One shared material
+// per phase (opacity animated); the per-ring scale is set on each mesh.
+const RIPPLE_PHASES = 3;
+const RIPPLE_PERIOD = 3.2; // seconds for a ring to travel fully out
+const RIPPLE_MIN_SCALE = 0.9;
+const RIPPLE_MAX_SCALE = 4.2;
+const RIPPLE_MAX_OPACITY = 0.5;
+const rippleGeometry = new RingGeometry(0.6, 0.78, 44);
+const rippleMats = Array.from(
+  { length: RIPPLE_PHASES },
+  () =>
+    new MeshBasicMaterial({
+      color: 0xef4444,
+      transparent: true,
+      opacity: 0,
+      side: DoubleSide,
+      depthWrite: false,
+    }),
+);
+
+// ── Beacon mode resources ──────────────────────────────────────────
+// Healthy cubes drop to a near-invisible dark body plus a faint
+// wireframe (shared EdgesGeometry of the cube), so the grid reads as a
+// blueprint and only the red alarmed cubes + their glow stand out.
+const ghostMat = new MeshBasicMaterial({
+  color: new Color('#1b2433'),
+  transparent: true,
+  opacity: 0.5,
+  depthWrite: false,
+});
+const cubeEdgesGeometry = new EdgesGeometry(nodeGeometry);
+const cubeEdgeMat = new LineBasicMaterial({
+  color: new Color('#7d8ba3'),
+  transparent: true,
+  opacity: 0.9,
+});
+// Soft red radial halo billboarded over each alarmed cube — the "beacon"
+// glow. Built from a canvas radial-gradient texture so it's a cheap
+// sprite, additively blended for a luminous bloom.
+function makeGlowTexture(): CanvasTexture | null {
+  if (typeof document === 'undefined') return null;
+  const size = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const cx = cv.getContext('2d');
+  if (!cx) return null;
+  const g = cx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,120,110,0.95)');
+  g.addColorStop(0.35, 'rgba(239,68,68,0.55)');
+  g.addColorStop(1, 'rgba(239,68,68,0)');
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, size, size);
+  return new CanvasTexture(cv);
+}
+const glowTexture = makeGlowTexture();
+const glowMat = new SpriteMaterial({
+  map: glowTexture ?? undefined,
+  color: 0xffffff,
+  transparent: true,
+  depthWrite: false,
+  blending: AdditiveBlending,
 });
 
 /** Intra-layer call edge — calls between two services in the same
@@ -640,6 +868,58 @@ function rebuildPackets(): void {
 }
 watch(visibleCallEdges, rebuildPackets, { immediate: true });
 
+// Cross-layer call edges flow too — packets travel caller→callee along
+// the curve (getPoint 0→1 = from→to) so the operator reads the call
+// DIRECTION, not just the static arrow head. Covers the always-on
+// same-plane edges and the selection-gated vertical ones. Amber to
+// match the cross-edge tubes; intra-layer packets stay cyan.
+const crossPacketMat = new MeshBasicMaterial({ color: new Color('#ffd9b0') });
+const crossPackets = shallowRef<Packet[]>([]);
+function rebuildCrossPackets(): void {
+  const out: Packet[] = [];
+  const add = (e: { curve: CatmullRomCurve3 }): void => {
+    for (let k = 0; k < 2; k++) out.push({ curve: e.curve, phase: k / 2, pos: new Vector3() });
+  };
+  visibleCrossEdges.value.forEach(add);
+  visibleVerticalEdges.value.forEach(add);
+  crossPackets.value = out;
+}
+watch([visibleCrossEdges, visibleVerticalEdges], rebuildCrossPackets, { immediate: true });
+
+// One ripple entry per (alarmed cube × phase). `pos` is the ring's
+// anchor on the plane (static — the cube doesn't move); `mesh` is the
+// live THREE mesh captured via the template ref so onSceneLoop can set
+// its scale each frame.
+interface AlarmRipple {
+  pos: [number, number, number];
+  phase: number;
+  mesh: Object3D | null;
+}
+const alarmRipples = shallowRef<AlarmRipple[]>([]);
+function rebuildAlarmRipples(): void {
+  const out: AlarmRipple[] = [];
+  for (const n of alarmedNodes.value) {
+    for (let p = 0; p < RIPPLE_PHASES; p++) {
+      out.push({ pos: [n.pos.x, n.pos.y + 0.03, n.pos.z], phase: p, mesh: null });
+    }
+  }
+  alarmRipples.value = out;
+}
+watch(alarmedNodes, rebuildAlarmRipples, { immediate: true });
+function bindRipple(r: AlarmRipple, el: unknown): void {
+  if (!el) {
+    r.mesh = null;
+    return;
+  }
+  const obj = (el as { isObject3D?: boolean }).isObject3D
+    ? (el as Object3D)
+    : (el as { value?: { isObject3D?: boolean } }).value?.isObject3D
+      ? (el as { value: Object3D }).value
+      : null;
+  r.mesh = obj;
+  if (obj) obj.raycast = _noopRaycast;
+}
+
 // ── Frame loop: animate packets + lerp the orbit controls' target
 // toward the caller's focus target (when the operator clicks a node
 // or a zone). Also recomputes which zone labels overflow their
@@ -715,16 +995,62 @@ function updateCloseNodes(): void {
  *  lerping — saves work and prevents jitter at the destination. */
 let lastFocusKey: string | null = null;
 const FOCUS_SNAP_EPS = 0.04;
+let sceneElapsed = 0;
+// Side-panel focus goal (pos+target), lerped per frame; precedes focusTarget.
+const camGoal = shallowRef<{ pos: Vector3; target: Vector3 } | null>(null);
+const FLASH_SECONDS = 4;
+const flashMat = new MeshBasicMaterial({
+  color: new Color('#cfe3ff'),
+  transparent: true,
+  opacity: 0,
+  side: DoubleSide,
+  depthWrite: false,
+});
+const flashState = shallowRef<{ keys: Set<string>; start: number } | null>(null);
 function onSceneLoop(ctx: { elapsed: number; delta: number }): void {
+  sceneElapsed = ctx.elapsed;
   for (const p of packets.value) {
     const t = ((ctx.elapsed / period) + p.phase) % 1;
     p.curve.getPoint(t, p.pos);
   }
-  // Focus lerp — write straight into the live OrbitControls.target so
-  // the move sticks even when the operator mouses on top of it. We
-  // snap when close enough so the loop doesn't keep nudging the
-  // sub-pixel residual forever.
-  if (props.focusTarget) {
+  for (const p of crossPackets.value) {
+    const t = ((ctx.elapsed / period) + p.phase) % 1;
+    p.curve.getPoint(t, p.pos);
+  }
+  // Alarm ripples — expand + fade each phase's ring; the shared
+  // per-phase material carries the opacity, each ring mesh its scale.
+  if (alarmRipples.value.length > 0) {
+    const scaleByPhase: number[] = [];
+    for (let p = 0; p < RIPPLE_PHASES; p++) {
+      const t = ((ctx.elapsed / RIPPLE_PERIOD) + p / RIPPLE_PHASES) % 1;
+      scaleByPhase[p] = RIPPLE_MIN_SCALE + t * (RIPPLE_MAX_SCALE - RIPPLE_MIN_SCALE);
+      rippleMats[p]!.opacity = (1 - t) * RIPPLE_MAX_OPACITY;
+    }
+    for (const r of alarmRipples.value) r.mesh?.scale.setScalar(scaleByPhase[r.phase]!);
+  }
+  // Side-panel focus — glide pos+target; precedes the target-only path.
+  if (camGoal.value) {
+    const cam = getCamera();
+    const c = getControls();
+    if (cam && c) {
+      const g = camGoal.value;
+      const k = Math.min(1, ctx.delta * 4);
+      cam.position.lerp(g.pos, k);
+      c.target.lerp(g.target, k);
+      c.update();
+      if (cam.position.distanceTo(g.pos) < 0.15 && c.target.distanceTo(g.target) < 0.1) {
+        cam.position.copy(g.pos);
+        c.target.copy(g.target);
+        c.update();
+        camGoal.value = null;
+      }
+    } else {
+      camGoal.value = null;
+    }
+  } else if (props.focusTarget) {
+    // Focus lerp — write straight into the live OrbitControls.target so
+    // the move sticks even when the operator mouses on top of it. Snap
+    // when close so the loop doesn't keep nudging the sub-pixel residual.
     const c = getControls();
     if (c) {
       const ft = props.focusTarget;
@@ -748,6 +1074,17 @@ function onSceneLoop(ctx: { elapsed: number; delta: number }): void {
     }
   } else {
     lastFocusKey = null;
+  }
+  // Region flash — pulse + fade the selected zones' plates over ~4s.
+  if (flashState.value) {
+    const age = ctx.elapsed - flashState.value.start;
+    if (age >= FLASH_SECONDS) {
+      flashState.value = null;
+      flashMat.opacity = 0;
+    } else {
+      const pulse = 0.5 + 0.5 * Math.sin(age * Math.PI * 2.2);
+      flashMat.opacity = pulse * (1 - age / FLASH_SECONDS) * 0.4;
+    }
   }
   if (ctx.elapsed - lastLabelTick > 0.15) {
     lastLabelTick = ctx.elapsed;
@@ -1025,6 +1362,7 @@ function pan(rightAmount: number, upAmount: number): void {
 
 /** Reset to the initial framing. */
 function resetView(): void {
+  camGoal.value = null; // cancel any in-flight side-panel focus
   const cam = getCamera();
   const c = getControls();
   if (!cam || !c) return;
@@ -1035,30 +1373,78 @@ function resetView(): void {
   c.update();
 }
 
-defineExpose({ zoom, rotateY, pan, resetView });
+/** Glide the camera to face `target` from the default isometric heading,
+ *  zoomed to fit `radius` (side panel — moves, doesn't pivot in place). */
+function focusOn(t: { x: number; y: number; z: number }, radius: number): void {
+  const target = new Vector3(t.x, t.y, t.z);
+  const dir = new Vector3(0.62, 0.62, 0.62).normalize();
+  const dist = Math.min(220, Math.max(9, radius * 2.6 + 6));
+  camGoal.value = { target, pos: target.clone().addScaledVector(dir, dist) };
+}
+function flashZones(layerKeys: string[]): void {
+  flashState.value = { keys: new Set(layerKeys), start: sceneElapsed };
+}
+const flashRender = computed(() => {
+  const fs = flashState.value;
+  if (!fs) return [];
+  return placement.zones.filter((z) =>
+    z.group ? z.group.layerKeys.some((k) => fs.keys.has(k)) : fs.keys.has(z.layerKey),
+  );
+});
 
+defineExpose({ zoom, rotateY, pan, resetView, focusOn, flashZones });
+
+// Pre-built layer-key → {name, group} + layer-key → tier (plane) name,
+// so the hover + detail cards can show the human-readable layer, its
+// family group, and the tier the cube sits on.
+const layerInfo = new Map<string, { name: string; group: string | null }>();
+for (const L of graph.layers) layerInfo.set(L.key, { name: L.name, group: L.group });
+const planeNameById = new Map(placement.planes.map((p) => [p.id, p.name]));
+const layerPlaneName = new Map<string, string>();
+for (const z of placement.zones) {
+  const pn = planeNameById.get(z.plane) ?? z.plane;
+  if (z.group) for (const k of z.group.layerKeys) layerPlaneName.set(k, pn);
+  else layerPlaneName.set(z.layerKey, pn);
+}
+
+/** Shared cube description — drives BOTH the hover preview and the click
+ *  detail card so they read identically. `group` is the service's
+ *  `<group>::` prefix; `cluster` is the topology-cluster (k8s/mesh
+ *  namespace) when the layer has a naming rule. */
+interface NodeInfo {
+  display: string;
+  service: string;
+  tier: string | null;
+  layer: string;
+  group: string | null;
+  cluster: string | null;
+  clusterAlias: string | null;
+}
+function describeNode(node: SceneServiceNode): NodeInfo {
+  const li = layerInfo.get(node.layerKey);
+  const rule = props.namingByLayer?.[node.layerKey.toUpperCase()] ?? null;
+  const id = resolveServiceIdentity(node.name, rule);
+  return {
+    display: id.display || node.shortName,
+    service: node.name,
+    tier: layerPlaneName.get(node.layerKey) ?? null,
+    layer: li?.name ?? node.layerKey,
+    group: id.legacyGroup,
+    cluster: id.cluster,
+    clusterAlias: id.clusterAlias,
+  };
+}
+
+// Hover preview is suppressed while a node is selected — the detail card
+// is the active info surface and a concurrent hover would double up.
 const hoveredNode = computed(() => {
-  if (!props.hoveredNodeId) return null;
-  // Suppress the hover preview entirely whenever a node is selected —
-  // the detail card next to the selected cube is the active info
-  // surface, and any concurrent hover tooltip just doubles up the
-  // same content on screen ("info shows twice"). Operators can still
-  // see hover previews on every other cube once they dismiss the
-  // selection.
-  if (props.selectedNodeId) return null;
+  if (!props.hoveredNodeId || props.selectedNodeId) return null;
   const n = graph.nodesByKey.get(props.hoveredNodeId);
   if (!n) return null;
   const pos = placement.nodes.get(props.hoveredNodeId);
   if (!pos) return null;
-  return { node: n, pos };
+  return { node: n, pos, info: describeNode(n) };
 });
-
-// Pre-built layer-key → {name, group} map so the detail card can show
-// the human-readable layer name + group alongside the cube it sits on.
-const layerInfo = new Map<string, { name: string; group: string | null }>();
-for (const L of graph.layers) {
-  layerInfo.set(L.key, { name: L.name, group: L.group });
-}
 
 const selectedNodeDetail = computed(() => {
   if (!props.selectedNodeId) return null;
@@ -1066,8 +1452,21 @@ const selectedNodeDetail = computed(() => {
   if (!n) return null;
   const pos = placement.nodes.get(props.selectedNodeId);
   if (!pos) return null;
-  const layer = layerInfo.get(n.layerKey) ?? null;
-  return { node: n, pos, layer };
+  return { node: n, pos, info: describeNode(n) };
+});
+
+/** Deep-link to the selected service's layer dashboard, pre-selecting
+ *  the service. The layer page seeds its pick from `?service=<id>` where
+ *  `<id>` is the OAP service id (the cube carries the real id, e.g.
+ *  `base64(name).1`); without it the page just auto-picks the first
+ *  service. `import.meta.env.BASE_URL` keeps the path correct under a
+ *  gateway sub-path (a bare `/layer/...` ignores the router base — the
+ *  same trap fixed for the brand / login links). */
+const openDashboardHref = computed<string>(() => {
+  const d = selectedNodeDetail.value;
+  if (!d) return import.meta.env.BASE_URL;
+  const base = import.meta.env.BASE_URL; // ends with '/'
+  return `${base}layer/${d.node.layerKey}/service?service=${encodeURIComponent(d.node.serviceId)}`;
 });
 
 // ── Detail-card side: flip to whichever side of the canvas has more
@@ -1115,24 +1514,40 @@ onUnmounted(() => {
   nodeGeometry.dispose();
   packetGeometry.dispose();
   planeMaterial.dispose();
+  planeEdgeMaterial.dispose();
+  for (const s of planeSlabs) {
+    s.box.dispose();
+    s.edges.dispose();
+  }
   for (const m of zoneMaterials.values()) m.dispose();
   for (const m of nodeMaterials.values()) m.dispose();
   for (const m of hoverMaterials.values()) m.dispose();
   selectedMat.dispose();
+  alarmMat.dispose();
   callEdgeMat.dispose();
   callPacketMat.dispose();
+  crossPacketMat.dispose();
+  flashMat.dispose();
   crossEdgeMat.dispose();
   crossArrowMat.dispose();
   hierarchyMat.dispose();
   crossArrowGeometry.dispose();
-  alarmCapGeometry.dispose();
-  alarmCapMat.dispose();
+  rippleGeometry.dispose();
+  for (const m of rippleMats) m.dispose();
+  ghostMat.dispose();
+  cubeEdgesGeometry.dispose();
+  cubeEdgeMat.dispose();
+  glowTexture?.dispose();
+  glowMat.dispose();
   for (const m of iconStampMaterials.values()) m.dispose();
   disposeLayerIconTextures();
   for (const t of callTubes.value) t.geometry.dispose();
   for (const t of crossTubes.value) t.geometry.dispose();
   for (const t of verticalTubes.value) t.geometry.dispose();
   for (const t of hierarchyTubes.value) t.geometry.dispose();
+  clusterFrameMat.dispose();
+  for (const f of clusterFrames.value) f.geom.dispose();
+  for (const e of clusterLabels.values()) { e.mat.map?.dispose(); e.mat.dispose(); }
 });
 </script>
 
@@ -1178,15 +1593,27 @@ onUnmounted(() => {
            handler, so a click on an empty plane area lands on the
            plane and is harmlessly dropped — exactly what we want for
            empty-space behaviour. -->
-      <TresMesh
-        v-for="P in placement.planes"
-        :key="`plane:${P.id}`"
-        :position="[0, P.y, 0]"
-        :rotation="[-Math.PI / 2, 0, 0]"
+      <template
+        v-for="s in planeSlabs"
+        :key="`plane:${s.id}`"
       >
-        <TresPlaneGeometry :args="[P.width, P.depth]" />
-        <primitive :object="planeMaterial" />
-      </TresMesh>
+        <!-- In single-layer focus mode only the focused layer's plane
+             slab renders; the other tiers are hidden so the view reads
+             as one layer's internal topology. -->
+        <template v-if="!props.soloPlane || s.id === props.soloPlane">
+        <!-- Volumetric glass slab — raycast left ON so it occludes
+             cubes behind it and absorbs empty clicks (see CLAUDE.md). -->
+        <TresMesh :position="[0, s.y, 0]">
+          <primitive :object="s.box" />
+          <primitive :object="planeMaterial" />
+        </TresMesh>
+        <!-- Rim wireframe — decorative, raycast disabled. -->
+        <TresLineSegments :position="[0, s.y, 0]" :ref="(el) => disableRaycast(el)">
+          <primitive :object="s.edges" />
+          <primitive :object="planeEdgeMaterial" />
+        </TresLineSegments>
+        </template>
+      </template>
 
       <!-- Layer zones — colored backplates. Same occlusion rule as
            the tier planes above: they raycast, so they hide cubes
@@ -1197,7 +1624,7 @@ onUnmounted(() => {
           :rotation="[-Math.PI / 2, 0, 0]"
         >
           <TresPlaneGeometry :args="[Z.width, Z.depth]" />
-          <primitive :object="zoneMaterial(resolveLayerColor(Z.layerKey, Z.tint))" />
+          <primitive :object="zoneMaterial(Z.group ? Z.group.color : resolveLayerColor(Z.layerKey, Z.tint))" />
         </TresMesh>
         <!-- Layer mark — the project's logo PRINTED onto the zone's
              colour swatch. Built as a textured PlaneGeometry rotated
@@ -1214,9 +1641,48 @@ onUnmounted(() => {
           :ref="(el) => disableRaycast(el)"
         >
           <TresPlaneGeometry :args="[1.7, 1.7]" />
-          <primitive :object="iconStampMaterial(Z.layerKey, Z.tint)" />
+          <primitive
+            :object="Z.group ? groupStampMaterial(Z.group.icon, Z.group.color) : iconStampMaterial(Z.layerKey, Z.tint)"
+          />
         </TresMesh>
       </template>
+
+      <!-- Cluster frames (k8s/mesh namespace): wireframe rect + baked
+           namespace stamp at the bottom-left. Decorative → raycast off. -->
+      <template v-for="f in clusterFrames" :key="`cframe:${f.band.key}`">
+        <TresLineSegments
+          :position="[f.band.centerX, f.band.y + 0.05, f.band.centerZ]"
+          :rotation="[-Math.PI / 2, 0, 0]"
+          :ref="(el) => disableRaycast(el)"
+        >
+          <primitive :object="f.geom" />
+          <primitive :object="clusterFrameMat" />
+        </TresLineSegments>
+        <TresMesh
+          :position="[
+            f.band.centerX - f.band.width / 2 + f.labelW / 2 + 0.25,
+            f.band.y + 0.06,
+            f.band.centerZ + f.band.depth / 2 - f.labelH / 2 - 0.25,
+          ]"
+          :rotation="[-Math.PI / 2, 0, 0]"
+          :ref="(el) => disableRaycast(el)"
+        >
+          <TresPlaneGeometry :args="[f.labelW, f.labelH]" />
+          <primitive :object="f.labelMat" />
+        </TresMesh>
+      </template>
+
+      <!-- Side-panel selection flash. -->
+      <TresMesh
+        v-for="z in flashRender"
+        :key="`flash:${z.layerKey}`"
+        :position="[z.centerX, z.y + 0.04, z.centerZ]"
+        :rotation="[-Math.PI / 2, 0, 0]"
+        :ref="(el) => disableRaycast(el)"
+      >
+        <TresPlaneGeometry :args="[z.width, z.depth]" />
+        <primitive :object="flashMat" />
+      </TresMesh>
 
       <TresMesh
         v-for="n in visibleNodes"
@@ -1229,6 +1695,10 @@ onUnmounted(() => {
           :object="
             props.selectedNodeId === n.node.nodeId
               ? selectedMat
+              : alarmedNodeIds.has(n.node.nodeId)
+              ? alarmMat
+              : props.beaconMode
+              ? ghostMat
               : props.hoveredNodeId === n.node.nodeId
               ? hoverMaterial(n.colorHex)
               : nodeMaterial(n.colorHex)
@@ -1236,18 +1706,43 @@ onUnmounted(() => {
         />
       </TresMesh>
 
-      <!-- Alarm cap — the top ~20% of an alarmed cube, painted red. The
-           cube keeps its layer color below; the red crown is the alert
-           signal. raycast disabled (it sits on the cube top and would
-           otherwise steal clicks aimed at the cube). -->
+      <!-- Beacon mode: faint wireframe on every cube (blueprint read)
+           + a red radial glow billboarded over each alarmed cube. Both
+           decorative → raycast disabled. -->
+      <template v-if="props.beaconMode">
+        <TresLineSegments
+          v-for="n in visibleNodes"
+          :key="`cube-edge:${n.node.nodeId}`"
+          :position="[n.pos.x, n.pos.y + 0.55, n.pos.z]"
+          :ref="(el) => disableRaycast(el)"
+        >
+          <primitive :object="cubeEdgesGeometry" />
+          <primitive :object="cubeEdgeMat" />
+        </TresLineSegments>
+        <TresSprite
+          v-for="n in alarmedNodes"
+          :key="`glow:${n.node.nodeId}`"
+          :position="[n.pos.x, n.pos.y + 0.55, n.pos.z]"
+          :scale="[2.8, 2.8, 1]"
+          :ref="(el) => disableRaycast(el)"
+        >
+          <primitive :object="glowMat" />
+        </TresSprite>
+      </template>
+
+      <!-- Alarm ripples — concentric red rings radiating across the
+           plane from each alarmed cube (radar / seismic pulse). Scale
+           is driven per-frame on the THREE mesh in onSceneLoop; raycast
+           disabled so the flat rings never absorb cube clicks. -->
       <TresMesh
-        v-for="n in alarmedNodes"
-        :key="`alarmcap:${n.node.nodeId}`"
-        :position="[n.pos.x, n.pos.y + 0.95, n.pos.z]"
-        :ref="(el) => disableRaycast(el)"
+        v-for="(r, ri) in alarmRipples"
+        :key="`ripple:${ri}`"
+        :position="r.pos"
+        :rotation="[-Math.PI / 2, 0, 0]"
+        :ref="(el) => bindRipple(r, el)"
       >
-        <primitive :object="alarmCapGeometry" />
-        <primitive :object="alarmCapMat" />
+        <primitive :object="rippleGeometry" />
+        <primitive :object="rippleMats[r.phase]" />
       </TresMesh>
 
       <!-- Traffic chip — small numeric pill that LIVES WITH its cube.
@@ -1348,22 +1843,56 @@ onUnmounted(() => {
         <primitive :object="callPacketMat" />
       </TresMesh>
 
+      <!-- Cross-layer call-edge packets — flow caller→callee. -->
+      <TresMesh
+        v-for="(p, pi) in crossPackets"
+        :key="`xpkt:${pi}`"
+        :position="p.pos"
+        :ref="(el) => disableRaycast(el)"
+      >
+        <primitive :object="packetGeometry" />
+        <primitive :object="crossPacketMat" />
+      </TresMesh>
+
       <!-- Hover tooltip — anchored above the hovered cube via cientos
            <Html>, so it follows the cube in 3D. occlude=false because
            the operator's intent is to read what they just hovered;
            hiding the tooltip behind 3D geometry would be surprising. -->
       <Html
         v-if="hoveredNode"
-        :position="[hoveredNode.pos.x, hoveredNode.pos.y + 1.3, hoveredNode.pos.z]"
-        center
+        :position="[hoveredNode.pos.x, hoveredNode.pos.y + 0.6, hoveredNode.pos.z]"
         :occlude="false"
         pointer-events="none"
         :z-index-range="[2000000000, 2000000000]"
       >
-        <div class="floating-tip">
-          <span class="tip-name">{{ hoveredNode.node.shortName }}</span>
-          <span class="tip-layer">{{ hoveredNode.node.layerKey }}</span>
-          <span class="tip-full">{{ hoveredNode.node.name }}</span>
+        <!-- Hover preview — SAME card as the click detail, minus the
+             "Open dashboard" footer (hover is read-only) and pointer-
+             events (must never steal the click). -->
+        <div class="detail-card hover">
+          <div class="d-head">
+            <div class="d-title">
+              <span class="d-name">{{ hoveredNode.info.display }}</span>
+              <span class="d-sub">service</span>
+            </div>
+          </div>
+          <div class="d-rows">
+            <div v-if="hoveredNode.info.tier" class="d-row">
+              <span class="d-label">Tier</span><span class="d-val">{{ hoveredNode.info.tier }}</span>
+            </div>
+            <div class="d-row">
+              <span class="d-label">Layer</span><span class="d-val">{{ hoveredNode.info.layer }}</span>
+            </div>
+            <div v-if="hoveredNode.info.group" class="d-row">
+              <span class="d-label">Group</span><span class="d-val">{{ hoveredNode.info.group }}</span>
+            </div>
+            <div v-if="hoveredNode.info.cluster" class="d-row">
+              <span class="d-label">{{ hoveredNode.info.clusterAlias || 'Cluster' }}</span>
+              <span class="d-val">{{ hoveredNode.info.cluster }}</span>
+            </div>
+            <div class="d-row">
+              <span class="d-label">Service</span><span class="d-val mono">{{ hoveredNode.info.service }}</span>
+            </div>
+          </div>
         </div>
       </Html>
 
@@ -1382,7 +1911,7 @@ onUnmounted(() => {
         <div class="detail-card" :data-side="selectedSide">
           <div class="d-head">
             <div class="d-title">
-              <span class="d-name">{{ selectedNodeDetail.node.shortName }}</span>
+              <span class="d-name">{{ selectedNodeDetail.info.display }}</span>
               <span class="d-sub">service</span>
             </div>
             <button
@@ -1393,15 +1922,21 @@ onUnmounted(() => {
             >×</button>
           </div>
           <div class="d-rows">
-            <div class="d-row">
-              <span class="d-label">Layer</span>
-              <span class="d-val">
-                {{ selectedNodeDetail.layer?.name ?? selectedNodeDetail.node.layerKey }}
-              </span>
+            <div v-if="selectedNodeDetail.info.tier" class="d-row">
+              <span class="d-label">Tier</span><span class="d-val">{{ selectedNodeDetail.info.tier }}</span>
             </div>
-            <div v-if="selectedNodeDetail.layer?.group" class="d-row">
-              <span class="d-label">Group</span>
-              <span class="d-val">{{ selectedNodeDetail.layer.group }}</span>
+            <div class="d-row">
+              <span class="d-label">Layer</span><span class="d-val">{{ selectedNodeDetail.info.layer }}</span>
+            </div>
+            <div v-if="selectedNodeDetail.info.group" class="d-row">
+              <span class="d-label">Group</span><span class="d-val">{{ selectedNodeDetail.info.group }}</span>
+            </div>
+            <div v-if="selectedNodeDetail.info.cluster" class="d-row">
+              <span class="d-label">{{ selectedNodeDetail.info.clusterAlias || 'Cluster' }}</span>
+              <span class="d-val">{{ selectedNodeDetail.info.cluster }}</span>
+            </div>
+            <div class="d-row">
+              <span class="d-label">Service</span><span class="d-val mono">{{ selectedNodeDetail.info.service }}</span>
             </div>
           </div>
           <div class="d-foot">
@@ -1409,7 +1944,7 @@ onUnmounted(() => {
                  real new tab. We point at the layer's main service view,
                  which is the default landing for every active layer. -->
             <a
-              :href="`/layer/${selectedNodeDetail.node.layerKey}/service`"
+              :href="openDashboardHref"
               target="_blank"
               rel="noopener"
               class="d-btn"
@@ -1446,45 +1981,6 @@ onUnmounted(() => {
    has higher specificity than any external class rule we could write.
    See CLAUDE.md "click-thief" section. */
 
-/* Hover tooltip — portaled via cientos <Html>, so non-scoped.
-   Anchored at the hovered cube; the translate-Y offset lifts it
-   slightly above the cube so the cube stays visible while the
-   tooltip reads. pointer-events: none keeps it from absorbing
-   the click the operator's about to make on the cube. */
-.floating-tip {
-  background: rgba(15, 19, 26, 0.96);
-  border: 1px solid var(--sw-line-2);
-  border-radius: 6px;
-  padding: 5px 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  font-size: 11px;
-  color: var(--sw-fg-0);
-  pointer-events: none;
-  white-space: nowrap;
-  transform: translateY(-100%);
-  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.6);
-  /* Sits above every traffic chip — cientos portals every <Html> as a
-     stacking-context-less absolute element, and without an explicit
-     z-index the per-cube chips (rendered later in the v-for) end up
-     painted on top of the hover tooltip. The tooltip is the operator's
-     focused-on info, so it always wins. */
-  position: relative;
-  z-index: 20;
-}
-.floating-tip .tip-name { font-weight: 700; font-size: 12px; }
-.floating-tip .tip-layer {
-  font-size: 9px;
-  color: var(--sw-fg-3);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.floating-tip .tip-full {
-  font-size: 10px;
-  color: var(--sw-fg-2);
-  font-family: var(--sw-mono, monospace);
-}
 
 /* Traffic chip — small numeric pill below each cube reading the
    stage-5 MQE result. Border picks up the layer color so the chip
@@ -1549,6 +2045,12 @@ onUnmounted(() => {
 .detail-card[data-side='left'] {
   transform: translate(calc(-100% - 20px), -50%);
 }
+/* Hover variant — same card, but read-only: centred above the cube and
+   never absorbs pointer events (the click must reach the cube). */
+.detail-card.hover {
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+}
 .detail-card .d-head {
   display: flex;
   align-items: flex-start;
@@ -1612,6 +2114,12 @@ onUnmounted(() => {
   flex: 1 1 auto;
   min-width: 0;
   word-break: break-word;
+}
+.detail-card .d-val.mono {
+  font-family: var(--sw-mono, monospace);
+  font-size: 11px;
+  color: var(--sw-fg-2);
+  word-break: break-all;
 }
 .detail-card .d-foot {
   padding: 0 12px 12px;

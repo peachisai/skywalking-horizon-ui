@@ -62,6 +62,19 @@ const edgeStyleSchema = z
   })
   .strict();
 
+const groupSpecSchema = z
+  .object({
+    id: z.string().regex(/^[a-z][a-z0-9-]*$/, {
+      message: 'group id must be lower-kebab (a-z, 0-9, -; start with a letter)',
+    }),
+    label: z.string().min(1),
+    level: z.string().min(1),
+    color: z.string().min(1),
+    icon: z.string().min(1),
+    layers: z.array(z.string().min(1)).min(1),
+  })
+  .strict();
+
 const levelSpecSchema = z
   .object({
     id: z.string().regex(/^[a-z][a-z0-9-]*$/, {
@@ -106,6 +119,8 @@ const configSchema = z
       })
       .strict(),
     levels: z.array(levelSpecSchema).min(1),
+    // Optional — older saved configs predate groups; default to none.
+    groups: z.array(groupSpecSchema).default([]),
     layers: z.record(z.string().min(1), layerSpecSchema),
   })
   .strict()
@@ -128,6 +143,27 @@ const configSchema = z
         message: `unknownLayer.level "${cfg.unknownLayer.level}" must be one of: ${Array.from(levelIds).join(', ')}`,
         path: ['unknownLayer', 'level'],
       });
+    }
+    // Each group must sit on a real level (a dangling `level` silently
+    // drops the group block + scatters its members at render time), and
+    // group ids must be unique (placement + side panel key on the id).
+    const groupIds = new Set<string>();
+    for (const g of cfg.groups) {
+      if (groupIds.has(g.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate group id: ${g.id}`,
+          path: ['groups'],
+        });
+      }
+      groupIds.add(g.id);
+      if (!levelIds.has(g.level)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `group "${g.id}" level "${g.level}" must be one of: ${Array.from(levelIds).join(', ')}`,
+          path: ['groups'],
+        });
+      }
     }
     // A layer can be referenced by an explicit list only once across all
     // levels — otherwise the level membership is ambiguous.

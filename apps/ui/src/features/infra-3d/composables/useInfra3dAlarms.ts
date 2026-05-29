@@ -24,29 +24,50 @@
  *   - 20m rolling window matches the alarm-page topbar default; the
  *     operator's mental model is "anything fresh enough to still be a
  *     concern."
- *   - We key on `service.name`. OAP returns `alarm.name` equal to the
- *     entity name when `scope === 'Service'`, which matches the
- *     `SceneServiceNode.name` field rendered on the cube. ServiceRelation
- *     / Endpoint / Process scopes don't map to a single cube and are
- *     ignored — they'd flag the wrong service.
- *   - We include both firing alarms (recoveryTime === null) and
- *     recently-recovered alarms (any alarm whose event lands in the
- *     window). Operators want to see "this service had trouble in the
- *     last 20m" even if it's currently fine — the red is a recency
- *     signal, not a live state.
- *   - Polled at 30s. Fast enough that a new firing alarm shows up
- *     within a refresh; slow enough that the cost is negligible.
+ *   - Only `scope === 'Service'` alarms count: OAP returns `alarm.name`
+ *     equal to the service entity name there, matching the cube's
+ *     `SceneServiceNode.name`. ServiceRelation / Endpoint / Process
+ *     scopes don't map to a single cube and are ignored — they'd flag
+ *     the wrong service.
+ *   - Matched on a composite `(layer, name)` key (see `alarmKey`), so a
+ *     same-named service is reddened only in its own tier; alarms with
+ *     no resolved layer fall back to a name-only set.
+ *   - Only currently-FIRING alarms (recoveryTime === null) redden a
+ *     cube — red means "alarming now", which matches the alarms page's
+ *     ACTIVE incident count. A recovered-within-window alarm is no
+ *     longer a live problem, so it is NOT reddened (including it made
+ *     the map show more red cubes than the page's active count).
+ *   - Polled every 1 min (POLL_INTERVAL_MS). Fast enough that a new
+ *     firing alarm shows up within a refresh; slow enough that the cost
+ *     is negligible.
  */
 
 import { onMounted, onUnmounted, readonly, ref, shallowRef } from 'vue';
 import { bff } from '../../../api/client';
 
 const TWENTY_MIN_MS = 20 * 60_000;
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 60_000;
 const FETCH_PAGE_SIZE = 500;
 
-const alarmedServiceNames = shallowRef<Set<string>>(new Set());
+/** Composite `LAYER\u0000serviceName` keys for alarms that carry a resolved
+ *  layer — the precise match (the same service name can exist in several
+ *  layers; keying on name alone would redden all of them). */
+const alarmedKeys = shallowRef<Set<string>>(new Set());
+/** Service names from alarms with NO resolved layer — a name-only
+ *  fallback so those alarms still light their cube(s). */
+const alarmedNamesNoLayer = shallowRef<Set<string>>(new Set());
 const lastUpdatedAt = ref<number | null>(null);
+
+/** Build the composite key the scene matches a cube against. The layer
+ *  and name are joined by U+0000, written as a `\u0000` ESCAPE in the
+ *  template below — never a raw NUL byte, which would make this a binary
+ *  file (unreviewable git diffs, tooling/editor mangling). NUL can appear
+ *  in neither an OAP layer key nor a service name, so the join is
+ *  collision-proof; both producer and the lone consumer call this, so the
+ *  key stays in-memory and is never serialized. */
+export function alarmKey(layerKey: string, serviceName: string): string {
+  return `${layerKey.toUpperCase()}\u0000${serviceName}`;
+}
 const error = ref<string | null>(null);
 let timer: ReturnType<typeof setInterval> | null = null;
 let inflight: Promise<void> | null = null;
@@ -63,7 +84,8 @@ async function refresh(): Promise<void> {
         pageSize: FETCH_PAGE_SIZE,
         pageNum: 1,
       });
-      const next = new Set<string>();
+      const keys = new Set<string>();
+      const namesNoLayer = new Set<string>();
       for (const m of r.msgs) {
         // Only single-service alarms — relation/instance/endpoint
         // alarms would otherwise spuriously redden every cube that
@@ -71,9 +93,20 @@ async function refresh(): Promise<void> {
         // intentionally skipped: their entity name carries an instance
         // suffix that doesn't match `service.name` on the cube.
         if (m.scope !== 'Service') continue;
-        if (typeof m.name === 'string' && m.name.length > 0) next.add(m.name);
+        if (typeof m.name !== 'string' || m.name.length === 0) continue;
+        // Firing only — a recovered alarm (recoveryTime set) is no longer
+        // an active problem. Reddening recovered-within-window alarms made
+        // the map show more red cubes than the alarms page's ACTIVE count.
+        if (m.recoveryTime !== null) continue;
+        // Precise: key on (layer, name) so an alarm reddens only the
+        // matching service in the matching tier, not every same-named
+        // cube across layers. Alarms with no resolved layer fall back
+        // to name-only matching.
+        if (m.layerKey) keys.add(alarmKey(m.layerKey, m.name));
+        else namesNoLayer.add(m.name);
       }
-      alarmedServiceNames.value = next;
+      alarmedKeys.value = keys;
+      alarmedNamesNoLayer.value = namesNoLayer;
       lastUpdatedAt.value = Date.now();
       error.value = null;
     } catch (err) {
@@ -102,7 +135,8 @@ export function useInfra3dAlarms() {
     }
   });
   return {
-    alarmedServiceNames: readonly(alarmedServiceNames),
+    alarmedKeys: readonly(alarmedKeys),
+    alarmedNamesNoLayer: readonly(alarmedNamesNoLayer),
     lastUpdatedAt: readonly(lastUpdatedAt),
     error: readonly(error),
     /** Force-refresh outside the timer (e.g. on visibility change). */

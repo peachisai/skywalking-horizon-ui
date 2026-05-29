@@ -22,7 +22,10 @@
   operator can toggle whole tiers or individual zones.
 -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { useLayers } from '@/shell/useLayers';
+import type { ServiceNamingRule } from '@skywalking-horizon-ui/api-client';
 import Infra3DScene from './Infra3DScene.vue';
 import PipelineTimeline from './PipelineTimeline.vue';
 import {
@@ -51,8 +54,26 @@ interface SceneHandle {
   rotateY: (degrees: number) => void;
   pan: (rightAmount: number, upAmount: number) => void;
   resetView: () => void;
+  /** Reset the orbit to the default isometric orientation, then glide to
+   *  FACE the target and zoom to fit `radius`. Used by the side panel. */
+  focusOn: (target: { x: number; y: number; z: number }, radius: number) => void;
+  /** Briefly flash the given layers' zone plates (light pulse, ~4s) to
+   *  show which region a side-panel click selected. */
+  flashZones: (layerKeys: string[]) => void;
 }
 const sceneRef = ref<SceneHandle | null>(null);
+
+// Beacon mode — dims the whole scene to a dark wireframe and lets only
+// alarming cubes glow, so the operator's eye goes straight to what's
+// firing. Toggled from the toolbar; the scene reads it as a prop.
+const beaconMode = ref(false);
+// Auto-refresh: re-run the pipeline every REFRESH_MS. A self-rescheduling
+// timeout (not setInterval) so a manual refresh resets the countdown
+// cleanly instead of drifting against a fixed interval. `nextRefreshAt`
+// (epoch ms) feeds the timeline strip's live countdown. Cleared on unmount.
+const REFRESH_MS = 60_000;
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+const nextRefreshAt = ref<number | null>(null);
 
 const planes = ref<PlanePlacement[]>([]);
 const zones = ref<ZonePlacement[]>([]);
@@ -64,13 +85,38 @@ const visibleLayers = ref<Set<string>>(new Set());
  *  toward this each frame so the camera glides rather than teleports. */
 const focusTarget = ref<{ x: number; y: number; z: number } | null>(null);
 
+// Single-layer focus mode: `/3d/map?layer=<key>` (linked from a layer's
+// 2D Service Map) opens the existing 3D scene zoomed to ONE layer's
+// internal topology — only that layer's cubes + its tier plane render,
+// and the camera recenters on its zone. `null` ⇒ the full multi-tier map.
+const route = useRoute();
+const focusLayer = computed<string | null>(() => {
+  const q = route.query.layer;
+  return typeof q === 'string' && q.length > 0 ? q.toLowerCase() : null;
+});
+/** Plane to render solo in focus mode (the focused layer's tier). */
+const soloPlane = ref<string | null>(null);
+
 // Admin config gates the scene mount — the build-graph pass below is
 // config-aware (level resolver, plane order, per-layer color) and
 // running it before the config resolves would freeze the 3-plane
 // fallback into the rendered layout. `ready` flips once the BFF /
 // bundled defaults are in hand.
-const { config: infraConfig, levelsOrdered, ensureLoaded, levelForLayer } = useInfra3dConfig();
+const { config: infraConfig, levelsOrdered, groups: infraGroups, ensureLoaded, levelForLayer } = useInfra3dConfig();
 const ready = ref(false);
+
+// Per-layer topology-cluster rules (k8s/mesh namespace) from the live
+// layer menu — drives the 3D namespace clustering, matching the 2D
+// Service Map. Keyed upper-case to match the scene's lookup.
+const { layers: menuLayers, isLoading: menuLoading } = useLayers();
+const namingByLayer = computed<Record<string, ServiceNamingRule | null>>(() => {
+  const out: Record<string, ServiceNamingRule | null> = {};
+  for (const L of menuLayers.value) out[L.key.toUpperCase()] = L.naming ?? null;
+  return out;
+});
+// Scene builds placement once at setup from namingByLayer; if the menu
+// lands AFTER the mount gate, re-key so it rebuilds with the cluster rules.
+const namingReady = computed(() => menuLayers.value.length > 0);
 // Set when the config fetch rejects (OAP/BFF offline, or a role without
 // `infra-3d:read`). Without this the page sat on "Loading…" forever —
 // the operator couldn't tell a slow load from a hard failure.
@@ -131,7 +177,7 @@ const pipelineImpls: Record<PipelineStageId, StageImpl<PipelineCtx>> = {
       if (t && t.calls.length > 0) withTopology.push(L.key);
       else withoutTopology.push(L.key);
     }
-    rep.ok(`${withTopology.length} with topology`, {
+    rep.ok(`${withTopology.length} topology-bearing`, {
       kind: 'templates',
       layersWithTopology: withTopology,
       layersWithoutTopology: withoutTopology,
@@ -147,7 +193,7 @@ const pipelineImpls: Record<PipelineStageId, StageImpl<PipelineCtx>> = {
       nodeCount: t.nodes.length,
       edgeCount: t.calls.length,
     }));
-    rep.ok(`${probes.filter((p) => p.status === 'ok').length} topologies`, {
+    rep.ok(`${probes.filter((p) => p.status === 'ok').length} maps with edges`, {
       kind: 'topologies',
       probes,
     });
@@ -158,7 +204,9 @@ const pipelineImpls: Record<PipelineStageId, StageImpl<PipelineCtx>> = {
     // The scene rebuilds placement on its own; we just measure the cost.
     const topo = loadDemoTopology();
     const g = buildSceneGraph(topo, levelForLayer);
-    const p = computePlacement(g, planeOrder.value);
+    // Pass groups so the measured zone count matches the rendered scene
+    // (Infra3DScene collapses each logic group into one zone).
+    const p = computePlacement(g, planeOrder.value, infraGroups.value);
     const ms = Math.round(performance.now() - t0);
     rep.ok(`${p.zones.length} zones laid in ${ms} ms`, {
       kind: 'layout',
@@ -259,6 +307,10 @@ const pipelineImpls: Record<PipelineStageId, StageImpl<PipelineCtx>> = {
           services: chunk.units.map((u) => ({
             name: u.name, layer: u.layer, normal: u.normal, mqe: u.mqe,
           })),
+          // Last 2h at HOUR step — two buckets, the cheapest query that
+          // still smooths a single spiky minute. The BFF reduces the
+          // series to one scalar for the cube's traffic chip.
+          window: { startMs: Date.now() - 2 * 3600_000, endMs: Date.now(), step: 'HOUR' },
         });
         setMetricValues(r.values);
         if (r.errors && Object.keys(r.errors).length > 0) errCount += Object.keys(r.errors).length;
@@ -294,19 +346,73 @@ async function runPipeline(): Promise<void> {
   await runPipelineState(ctx, pipelineImpls);
 }
 
+/** Arm (or re-arm) the auto-refresh timer + countdown anchor. */
+function scheduleRefresh(): void {
+  if (refreshTimer !== null) clearTimeout(refreshTimer);
+  nextRefreshAt.value = Date.now() + REFRESH_MS;
+  refreshTimer = setTimeout(() => {
+    void runPipeline();
+    scheduleRefresh();
+  }, REFRESH_MS);
+}
+
+/** Manual refresh from the timeline strip — run now and reset the
+ *  countdown so the next auto-refresh is a full interval away. */
+function refreshNow(): void {
+  void runPipeline();
+  scheduleRefresh();
+}
+
 function onPlanes(p: PlanePlacement[]): void {
   planes.value = p;
 }
+/** Expand a zone to the layer key(s) the Scene gates visibility on. A
+ *  solo zone keys on its own layer; a GROUP zone (e.g. Self-Observability
+ *  clustering so11y_*) keys on its MEMBER layers. The Scene checks
+ *  `visibleNodes` / `visibleZones` against member layer keys, never the
+ *  group id — so visibility seeding, the tier toggle, and per-layer
+ *  counts must all use the members. Keying on the group id alone leaves
+ *  grouped cubes unrendered and undercounts the tier. */
+function zoneLayerKeys(z: ZonePlacement): string[] {
+  return z.group ? z.group.layerKeys : [z.layerKey];
+}
+/** Derive cube/plane visibility from the current zones + focus state.
+ *  Focus mode (`?layer=`) shows only the one layer's cubes on its plane
+ *  and recenters the camera on its zone — the existing scene scoped to a
+ *  single layer's internal topology. A solo layer matches its own zone;
+ *  a grouped layer matches the group zone that lists it. */
+function applyVisibility(z: ZonePlacement[]): void {
+  if (focusLayer.value) {
+    const fz = z.find(
+      (zz) =>
+        zz.layerKey.toLowerCase() === focusLayer.value ||
+        (zz.group?.layerKeys ?? []).some((k) => k.toLowerCase() === focusLayer.value),
+    );
+    if (fz) {
+      visibleLayers.value = new Set([focusLayer.value]);
+      soloPlane.value = fz.plane;
+      focusTarget.value = { x: fz.centerX, y: fz.y + 0.5, z: fz.centerZ };
+      return;
+    }
+    // Unknown layer in the URL → fall through to the full map.
+  }
+  // Default: every layer visible — group zones expand to their member
+  // keys so the Scene's member-key gate lets the grouped cubes render.
+  soloPlane.value = null;
+  visibleLayers.value = new Set(z.flatMap(zoneLayerKeys));
+}
 function onZones(z: ZonePlacement[]): void {
   zones.value = z;
-  // Default: every zone visible.
-  visibleLayers.value = new Set(z.map((zz) => zz.layerKey));
+  applyVisibility(z);
 }
+// Re-derive visibility when the focus changes after mount (e.g. the
+// "view full map" link flips `?layer` off) — no reload needed.
+watch(focusLayer, () => applyVisibility(zones.value));
 function onNodesByLayer(byLayer: Record<string, SceneServiceNode[]>): void {
   nodesByLayer.value = byLayer;
 }
 function togglePlane(planeId: string): void {
-  const inPlane = zones.value.filter((z) => z.plane === planeId).map((z) => z.layerKey);
+  const inPlane = zones.value.filter((z) => z.plane === planeId).flatMap(zoneLayerKeys);
   const allOn = inPlane.every((k) => visibleLayers.value.has(k));
   const next = new Set(visibleLayers.value);
   if (allOn) inPlane.forEach((k) => next.delete(k));
@@ -334,44 +440,29 @@ function onSelect(node: SceneServiceNode | null): void {
     selectedNodeId.value = node.nodeId;
   }
 }
-/** Tier-level focus: re-centre the camera on the geometric centroid
- *  of every visible zone within this tier. Falls back to the tier's
- *  baseline Y when the tier has no zones rendered (defensive). */
-function onPanelTierFocus(planeId: string, _event: MouseEvent): void {
-  const inTier = zones.value.filter((z) => z.plane === planeId);
-  if (inTier.length === 0) return;
-  let sx = 0;
-  let sz = 0;
-  for (const z of inTier) { sx += z.centerX; sz += z.centerZ; }
-  focusTarget.value = {
-    x: sx / inTier.length,
-    y: inTier[0]!.y + 0.5,
-    z: sz / inTier.length,
-  };
-}
-
 /** "all" → every layer in this tier is on; "none" → every layer is
  *  off; "some" → mixed. Drives the eye-toggle icon state and the
  *  hidden-row class on the tier row. */
 function tierVisibility(tierZones: ZonePlacement[]): 'all' | 'some' | 'none' {
-  if (tierZones.length === 0) return 'none';
+  const keys = tierZones.flatMap(zoneLayerKeys);
+  if (keys.length === 0) return 'none';
   let on = 0;
-  for (const z of tierZones) if (visibleLayers.value.has(z.layerKey)) on++;
+  for (const k of keys) if (visibleLayers.value.has(k)) on++;
   if (on === 0) return 'none';
-  if (on === tierZones.length) return 'all';
+  if (on === keys.length) return 'all';
   return 'some';
 }
 function visibleServicesInTier(tierZones: ZonePlacement[]): number {
   let n = 0;
-  for (const z of tierZones) {
-    if (!visibleLayers.value.has(z.layerKey)) continue;
-    n += (nodesByLayer.value[z.layerKey] || []).length;
+  for (const k of tierZones.flatMap(zoneLayerKeys)) {
+    if (!visibleLayers.value.has(k)) continue;
+    n += (nodesByLayer.value[k] || []).length;
   }
   return n;
 }
 function totalServicesInTier(tierZones: ZonePlacement[]): number {
   let n = 0;
-  for (const z of tierZones) n += (nodesByLayer.value[z.layerKey] || []).length;
+  for (const k of tierZones.flatMap(zoneLayerKeys)) n += (nodesByLayer.value[k] || []).length;
   return n;
 }
 
@@ -473,24 +564,85 @@ onMounted(async () => {
     configError.value = err instanceof Error ? err.message : String(err);
     return;
   }
+  // Wait for the layer menu too — it carries the per-layer naming rules
+  // that drive namespace clustering, and the scene reads them ONCE when
+  // it builds placement. Bounded so a slow/unreachable menu just renders
+  // the map unclustered rather than hanging on the loading state.
+  await new Promise<void>((resolve) => {
+    if (!menuLoading.value) return resolve();
+    const stop = watch(menuLoading, (loading) => {
+      if (!loading) { stop(); resolve(); }
+    });
+    setTimeout(() => { stop(); resolve(); }, 4000);
+  });
   ready.value = true;
-  // Kick the loading pipeline once. Subsequent runs are operator-
-  // initiated (timeline strip's refresh button).
+  // Kick the loading pipeline once, then refresh every minute. Alarms
+  // poll on their own 1-min timer (20m window); metrics ride the
+  // pipeline (2h @ HOUR). The timeline strip's refresh button still
+  // forces an immediate run.
   void runPipeline();
+  scheduleRefresh();
 });
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown);
+  if (refreshTimer !== null) clearTimeout(refreshTimer);
 });
 
 // Group zones by plane for the side panel — order matches `levels`
 // from the admin config (apps on top, infra at the bottom by default).
-const groupedZones = computed(() => {
-  return (levelsOrdered.value ?? []).map((lvl) => ({
-    id: lvl.id,
-    name: lvl.label,
-    zones: zones.value.filter((z) => z.plane === lvl.id),
-  }));
-});
+function servicesIn(key: string): number {
+  return nodesByLayer.value[key]?.length ?? 0;
+}
+
+interface PanelEntry {
+  kind: 'layer' | 'group';
+  key: string;
+  name: string;
+  color?: string;
+  services: number;
+}
+/** Side-panel hierarchy: tier → layer | logic-group (2 levels). */
+const panelTree = computed(() =>
+  (levelsOrdered.value ?? []).map((lvl) => {
+    const tierZones = zones.value.filter((z) => z.plane === lvl.id);
+    const entries: PanelEntry[] = tierZones.map((z) =>
+      z.group
+        ? {
+            kind: 'group',
+            key: z.layerKey,
+            name: z.layerName,
+            color: z.group.color,
+            services: z.group.layerKeys.reduce((a, k) => a + servicesIn(k), 0),
+          }
+        : { kind: 'layer', key: z.layerKey, name: z.layerName, services: servicesIn(z.layerKey) },
+    );
+    return { id: lvl.id, name: lvl.label, zones: tierZones, entries };
+  }),
+);
+
+/** Focus a tier (all its zones) — face + zoom the scene there and flash
+ *  the region. Called from the side-panel tier row. */
+function onPanelTierFocus(planeId: string): void {
+  const inTier = zones.value.filter((z) => z.plane === planeId);
+  if (inTier.length === 0) return;
+  let sx = 0, sz = 0, halfW = 0, halfD = 0;
+  for (const z of inTier) {
+    sx += z.centerX;
+    sz += z.centerZ;
+    halfW = Math.max(halfW, Math.abs(z.centerX) + z.width / 2);
+    halfD = Math.max(halfD, Math.abs(z.centerZ) + z.depth / 2);
+  }
+  const center = { x: sx / inTier.length, y: inTier[0]!.y + 0.5, z: sz / inTier.length };
+  sceneRef.value?.focusOn(center, Math.max(halfW, halfD));
+  sceneRef.value?.flashZones(inTier.flatMap(zoneLayerKeys));
+}
+/** Focus a single zone (layer / logic group) — face + zoom + flash. */
+function onPanelZoneFocus(zoneKey: string): void {
+  const z = zones.value.find((zz) => zz.layerKey === zoneKey);
+  if (!z) return;
+  sceneRef.value?.focusOn({ x: z.centerX, y: z.y + 0.5, z: z.centerZ }, Math.max(z.width, z.depth) / 2);
+  sceneRef.value?.flashZones(zoneLayerKeys(z));
+}
 
 const totalServices = computed(() =>
   Object.values(nodesByLayer.value).reduce((acc, arr) => acc + arr.length, 0),
@@ -513,8 +665,18 @@ const visibleServices = computed(() => {
          scene first, the chrome is glanceable when they need stats. -->
     <header class="bar floating">
       <div class="title">
-        <span class="kicker">3D Infrastructure Map</span>
-        <span class="hint">apps · service mesh · middleware · infra · drag to rotate · scroll to zoom · arrow keys / WASD to pan</span>
+        <template v-if="focusLayer">
+          <span class="kicker">3D Layer Topology</span>
+          <span class="hint">
+            focused on <strong>{{ focusLayer.toUpperCase() }}</strong> ·
+            <router-link class="title-link" :to="{ path: '/3d/map' }">view full map</router-link>
+            · drag to rotate · scroll to zoom
+          </span>
+        </template>
+        <template v-else>
+          <span class="kicker">3D Infrastructure Map</span>
+          <span class="hint">apps · service mesh · middleware · infra · drag to rotate · scroll to zoom · arrow keys / WASD to pan</span>
+        </template>
       </div>
       <div class="stats">
         <span class="stat">
@@ -522,6 +684,12 @@ const visibleServices = computed(() => {
         </span>
         <span class="stat">
           <strong>{{ zones.length }}</strong> layers · <strong>{{ planes.length }}</strong> levels
+        </span>
+        <!-- Query scopes so the operator knows what window each signal
+             reflects: topology/metrics roll up the last 2h (HOUR step),
+             alarms the last 20m; everything refreshes each minute. -->
+        <span class="stat scope" title="Topology &amp; metrics: last 2h (HOUR step) · Alarms: last 20m · auto-refresh every 1 min">
+          metrics <strong>2h</strong> · alarms <strong>20m</strong> · ↻ <strong>1m</strong>
         </span>
         <router-link class="back" to="/" title="Exit 3D map">×</router-link>
       </div>
@@ -537,12 +705,17 @@ const visibleServices = computed(() => {
       <div v-else-if="!ready" class="cfg-loading">Loading 3D map configuration…</div>
       <Infra3DScene
         v-else
+        :key="namingReady ? 'with-naming' : 'no-naming'"
         ref="sceneRef"
         :plane-order="planeOrder"
         :visible-layers="visibleLayers"
         :hovered-node-id="hoveredNodeId"
         :selected-node-id="selectedNodeId"
         :focus-target="focusTarget"
+        :beacon-mode="beaconMode"
+        :groups="infraGroups"
+        :solo-plane="soloPlane"
+        :naming-by-layer="namingByLayer"
         @hover="onHover"
         @select="onSelect"
         @planes="onPlanes"
@@ -571,76 +744,76 @@ const visibleServices = computed(() => {
         </div>
       </aside>
 
-      <!-- Side panel — TIERS ONLY. Per-layer rows were removed once
-           the 3D scene grew its own brand-stamps on each zone (the
-           layer becomes identifiable visually, on the map, not in
-           chrome). The remaining controls are tier-level toggles:
-           click a row to focus the camera on the tier; click the eye
-           to show/hide every layer in that tier at once. -->
+      <!-- Beacon mode toggle — dims the scene to wireframe so only
+           alarming cubes stand out. Sits under the camera toolbar. -->
+      <button
+        class="beacon-toggle"
+        :class="{ 'is-on': beaconMode }"
+        :title="beaconMode ? 'Beacon mode on — click to show all' : 'Beacon mode — focus on alarms'"
+        @click="beaconMode = !beaconMode"
+      >
+        <span class="beacon-dot" />
+        <span class="beacon-label">Beacon</span>
+      </button>
+
+      <!-- Side panel: tier → layer/logic-group. Click focuses + flashes
+           that region; the eye toggles the tier. -->
       <aside class="layer-panel">
         <div class="panel-head">
           <span>Tiers</span>
+          <button type="button" class="panel-reset" title="Reset the view to the default framing" @click="btnReset">⌂ Reset</button>
         </div>
         <div class="panel-body">
           <ul class="tier-list">
             <li
-              v-for="g in groupedZones"
+              v-for="g in panelTree"
               :key="g.id"
-              class="tier-item"
+              class="tier-block"
               :class="{ hidden: tierVisibility(g.zones) === 'none' }"
-              @click="(e) => onPanelTierFocus(g.id, e)"
             >
-              <span class="grp-dot" :data-plane="g.id" />
-              <span class="tier-name">{{ g.name }}</span>
-              <span class="tier-stat">
-                {{ visibleServicesInTier(g.zones) }} / {{ totalServicesInTier(g.zones) }}
-              </span>
-              <button
-                type="button"
-                class="eye-btn"
-                :title="tierVisibility(g.zones) === 'all' ? 'hide this tier' : 'show this tier'"
-                :aria-pressed="tierVisibility(g.zones) !== 'none'"
-                @click.stop="togglePlane(g.id)"
-              >
-                <svg
-                  v-if="tierVisibility(g.zones) !== 'none'"
-                  viewBox="0 0 16 16"
-                  width="14"
-                  height="14"
-                  aria-hidden="true"
+              <!-- Tier row — click to focus the tier, eye to toggle it. -->
+              <div class="tier-item" @click="onPanelTierFocus(g.id)">
+                <span class="grp-dot" :data-plane="g.id" />
+                <span class="tier-name">{{ g.name }}</span>
+                <span class="tier-stat">
+                  {{ visibleServicesInTier(g.zones) }} / {{ totalServicesInTier(g.zones) }}
+                </span>
+                <button
+                  type="button"
+                  class="eye-btn"
+                  :title="tierVisibility(g.zones) === 'all' ? 'hide this tier' : 'show this tier'"
+                  :aria-pressed="tierVisibility(g.zones) !== 'none'"
+                  @click.stop="togglePlane(g.id)"
                 >
-                  <path
-                    d="M8 4c-3.5 0-6 4-6 4s2.5 4 6 4 6-4 6-4-2.5-4-6-4z"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.4"
-                  />
-                  <circle cx="8" cy="8" r="2" fill="currentColor" />
-                </svg>
-                <svg v-else viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                  <path
-                    d="M8 4c-3.5 0-6 4-6 4s2.5 4 6 4 6-4 6-4-2.5-4-6-4z"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.4"
-                    opacity="0.6"
-                  />
-                  <line
-                    x1="2.5"
-                    y1="2.5"
-                    x2="13.5"
-                    y2="13.5"
-                    stroke="currentColor"
-                    stroke-width="1.4"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </button>
+                  <svg v-if="tierVisibility(g.zones) !== 'none'" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                    <path d="M8 4c-3.5 0-6 4-6 4s2.5 4 6 4 6-4 6-4-2.5-4-6-4z" fill="none" stroke="currentColor" stroke-width="1.4" />
+                    <circle cx="8" cy="8" r="2" fill="currentColor" />
+                  </svg>
+                  <svg v-else viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                    <path d="M8 4c-3.5 0-6 4-6 4s2.5 4 6 4 6-4 6-4-2.5-4-6-4z" fill="none" stroke="currentColor" stroke-width="1.4" opacity="0.6" />
+                    <line x1="2.5" y1="2.5" x2="13.5" y2="13.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Layers + logic groups on this tier (level 2). -->
+              <ul v-if="g.entries.length" class="layer-sublist">
+                <li
+                  v-for="e in g.entries"
+                  :key="e.key"
+                  class="layer-row"
+                  :class="{ 'is-group': e.kind === 'group' }"
+                  :title="`Focus ${e.name}`"
+                  @click="onPanelZoneFocus(e.key)"
+                >
+                  <span class="lr-dot" :style="e.color ? { background: e.color } : undefined" />
+                  <span class="lr-name">{{ e.name }}</span>
+                  <span v-if="e.kind === 'group'" class="lr-tag">group</span>
+                  <span class="lr-stat">{{ e.services }}</span>
+                </li>
+              </ul>
             </li>
           </ul>
-        </div>
-        <div class="panel-foot">
-          source: apache skywalking-showcase
         </div>
       </aside>
 
@@ -650,20 +823,25 @@ const visibleServices = computed(() => {
         :stages="stages"
         :stage-order="stageOrder"
         :running="pipelineRunning"
-        @refresh="runPipeline"
+        :next-refresh-at="nextRefreshAt"
+        @refresh="refreshNow"
       />
 
       <!-- Bottom-left brand mark — anchors the standalone view to the
            SkyWalking product identity. No link / no chrome; pure
            identification so an operator opening the page mid-incident
            still knows where they are. -->
-      <a class="sw-brand" href="/" title="Back to Horizon">
+      <!-- router-link, not a bare <a href="/">: a hardcoded "/" ignores
+           the router base (import.meta.env.BASE_URL) and full-reloads to
+           the server root, which lands on an empty page under a gateway
+           sub-path. router-link prepends the base and stays in-SPA. -->
+      <router-link class="sw-brand" to="/" title="Back to Horizon">
         <span class="sw-brand-logo" v-html="logoSw" />
         <span class="sw-brand-text">
           <span class="sw-brand-line1">Apache SkyWalking</span>
           <span class="sw-brand-line2">Horizon · 3D Infra Map</span>
         </span>
-      </a>
+      </router-link>
 
     </div>
   </div>
@@ -699,6 +877,8 @@ const visibleServices = computed(() => {
 .title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .kicker { font-weight: 700; font-size: 12.5px; letter-spacing: 0.03em; color: var(--sw-fg-0); }
 .hint   { font-size: 10.5px; color: var(--sw-fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.title-link { color: var(--sw-accent); text-decoration: none; }
+.title-link:hover { text-decoration: underline; }
 .stats  { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
 .stat   { font-size: 11px; color: var(--sw-fg-2); }
 .stat strong { color: var(--sw-fg-0); font-weight: 700; margin-right: 4px; }
@@ -815,6 +995,9 @@ const visibleServices = computed(() => {
   z-index: 50;
 }
 .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 10px;
   border-bottom: 1px solid var(--sw-line);
   font-size: 10.5px;
@@ -823,6 +1006,21 @@ const visibleServices = computed(() => {
   letter-spacing: 0.1em;
   color: var(--sw-fg-2);
 }
+.panel-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: var(--sw-bg-2);
+  border: 1px solid var(--sw-line-2);
+  border-radius: 4px;
+  color: var(--sw-fg-2);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.panel-reset:hover { background: var(--sw-bg-3); color: var(--sw-fg-0); border-color: var(--sw-line-3); }
 .panel-body {
   overflow-y: auto;
   flex: 1;
@@ -888,14 +1086,36 @@ const visibleServices = computed(() => {
   cursor: pointer;
   font-size: 11.5px;
   color: var(--sw-fg-1);
-  border-bottom: 1px solid var(--sw-line);
 }
-.tier-item:last-child { border-bottom: none; }
+.tier-block { border-bottom: 1px solid var(--sw-line); }
+.tier-block:last-child { border-bottom: none; }
+.tier-block.hidden { opacity: 0.5; }
 .tier-item:hover {
   background: rgba(255, 255, 255, 0.04);
   color: var(--sw-fg-0);
 }
-.tier-item.hidden { opacity: 0.5; }
+/* ── Nested hierarchy: layers / logic groups under a tier, members /
+      clusters under those. Indented, lighter than the tier row. ── */
+.layer-sublist { list-style: none; margin: 0; padding: 2px 0 6px; }
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px 4px 22px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--sw-fg-2);
+}
+.layer-row:hover { background: rgba(255, 255, 255, 0.04); color: var(--sw-fg-0); }
+.layer-row.is-group .lr-name { font-weight: 700; }
+.lr-dot { width: 7px; height: 7px; border-radius: 2px; flex: 0 0 7px; background: var(--sw-fg-3); }
+.lr-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lr-tag {
+  font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--sw-accent-2); background: var(--sw-accent-soft);
+  border-radius: 3px; padding: 0 4px;
+}
+.lr-stat { font-size: 9.5px; color: var(--sw-fg-3); font-variant-numeric: tabular-nums; }
 .tier-name {
   flex: 1;
   min-width: 0;
@@ -977,14 +1197,6 @@ const visibleServices = computed(() => {
   color: var(--sw-fg-0);
   font-weight: 600;
 }
-.panel-foot {
-  padding: 7px 10px;
-  border-top: 1px solid var(--sw-line);
-  font-size: 9.5px;
-  color: var(--sw-fg-3);
-  text-align: center;
-  letter-spacing: 0.02em;
-}
 
 /* Detail card moved INTO the Scene component as a cientos <Html>
    anchored at the selected cube — its styles now live alongside the
@@ -1011,6 +1223,34 @@ const visibleServices = computed(() => {
   display: flex;
   gap: 4px;
 }
+.beacon-toggle {
+  position: absolute;
+  top: 256px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  background: rgba(15, 19, 26, 0.88);
+  border: 1px solid var(--sw-line-2);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  color: var(--sw-fg-2);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  z-index: 50;
+  transition: border-color 0.15s, color 0.15s;
+}
+.beacon-toggle:hover { color: var(--sw-fg-0); border-color: var(--sw-line); }
+.beacon-toggle.is-on { border-color: #ef4444; color: #fca5a5; }
+.beacon-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sw-fg-3); }
+.beacon-toggle.is-on .beacon-dot {
+  background: #ef4444;
+  box-shadow: 0 0 8px 1px rgba(239, 68, 68, 0.8);
+  animation: beacon-pulse 1.4s infinite ease-in-out;
+}
+@keyframes beacon-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .cam-pad {
   display: grid;
   grid-template-columns: repeat(3, 26px);

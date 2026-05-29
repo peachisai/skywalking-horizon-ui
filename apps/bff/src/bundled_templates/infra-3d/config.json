@@ -40,20 +40,19 @@
     },
     {
       "id":          "mesh",
-      "order":       1,
+      "order":       2,
       "label":       "Service Mesh",
       "layerFilter": ".*",
       "layers": [
         "MESH",
         "MESH_DP",
         "MESH_CP",
-        "CILIUM_SERVICE",
-        "ENVOY_AI_GATEWAY"
+        "CILIUM_SERVICE"
       ]
     },
     {
       "id":          "middleware",
-      "order":       2,
+      "order":       1,
       "label":       "Middleware",
       "layerFilter": ".*",
       "layers": [
@@ -85,7 +84,8 @@
         "AWS_S3",
         "AWS_DYNAMODB",
         "AWS_GATEWAY",
-        "AWS_API_GATEWAY"
+        "AWS_API_GATEWAY",
+        "ENVOY_AI_GATEWAY"
       ]
     },
     {
@@ -100,6 +100,22 @@
         "OS_WINDOWS",
         "VIRTUAL_MACHINE",
         "AWS_EKS"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "self-observability",
+      "label": "Self-Observability",
+      "level": "middleware",
+      "color": "#a78bfa",
+      "icon": "skywalking",
+      "layers": [
+        "SO11Y_OAP",
+        "SO11Y_SATELLITE",
+        "SO11Y_BANYANDB",
+        "SO11Y_JAVA_AGENT",
+        "SO11Y_GO_AGENT"
       ]
     }
   ],
@@ -265,10 +281,12 @@
       "color": "#a8d5ff"
     },
     "SO11Y_JAVA_AGENT": {
-      "color": "#9fb3c2"
+      "color": "#9fb3c2",
+      "$note": "No traffic chip by design: every meter_java_agent_* metric is ServiceInstance-scope (verified against the OAP metric catalog); OAP does not roll ServiceInstance up to Service, and the cube queries at Service scope. No Service-scope agent metric exists to put on the cube."
     },
     "SO11Y_GO_AGENT": {
-      "color": "#80b8c0"
+      "color": "#80b8c0",
+      "$note": "No traffic chip by design: every meter_sw_go_* metric is ServiceInstance-scope (verified against the OAP metric catalog); the cube queries at Service scope and OAP won't roll up. No Service-scope agent metric exists."
     },
     "AWS_S3": {
       "color": "#ff9900",
