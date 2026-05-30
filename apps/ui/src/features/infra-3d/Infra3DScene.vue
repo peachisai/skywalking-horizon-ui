@@ -59,6 +59,7 @@ import {
 import {
   buildSceneGraph,
   loadDemoTopology,
+  type DemoTopology,
   type SceneCallEdge,
   type SceneCrossLayerEdge,
   type SceneHierarchyEdge,
@@ -116,6 +117,11 @@ interface Props {
    *  layer with a rule yielding ≥2 clusters is laid out cluster-by-
    *  cluster (k8s/mesh namespace grouping), matching the 2D map. */
   namingByLayer?: Record<string, ServiceNamingRule | null>;
+  /** Live-assembled topology to render instead of the committed snapshot.
+   *  Null/absent ⇒ the snapshot. The build below runs once at setup, so
+   *  the parent re-keys this component to rebuild when the live structure
+   *  changes. */
+  topology?: DemoTopology | null;
 }
 const props = defineProps<Props>();
 const emit = defineEmits<{
@@ -132,7 +138,7 @@ const emit = defineEmits<{
 // loaded before mounting this component (see Infra3DView.vue), so
 // `levelForLayer` returns deterministic values here, not the synchronous
 // fallback. `planeOrder` is the source of truth for vertical stacking.
-const topo = loadDemoTopology();
+const topo = props.topology ?? loadDemoTopology();
 const graph = buildSceneGraph(topo, levelForLayer);
 const placement = computePlacement(graph, props.planeOrder, props.groups, props.namingByLayer);
 
@@ -1256,18 +1262,42 @@ watch(
 // The initial pose is applied via `:position` / `:target` on first
 // mount; after that, all updates go through the refs.
 
+// Initial camera heading — azimuth 15° off front, 62° polar from vertical
+// (matching OrbitControls' getAzimuthal/getPolarAngle), tuned on the
+// showcase to read the stacked tiers. Scale-invariant; the reset AND the
+// side-panel focus reuse it so every camera move keeps the same angle.
+const CAMERA_AZ = (15 * Math.PI) / 180;
+const CAMERA_POL = (62 * Math.PI) / 180;
+/** Unit camera→position offset direction for the tuned heading. */
+function headingDir(): Vector3 {
+  const s = Math.sin(CAMERA_POL);
+  return new Vector3(s * Math.sin(CAMERA_AZ), Math.cos(CAMERA_POL), s * Math.cos(CAMERA_AZ));
+}
+
 function defaultCameraPos(): [number, number, number] {
+  const b = placement.bounds;
+  const [tx, ty, tz] = defaultTargetPos();
+  const spanXZ = Math.max(b.maxX - b.minX, b.maxZ - b.minZ);
+  // Distance scales with the scene footprint so larger / smaller deployments
+  // keep the same fill.
+  const dist = spanXZ * 0.97 + 6;
+  const o = headingDir().multiplyScalar(dist);
+  return [tx + o.x, ty + o.y, tz + o.z];
+}
+function defaultTargetPos(): [number, number, number] {
   const b = placement.bounds;
   const cx = (b.minX + b.maxX) / 2;
   const cz = (b.minZ + b.maxZ) / 2;
   const spanXZ = Math.max(b.maxX - b.minX, b.maxZ - b.minZ);
-  const spanY = Math.max(8, b.maxY - b.minY);
-  const radius = spanXZ * 1.0 + 6;
-  return [cx + radius * 0.8, b.minY + spanY * 0.55 + radius * 0.55, cz + radius * 0.8];
-}
-function defaultTargetPos(): [number, number, number] {
-  const b = placement.bounds;
-  return [(b.minX + b.maxX) / 2, b.minY + (b.maxY - b.minY) * 0.4, (b.minZ + b.maxZ) / 2];
+  // Shift the look-point along the camera's screen-right axis (cos az, 0,
+  // -sin az) so the scene sits left-of-centre, clear of the right-hand
+  // TIERS panel.
+  const shift = spanXZ * 0.1;
+  return [
+    cx + Math.cos(CAMERA_AZ) * shift,
+    b.minY + (b.maxY - b.minY) * 0.4,
+    cz - Math.sin(CAMERA_AZ) * shift,
+  ];
 }
 const initialCameraPos = defaultCameraPos();
 const initialTarget = defaultTargetPos();
@@ -1373,13 +1403,13 @@ function resetView(): void {
   c.update();
 }
 
-/** Glide the camera to face `target` from the default isometric heading,
- *  zoomed to fit `radius` (side panel — moves, doesn't pivot in place). */
+/** Glide the camera to face `target` from the tuned heading (same angle as
+ *  the default / reset), zoomed to fit `radius`. Side panel — moves, doesn't
+ *  pivot in place. */
 function focusOn(t: { x: number; y: number; z: number }, radius: number): void {
   const target = new Vector3(t.x, t.y, t.z);
-  const dir = new Vector3(0.62, 0.62, 0.62).normalize();
   const dist = Math.min(220, Math.max(9, radius * 2.6 + 6));
-  camGoal.value = { target, pos: target.clone().addScaledVector(dir, dist) };
+  camGoal.value = { target, pos: target.clone().addScaledVector(headingDir(), dist) };
 }
 function flashZones(layerKeys: string[]): void {
   flashState.value = { keys: new Set(layerKeys), start: sceneElapsed };

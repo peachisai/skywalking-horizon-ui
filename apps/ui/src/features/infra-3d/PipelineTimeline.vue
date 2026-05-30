@@ -135,6 +135,10 @@ const openStageState = computed<ROStageState | null>(() => {
               <b>removed since last run</b><span>{{ openStageState.detail.removedSince }}</span>
             </li>
           </ul>
+          <details v-if="(openStageState.detail.hiddenNoTemplate?.length ?? 0) > 0">
+            <summary>hidden — no layer template (refresh to load)</summary>
+            <code class="layer-list">{{ openStageState.detail.hiddenNoTemplate?.join(', ') }}</code>
+          </details>
         </template>
 
         <!-- Templates -->
@@ -249,7 +253,9 @@ const openStageState = computed<ROStageState | null>(() => {
   background: rgba(15, 19, 26, 0.92);
   border-top: 1px solid var(--sw-line);
   backdrop-filter: blur(6px);
-  z-index: 60;
+  /* Above the bottom-left brand mark (z 70) so the stage-detail drawer,
+   *  which expands up into the brand's corner, is never occluded by it. */
+  z-index: 80;
 }
 
 /* Strip */
