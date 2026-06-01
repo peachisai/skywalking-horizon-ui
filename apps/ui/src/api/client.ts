@@ -625,7 +625,11 @@ export interface InfraMqe {
 
 export interface InfraLayerSpec {
   color: string;
+  /** Single traffic metric for the cube ring — canonical shape. */
+  metric?: InfraMqe;
+  /** @deprecated folded into `metric`; accepted for back-compat. */
   topology?: { server?: InfraMqe; client?: InfraMqe };
+  /** @deprecated folded into `metric`; accepted for back-compat. */
   load?: InfraMqe;
 }
 
@@ -633,7 +637,6 @@ export interface InfraLevelSpec {
   id: string;
   order: number;
   label: string;
-  layerFilter: string;
   layers: string[];
 }
 
