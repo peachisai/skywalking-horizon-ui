@@ -1,8 +1,13 @@
-# Runtime Rules (DSL Management)
+# Runtime Rules (DSL)
 
 Path: `/operate/dsl`. Verbs: `rule:read` to browse, `rule:write` / `rule:write:structural` / `rule:delete` to change (granted by maintainer, operator, admin).
 
 DSL Management lets you edit a connected OAP's analysis rules — MAL (`otel-rules`, `telegraf-rules`, `log-mal-rules`) and LAL (`lal`) — at runtime, without restarting the backend. You browse a catalog, open a rule in the editor, and save; OAP applies the change live across the cluster. Bundled rules shipped with OAP can be overridden, inactivated, or reverted to their bundled version.
+
+Two companion pages, both `rule:read`-gated, sit alongside the editable catalogs:
+
+- **OAL catalog** (`/operate/oal`) — a read-only browser of the connected OAP's OAL rules. OAL rules are **not** runtime-editable; this page lets you read them, but changes go through the OAP build, not the live editor.
+- **Dump & restore** (`/operate/dsl/dump`) — exports the connected OAP's runtime rules for backup and re-imports them onto another OAP.
 
 ## The two kinds of edit
 

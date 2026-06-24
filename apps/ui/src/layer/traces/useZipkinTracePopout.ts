@@ -15,34 +15,45 @@
  * limitations under the License.
  */
 
-/**
- * URL-backed popout state for Zipkin traces. Mirrors `useTracePopout`
- * (the native popout) but reads/writes `?openZipkinTraceId=<id>` so
- * the two trace kinds can be open simultaneously without colliding.
- */
+/** URL-backed popout state for Zipkin traces, sharing the native
+ *  popout's `?traceId=` param. */
 
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useLayers } from '@/shell/useLayers';
+
+// Native vs Zipkin keys on the layer's trace source (route), not the
+// ID shape — native IDs can be bare hex, same as Zipkin.
+export function useTraceSourceIsZipkin() {
+  const route = useRoute();
+  const { layers } = useLayers();
+  return computed<boolean>(() => {
+    if (/\/zipkin-trace(\/|$|\?)/.test(route.path)) return true;
+    const key = String(route.params.layerKey ?? '');
+    return (layers.value.find((l) => l.key === key)?.traces?.source ?? 'native') === 'zipkin';
+  });
+}
 
 export function useZipkinTracePopout() {
   const route = useRoute();
   const router = useRouter();
+  const sourceIsZipkin = useTraceSourceIsZipkin();
 
   const openTraceId = computed<string | null>(() => {
-    const v = route.query.openZipkinTraceId;
-    return typeof v === 'string' && v.length > 0 ? v : null;
+    const v = route.query.traceId;
+    return typeof v === 'string' && v.length > 0 && sourceIsZipkin.value ? v : null;
   });
 
   function openTrace(id: string): void {
     if (!id) return;
-    const next = { ...route.query, openZipkinTraceId: id };
-    void router.replace({ path: route.path, query: next });
+    void router.replace({ path: route.path, query: { ...route.query, traceId: id } });
   }
 
   function closeTrace(): void {
     if (!openTraceId.value) return;
     const next = { ...route.query };
-    delete next.openZipkinTraceId;
+    delete next.traceId;
+    delete next.traceAt;
     void router.replace({ path: route.path, query: next });
   }
 

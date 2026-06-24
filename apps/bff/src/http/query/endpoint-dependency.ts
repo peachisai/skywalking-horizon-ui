@@ -41,9 +41,14 @@ import type {
   UITemplateClient,
 } from '@skywalking-horizon-ui/api-client';
 import { requireAuth } from '../../user/middleware.js';
-import {  graphqlPost, buildOapOpts } from '../../client/graphql.js';
+import { graphqlPost, buildOapOpts, fetchAliasedChunks } from '../../client/graphql.js';
 import { withColdStage } from '../../util/duration.js';
-import { defaultMinuteWindow, getServerOffsetMinutes } from '../../util/window.js';
+import {
+  defaultMinuteWindow,
+  getServerOffsetMinutes,
+  windowFromRange,
+  type TimeStep,
+} from '../../util/window.js';
 import { endpointDependencyConfigFor } from '../../logic/layers/loader.js';
 import { resolveEffectiveLayer } from '../../logic/layers/effective.js';
 import { parsePreviewEndpointDep } from '../../logic/layers/preview.js';
@@ -120,7 +125,7 @@ function endpointFragment(
   serviceName: string,
   endpointName: string,
   normal: boolean,
-  w: { start: string; end: string },
+  w: { start: string; end: string; step: TimeStep },
   coldStage: boolean,
 ): string {
   const coldFrag = coldStage ? ', coldStage: true' : '';
@@ -131,7 +136,7 @@ function endpointFragment(
     ` serviceName: ${JSON.stringify(serviceName)},` +
     ` endpointName: ${JSON.stringify(endpointName)},` +
     ` normal: ${normal ? 'true' : 'false'} },\n` +
-    `      duration: { start: ${JSON.stringify(w.start)}, end: ${JSON.stringify(w.end)}, step: MINUTE${coldFrag} }\n` +
+    `      duration: { start: ${JSON.stringify(w.start)}, end: ${JSON.stringify(w.end)}, step: ${w.step}${coldFrag} }\n` +
     `    ) { type error results { values { value } } }`
   );
 }
@@ -150,7 +155,7 @@ function endpointRelationFragment(
   destServiceName: string,
   destEndpointName: string,
   destNormal: boolean,
-  w: { start: string; end: string },
+  w: { start: string; end: string; step: TimeStep },
   coldStage: boolean,
 ): string {
   const coldFrag = coldStage ? ', coldStage: true' : '';
@@ -164,7 +169,7 @@ function endpointRelationFragment(
     ` destServiceName: ${JSON.stringify(destServiceName)},` +
     ` destEndpointName: ${JSON.stringify(destEndpointName)},` +
     ` destNormal: ${destNormal ? 'true' : 'false'} },\n` +
-    `      duration: { start: ${JSON.stringify(w.start)}, end: ${JSON.stringify(w.end)}, step: MINUTE${coldFrag} }\n` +
+    `      duration: { start: ${JSON.stringify(w.start)}, end: ${JSON.stringify(w.end)}, step: ${w.step}${coldFrag} }\n` +
     `    ) { type error results { values { value } } }`
   );
 }
@@ -253,7 +258,14 @@ export function registerEndpointDependencyRoute(
       if (!layerKey || !/^[a-z0-9_]+$/i.test(layerKey)) {
         return reply.code(400).send({ error: 'invalid_layer_key' });
       }
-      const q = req.query as { service?: string; endpoint?: string; previewConfig?: string };
+      const q = req.query as {
+        service?: string;
+        endpoint?: string;
+        previewConfig?: string;
+        step?: string;
+        startMs?: string;
+        endMs?: string;
+      };
       const serviceArg = (q.service ?? '').trim();
       const endpointArg = (q.endpoint ?? '').trim();
       if (!serviceArg) return reply.code(400).send({ error: 'missing_service' });
@@ -275,11 +287,23 @@ export function registerEndpointDependencyRoute(
       }
 
       const cfgCurrent = deps.config.current;
+      const perf = cfgCurrent.performance;
       const opts = buildOapOpts(cfgCurrent, deps.fetch);
       const offset = await getServerOffsetMinutes(deps.config, deps.fetch);
-      const window = defaultMinuteWindow(offset, DEFAULT_WINDOW_MIN);
+      // Honor the SPA's topbar picker triplet; else fall back to the
+      // last-hour MINUTE window (dashboards family — minute precision).
+      const stepArg = (q.step ?? '').toUpperCase() as TimeStep;
+      const startMs = Number(q.startMs);
+      const endMs = Number(q.endMs);
+      const window =
+        (stepArg === 'MINUTE' || stepArg === 'HOUR' || stepArg === 'DAY') &&
+        Number.isFinite(startMs) &&
+        Number.isFinite(endMs)
+          ? windowFromRange(stepArg, startMs, endMs, offset) ??
+            defaultMinuteWindow(offset, DEFAULT_WINDOW_MIN)
+          : defaultMinuteWindow(offset, DEFAULT_WINDOW_MIN);
       const oapLayer = layerKey.toUpperCase();
-      const durationVar = withColdStage(req, { start: window.start, end: window.end, step: 'MINUTE' });
+      const durationVar = withColdStage(req, { start: window.start, end: window.end, step: window.step });
       const coldStage = !!req.coldStage;
 
       // ── Resolve service name → id.
@@ -372,38 +396,25 @@ export function registerEndpointDependencyRoute(
       const realNodes = graph.nodes.filter(
         (n) => n.isReal && n.serviceName && n.name && n.name !== 'User',
       );
+      // ── Per-node + per-edge MQE. Build both fragment families, then fan them
+      // out concurrently (disjoint OAP entities + result maps); each chunks
+      // internally and soft-fails per chunk, keeping the graph on a hiccup.
       const nodeMetricVals = new Map<string, Record<string, number | null>>();
+      const edgeMetricVals = new Map<string, Record<string, number | null>>();
+      const edgeMetricSeries = new Map<string, Record<string, Array<number | null> | null>>();
+
+      const nodeAliasMap = new Map<string, { nodeId: string; metric: TopologyMetricDef }>();
+      const nodeFragments: string[] = [];
       if (realNodes.length > 0 && epCfg.nodeMetrics.length > 0) {
-        const fragments: string[] = [];
-        const aliasMap = new Map<string, { nodeId: string; metric: TopologyMetricDef }>();
         realNodes.forEach((n, i) => {
           const isFocus = n.serviceId === serviceId;
           const useNormal = isFocus ? normal : true;
           epCfg.nodeMetrics.forEach((m, j) => {
             const alias = `e${i}_${j}`;
-            aliasMap.set(alias, { nodeId: n.id, metric: m });
-            fragments.push(endpointFragment(alias, m, n.serviceName, n.name, useNormal, window, coldStage));
+            nodeAliasMap.set(alias, { nodeId: n.id, metric: m });
+            nodeFragments.push(endpointFragment(alias, m, n.serviceName, n.name, useNormal, window, coldStage));
           });
         });
-        const CHUNK = 150;
-        for (let i = 0; i < fragments.length; i += CHUNK) {
-          const slice = fragments.slice(i, i + CHUNK);
-          const query = `query EndpointMetrics {\n  ${slice.join('\n  ')}\n}`;
-          let env: Record<string, MqeShape>;
-          try {
-            env = await graphqlPost<Record<string, MqeShape>>(opts, query);
-          } catch {
-            break;
-          }
-          for (const [alias, shape] of Object.entries(env)) {
-            const info = aliasMap.get(alias);
-            if (!info) continue;
-            const v = aggregateMqe(shape, info.metric.aggregation ?? 'avg');
-            const rec = nodeMetricVals.get(info.nodeId) ?? {};
-            rec[info.metric.id] = v;
-            nodeMetricVals.set(info.nodeId, rec);
-          }
-        }
       }
 
       // ── Per-edge MQE under EndpointRelation. We also capture the
@@ -418,17 +429,15 @@ export function registerEndpointDependencyRoute(
       // virtual we use a synthetic source service name and
       // `sourceNormal: false`, which is what booster does too.
       const linkMetrics = epCfg.linkMetrics ?? [];
-      const edgeMetricVals = new Map<string, Record<string, number | null>>();
-      const edgeMetricSeries = new Map<string, Record<string, Array<number | null> | null>>();
       const realEndpointMap = new Map(realNodes.map((n) => [n.id, n]));
       const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
       const candidateEdges = graph.calls.filter((c) => {
         const dst = nodeById.get(c.target);
         return !!dst && dst.isReal && !!dst.name && !!dst.serviceName;
       });
+      const edgeAliasMap = new Map<string, { callId: string; metric: TopologyMetricDef }>();
+      const edgeFragments: string[] = [];
       if (candidateEdges.length > 0 && linkMetrics.length > 0) {
-        const fragments: string[] = [];
-        const aliasMap = new Map<string, { callId: string; metric: TopologyMetricDef }>();
         candidateEdges.forEach((c, i) => {
           const dst = realEndpointMap.get(c.target) ?? nodeById.get(c.target)!;
           const src = nodeById.get(c.source);
@@ -442,8 +451,8 @@ export function registerEndpointDependencyRoute(
           const dstNormal = dst.serviceId === serviceId ? normal : true;
           linkMetrics.forEach((m, j) => {
             const alias = `r${i}_${j}`;
-            aliasMap.set(alias, { callId: c.id, metric: m });
-            fragments.push(
+            edgeAliasMap.set(alias, { callId: c.id, metric: m });
+            edgeFragments.push(
               endpointRelationFragment(
                 alias,
                 m,
@@ -459,28 +468,33 @@ export function registerEndpointDependencyRoute(
             );
           });
         });
-        const CHUNK = 200;
-        for (let i = 0; i < fragments.length; i += CHUNK) {
-          const slice = fragments.slice(i, i + CHUNK);
-          const query = `query EndpointEdgeMetrics {\n  ${slice.join('\n  ')}\n}`;
-          let env: Record<string, MqeShape>;
-          try {
-            env = await graphqlPost<Record<string, MqeShape>>(opts, query);
-          } catch {
-            break;
-          }
-          for (const [alias, shape] of Object.entries(env)) {
-            const info = aliasMap.get(alias);
-            if (!info) continue;
-            const v = aggregateMqe(shape, info.metric.aggregation ?? 'avg');
-            const rec = edgeMetricVals.get(info.callId) ?? {};
-            rec[info.metric.id] = v;
-            edgeMetricVals.set(info.callId, rec);
-            const sRec = edgeMetricSeries.get(info.callId) ?? {};
-            sRec[info.metric.id] = seriesFromMqe(shape);
-            edgeMetricSeries.set(info.callId, sRec);
-          }
-        }
+      }
+
+      // track failed metric chunks → surface "blank may be unavailable, not zero"
+      const mstats = { failed: 0, total: 0 };
+      const [nodeEnv, edgeEnv] = await Promise.all([
+        fetchAliasedChunks<MqeShape>(opts, nodeFragments, perf.bulk.topology.nodeBulkSize, 'EndpointMetrics', perf.bulk.topology.concurrency, mstats),
+        fetchAliasedChunks<MqeShape>(opts, edgeFragments, perf.bulk.topology.edgeBulkSize, 'EndpointEdgeMetrics', perf.bulk.topology.concurrency, mstats),
+      ]);
+
+      for (const [alias, shape] of Object.entries(nodeEnv)) {
+        const info = nodeAliasMap.get(alias);
+        if (!info) continue;
+        const v = aggregateMqe(shape, info.metric.aggregation ?? 'avg');
+        const rec = nodeMetricVals.get(info.nodeId) ?? {};
+        rec[info.metric.id] = v;
+        nodeMetricVals.set(info.nodeId, rec);
+      }
+      for (const [alias, shape] of Object.entries(edgeEnv)) {
+        const info = edgeAliasMap.get(alias);
+        if (!info) continue;
+        const v = aggregateMqe(shape, info.metric.aggregation ?? 'avg');
+        const rec = edgeMetricVals.get(info.callId) ?? {};
+        rec[info.metric.id] = v;
+        edgeMetricVals.set(info.callId, rec);
+        const sRec = edgeMetricSeries.get(info.callId) ?? {};
+        sRec[info.metric.id] = seriesFromMqe(shape);
+        edgeMetricSeries.set(info.callId, sRec);
       }
 
       // ── Build response — drop nodes without any metric values, then
@@ -539,6 +553,7 @@ export function registerEndpointDependencyRoute(
         nodes: liveNodes,
         calls: liveCalls,
         reachable: true,
+        ...(mstats.failed > 0 ? { metricsPartial: { failedChunks: mstats.failed, totalChunks: mstats.total } } : {}),
       } satisfies EndpointDependencyResponse);
     },
   );

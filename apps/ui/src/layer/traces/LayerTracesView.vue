@@ -52,6 +52,7 @@ import { useLayers } from '@/shell/useLayers';
 import { useLayerTraces, useTraceDetail } from '@/layer/traces/useLayerTraces';
 import { useLayerInstances } from '@/layer/useLayerInstances';
 import { useLayerEndpoints } from '@/layer/useLayerEndpoints';
+import TypeaheadSelect from '@/components/primitives/TypeaheadSelect.vue';
 import { useSelectedService } from '@/layer/useSelectedService';
 import { useLayerServiceName } from '@/layer/useLayerServiceName';
 import { useSetupStore } from '@/state/setup';
@@ -169,6 +170,23 @@ const sourceRef = computed<'native'>(() => 'native');
 
 const { instances } = useLayerInstances(layerKey, serviceName);
 const { endpoints } = useLayerEndpoints(layerKey, serviceName, endpointQuery, ref(50));
+// '' ↔ null bridges the All sentinel (TypeaheadSelect value is a string).
+const instanceSelectOptions = computed(() => [
+  { value: '', label: t('All') },
+  ...instances.value.map((i) => ({ value: i.id, label: i.name })),
+]);
+const endpointSelectOptions = computed(() => [
+  { value: '', label: t('All') },
+  ...endpoints.value.map((e) => ({ value: e.id, label: e.name })),
+]);
+const instanceIdSel = computed<string>({
+  get: () => instanceId.value ?? '',
+  set: (v) => { instanceId.value = v || null; },
+});
+const endpointIdSel = computed<string>({
+  get: () => endpointId.value ?? '',
+  set: (v) => { endpointId.value = v || null; },
+});
 
 watch([serviceName], () => {
   instanceId.value = null;
@@ -990,17 +1008,25 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPageKeyDown, true)
         <div class="tr-conditions">
           <label class="cf">
             <span>{{ t('Instance') }}</span>
-            <select v-model="instanceId" :disabled="!serviceName" class="cf-input">
-              <option :value="null">{{ t('All') }}</option>
-              <option v-for="i in instances" :key="i.id" :value="i.id">{{ i.name }}</option>
-            </select>
+            <TypeaheadSelect
+              v-model="instanceIdSel"
+              :aria-label="t('Instance')"
+              :options="instanceSelectOptions"
+              :placeholder="t('All')"
+              :disabled="!serviceName"
+              class="cf-tas"
+            />
           </label>
           <label class="cf cf-wide">
             <span>{{ t('Endpoint') }}</span>
-            <select v-model="endpointId" :disabled="!serviceName" class="cf-input">
-              <option :value="null">{{ t('All') }}</option>
-              <option v-for="e in endpoints" :key="e.id" :value="e.id">{{ e.name }}</option>
-            </select>
+            <TypeaheadSelect
+              v-model="endpointIdSel"
+              :aria-label="t('Endpoint')"
+              :options="endpointSelectOptions"
+              :placeholder="t('All')"
+              :disabled="!serviceName"
+              class="cf-tas"
+            />
           </label>
           <label class="cf">
             <span>{{ t('Status') }}</span>
@@ -1020,11 +1046,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPageKeyDown, true)
           <label class="cf" :title="t('Cap on trace rows returned (default 30).')">
             <span>{{ t('Limit') }}</span>
             <select v-model.number="limit" class="cf-input">
-              <option :value="10">10</option>
+              <option :value="20">20</option>
               <option :value="30">30</option>
               <option :value="50">50</option>
               <option :value="100">100</option>
-              <option :value="200">200</option>
             </select>
           </label>
           <label class="cf" :class="{ 'cf-wide': isCustomRange }">
@@ -1490,7 +1515,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPageKeyDown, true)
                 :d="lnk.d"
                 class="tree-link"
                 fill="none"
-                stroke="var(--sw-line-2)"
+                stroke="var(--sw-fg-3)"
                 stroke-width="1.4"
               />
               <g
@@ -1800,6 +1825,17 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onPageKeyDown, true)
   box-sizing: border-box;
 }
 .cf-input:disabled { opacity: 0.5; cursor: not-allowed; }
+.cf-tas { display: block; width: 100%; }
+.cf-tas :deep(.tas__trigger) {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+  background: var(--sw-bg-2);
+  border-radius: 4px;
+}
 .cf-range { display: flex; align-items: center; gap: 4px; }
 .cf-range-num { flex: 1; min-width: 0; }
 .cf-range-sep { color: var(--sw-fg-3); font-size: 12px; flex: 0 0 auto; }

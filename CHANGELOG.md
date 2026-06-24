@@ -4,6 +4,25 @@ Notable changes to Apache SkyWalking Horizon UI, written from the operator's poi
 
 The version line is shared by every package in the monorepo (apps + shared packages) plus the BFF's `HORIZON_VERSION` default.
 
+## 1.0.0
+
+### Performance & behavior tuning
+
+- **New `performance` section in `horizon.yaml`.** Tune how hard the BFF fans metric queries out to OAP — per-route bulk (request) sizes and concurrency for the topology, 3D-map, landing, and dashboard fan-outs — plus protective caps: the service-map render valve (`topologyMaxNodes` / `topologyMaxEdges`) and per-request record caps for traces / logs / browser logs. Operational, hot-reloaded, per-deployment; defaults match the previous built-in values, so the whole block is optional. Raise it for a beefy OAP + storage backend, lower it to protect a modest deployment; every value clamps to a hard ceiling.
+- **3D-map fan-out tuning moved out of the dashboard template into `horizon.yaml`** (`performance.bulk.infra3d`). These metric concurrency / batch knobs were operational settings misplaced in a published-to-OAP dashboard template (not even surfaced in the admin editor); a stale template still carrying the old `pipeline` block is accepted and stripped on save, so a 3D config that was synced before the move converges back to `synced` after one re-push (instead of showing `diverged` forever).
+- **Unified page-size pickers across the event lists.** Traces, Logs, and Browser Logs share a `20 / 30 / 50 / 100` page-size dropdown — and Browser Logs gains a picker it never had (it had a fixed 100). Each picker's max matches the server-side fetch cap in `performance.limits.maxPageSize`.
+- **Node memory sizing guidance.** The container image now sets a default `NODE_OPTIONS=--max-old-space-size`, and the docs cover sizing the Node heap to your container memory limit and the in-memory source-map budget.
+
+### Trace explorer
+
+- **Zipkin traces now render with the full native trace experience.** The Zipkin trace detail and popout gained the KPI strip, service legend, the duration-distribution scatter (drag to filter, click to open), time-positioned waterfall bars (service · operation inside the bar, kind/status affordances), and a centered span-detail modal — matching the SkyWalking-native trace view. Zipkin annotation codes (`cr` / `cs` / `sr` / `ss` …) show an inline plain-language hint.
+- **Shareable trace links are unified.** Native and Zipkin traces both open from a single `?traceId=` link under the layer's trace tab; the viewer auto-selects native vs Zipkin by the trace-ID shape, so `/layer/<layer>/trace?traceId=…` always opens the right one.
+- **Trace filters are searchable, on-theme dropdowns.** The native Service / Instance / Endpoint pickers and the Zipkin Service / Remote service / Span name pickers use a dark type-to-filter dropdown that reopens correctly after a pick.
+
+### Bundled layer dashboards
+
+- **Single-value metrics now render as cards, not flat lines, on several layer dashboards.** Widgets whose expression collapses the window to one number (a `latest(...)` total) had been mis-ported as line charts — drawn as a lone dot that misreads as a time series and shares one axis with an unrelated average trend. Each is now split into a proper single-value **card** (the total) plus a trend **line** (the average), matching the metric's shape, the way booster-ui rendered them. Affects the **Virtual GenAI** (Input / Output Tokens, Estimated Cost — provider and model scopes), **Elasticsearch** (deleted documents), **ClickHouse** (Zookeeper sessions / watches), **RabbitMQ** (connection / publisher / consumer / channel / queue totals, allocated memory), **RocketMQ** (max CommitLog disk ratio, max producer / consumer message size), and **APISIX** (etcd reachability) dashboards; every changed dashboard row still tiles to full width.
+
 ## 0.7.0
 
 ### Browser errors & source maps
@@ -38,7 +57,6 @@ The version line is shared by every package in the monorepo (apps + shared packa
 
 - Card widgets gain a **`enum`** format with a **value→label map**: a coded metric (e.g. a 1/0 success gauge) renders a readable label (`1 → OK`, `0 → Failed`) instead of the raw number. Labels are **translatable per locale** (BFF-side template i18n overlay) and the map is editable in the Layer dashboards admin. BanyanDB's lifecycle **Last Sync** card uses it.
 - New **`duration`** format renders a SECONDS metric as a human time-ago (`5m 20s ago`; compact `5m` / `2h` on axes) — used by BanyanDB's **Time Since Last Sync** card.
-- Line-chart **axis labels and tooltips now use scientific notation** (`1.2e6`) for large magnitudes (≥ 10,000) so dense byte / count series stay readable, with the axis tick and its hovered value sharing one notation.
 
 ### Record widgets — jump to trace & copy
 
@@ -70,7 +88,7 @@ The version line is shared by every package in the monorepo (apps + shared packa
 
 ### Lock & compare entities on a layer dashboard
 
-- **Lock several services, instances, or endpoints — including ones from different services — and compare them in place** (preview — enable per build with `VITE_FF_ENTITY_COMPARE=1`, or per browser via `localStorage['horizon:ff:entity-compare'] = '1'` then reload). Pin entities from the service picker or the instance / endpoint list; instance and endpoint pins are cross-service, so instances belonging to different services can be compared side by side. A persistent, scope-aware **comparison bar** shows the cohort regardless of how the underlying list paginates or which entity is currently selected.
+- **Lock several services, instances, or endpoints — including ones from different services — and compare them in place.** Compare is standard on every service / instance / endpoint layer dashboard — no flag, nothing to enable. Pin entities from the service picker or the instance / endpoint list; instance and endpoint pins are cross-service, so instances belonging to different services can be compared side by side. A persistent, scope-aware **comparison bar** shows the cohort regardless of how the underlying list paginates or which entity is currently selected.
 - **The entity you're viewing is always part of the comparison** — it appears first, tagged `CURRENT` in the accent color (and still drives the header KPIs); pinned entities add to it, each in its own stable hue (up to six pins). The comparison-bar chips are display-only: clicking a chip never changes what you're viewing (no disruptive reload) and `×` unpins — switch the focused entity from the top selector / list as usual.
 - **Each widget compares inline in its own tile** — line widgets overlay one hued series per entity; card widgets show one row per entity; top-N and record widgets get per-entity tabs plus a merged "All" tab; table widgets gain an **Entity** column that groups rows by entity and folds each entity's long tail into one `(others)` row (summed for counts, count-only for latencies / percentiles where a sum would mislead). With nothing locked, every page renders exactly as before.
 - **Labeled series lead with the meaningful dimension** — a multi-label series reads `<label> · <service> · <instance>` so the label (e.g. a JVM thread state) survives when a long instance / endpoint id has to truncate; entities stay distinguishable by color. A widget that only some compared entities expose (e.g. JVM widgets when a Java service is pinned alongside a non-JVM one) shows whenever *any* compared entity has it.
@@ -121,8 +139,37 @@ The version line is shared by every package in the monorepo (apps + shared packa
 - **Selecting a low-traffic (below-cap) service now works on *every* tab**, not just the dashboard. Logs, traces, and endpoint-dependency resolved the picked service's name from the landing sample only — so a tail service queried as blank (and Logs even snapped the pick back to the top service). All per-layer tabs now resolve the name from the full roster, so a `low` service drills in everywhere.
 - **Profiling scopes no longer show an editor grid that goes nowhere.** Trace / eBPF / async profiling are built-in runtime views with nothing to author, so the admin now shows a "configured at runtime" note for them instead of a widget grid whose widgets never rendered.
 
+### Access control & permissions
+
+- The **Roles & Permissions** board now lists `infra-3d:read` — the permission to view the **3D Infrastructure Map** — under the data-catalog group, with a matching "3D infrastructure map" row in the menu-visibility matrix. It was already enforced and granted to every built-in role (viewer and up), but it never appeared on the board, so an admin couldn't see who held it.
+- Editing a **layer dashboard template** is now gated on the `dashboard:write` permission the editor already advertises; publishing overview, alert, and 3D-map configs stays on `overview:write`. The required permission is resolved per template kind at save time. Built-in roles are unaffected (`operator` and `admin` hold both), but a custom role granted only `dashboard:write` can now save layer dashboards.
+- The **Cluster Status debug view** (`/api/debug/status`) now requires only `live-debug:read`. It previously also demanded `cluster:read`, so a role granted live-debug access but not cluster-read was wrongly blocked.
+- Saving a **local draft** of a template (the "Save local" action) now enforces the same per-kind permission as publishing — a layer draft needs `dashboard:write`, other kinds `overview:write` — instead of a blanket `overview:write`.
+
+### Performance hardening
+
+- **Layer dashboards skip a redundant service lookup on every load.** The dashboard route used to issue its own `listServices` to auto-pick the service and carry its entity-scope flags; it now reads the shared per-layer service catalog the sidebar already keeps warm, so a dashboard's first paint costs one fewer OAP round-trip in the common case. It still falls back to a live lookup for a just-registered service, a cold snapshot, or to surface an OAP outage (the "OAP unreachable" state now follows the actual widget fetch, so a warm cache can't mask a backend that's gone away).
+- **The alarms list and count fire their two startup probes in parallel.** The server-time offset and backend-capability probes that precede every alarms query now run concurrently instead of one-after-the-other.
+- **The 3D Infra Map loads its metrics in parallel.** Per-node metric values used to fetch one batch at a time; they now load in bounded-concurrency batches, so the load rings and traffic values fill in sooner on large layers. A new `metricConcurrency` setting in the Infra Map config (default 4) caps how many metric batches run at once.
+- **Oversized layer topologies fail with a clear message instead of an unreadable map.** When a layer's service graph exceeds the render ceiling (5,000 services or 15,000 calls), the service map shows a "Topology too large to render" notice with the live counts and a hint to pick a specific service or lower the depth, rather than attempting to lay out a graph too dense to read.
+- **Partial metric-load failures are now surfaced on every topology map.** If some metric batches fail to load (a transient OAP error) on the service map, instance topology, deployment, or endpoint-dependency map, a banner now explains that blank values may be unavailable rather than zero — and on the endpoint-dependency map, that some endpoints or links may be missing — so a backend hiccup isn't misread as real "no traffic" data.
+
+### Fixes
+
+- **Metrics Inspect** — the crosshair value tooltip is no longer clipped behind the navigation sidebar when you hover near a widget's left edge; it now renders above the page chrome.
+- **3D Infrastructure Map config** — "Check diff & push" now requires saving a local draft first (it was selectable while edits were still unsaved), and the push dialog renders the side-by-side before/after JSON diff instead of an empty panel.
+- **The API-dependency tab now honors the topbar time picker.** It was pinned to the last hour regardless of the selected range; changing the range (and expanding a node) now re-queries the chosen window, like the service map and instance map already did.
+- **A dashboard no longer blanks entirely when one metric group fails.** A transient backend error (timeout / 5xx / query-complexity limit) on a single batch of widgets now marks only those widgets as failed; the rest of the dashboard renders normally instead of every cell going blank.
+- **Trace list rows pick the correct root span on BanyanDB.** A multi-service trace could surface a downstream span's endpoint / duration / start time in the list; the row now reliably reflects the trace's true entry span.
+- **Correct timestamps right after repointing OAP.** The server-timezone offset is now cached per OAP URL, so a configuration reload that switches to a different-timezone OAP re-probes immediately instead of serving the previous server's offset for up to a minute.
+- **Baseline security response headers** (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`) are now sent on every response.
+- Removed an internal `?mockTop=` debug query parameter that padded top-N widgets with synthetic rows; it no longer ships in release builds.
+- **The profiling pages now use more of the page height.** The Trace / eBPF / Async / pprof / network profiling layouts were sized off a viewport offset that over-counted the chrome above them, leaving dead space at the bottom on taller screens; they now extend closer to the bottom of the view.
+- **Overview dashboard templates are validated before save.** A malformed overview (missing a required field, an unknown widget type) is now rejected with a clear field-level error instead of being written to OAP — restoring a guard that was lost when overview editing moved to the OAP-backed save path.
+
 ### Documentation & release tooling
 
+- A further accuracy pass corrected the Cluster Status page (three panes — Query, Admin, Zipkin/OTLP — and no per-node member list), the Kubernetes readiness-probe guidance (point it at the public `/api/health`, not the authenticated `/api/oap/info`), the layer-template `components` default (only the service dashboard is on when a key is omitted) and the `aliases` authoring key, the removed `visibleWhen` free-text and embedded-i18n template shapes, and the data-retention cold-stage controls.
 - The website docs were brought current with the 0.6.0 build and the configuration pages restructured around the admin UI — the JSON shape is now a reference appendix, not an authoring surface (these admin pages are structured editors, not raw-JSON editors). Accuracy fixes span the RBAC verbs (incl. `infra-3d:read`), the audit-log action set, the Metrics Inspect API paths, the layer-template component flags, and the redesigned 3D-map config + loading stages. A new `docs/CLAUDE.md` records the doc-writing principles, and the i18n docs gain a language × scope coverage matrix plus a translation step in the add-a-layer recipe.
 - The container image is published to Docker Hub by CI on every `v*` tag; the post-vote finalize script now only verifies the published tags (the manual local-push fallback and Docker Hub login preflight were removed).
 

@@ -128,6 +128,16 @@ app.setErrorHandler((err, _req, reply) => {
   return reply.status(500).send({ code: 'internal_error', message });
 });
 
+// Baseline security headers on every response (MIME-sniff / clickjacking /
+// referrer leakage). Defense-in-depth for the console behind the operator's
+// ingress; no third-party dependency.
+app.addHook('onSend', (_req, reply, payload, done) => {
+  reply.header('X-Content-Type-Options', 'nosniff');
+  reply.header('X-Frame-Options', 'DENY');
+  reply.header('Referrer-Policy', 'no-referrer');
+  done(null, payload);
+});
+
 const sessions = new SessionStore({ ttlMinutes: source.current.session.ttlMinutes });
 const audit = new AuditLogger(source.current.audit.file);
 await audit.open();
@@ -324,7 +334,7 @@ if (staticDir && existsSync(staticDir)) {
 // admin status pages.
 app.get('/api/health', async () => ({
   status: 'ok',
-  version: process.env.HORIZON_VERSION ?? '0.7.0-dev',
+  version: process.env.HORIZON_VERSION ?? '1.0.0-dev',
 }));
 
 const { host, port } = source.current.server;

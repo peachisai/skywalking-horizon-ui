@@ -41,7 +41,7 @@ import { useLayerEndpoints } from '@/layer/useLayerEndpoints';
 import { useLayerInstances } from '@/layer/useLayerInstances';
 import { useLayerServices } from '@/layer/useLayerServices';
 import { useLayerLanding } from '@/layer/useLayerLanding';
-import { useTimeRangeStore, type TimeStep } from '@/controls/timeRange';
+import { useTimeRangeStore } from '@/controls/timeRange';
 import { pushEvent } from '@/controls/eventLog';
 import { useLayers } from '@/shell/useLayers';
 import { useSelectedEndpoint } from '@/layer/useSelectedEndpoint';
@@ -49,10 +49,9 @@ import { useSelectedInstance } from '@/layer/useSelectedInstance';
 import { useSelectedService } from '@/layer/useSelectedService';
 import { useLayerServiceName } from '@/layer/useLayerServiceName';
 import { useSetupStore } from '@/state/setup';
-import { fmtMetricAs, type MetricFormat } from '@/utils/formatters';
+import { bucketTimeLabel, fmtMetricAs, type MetricFormat } from '@/utils/formatters';
 import { ref, watch, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { FF_ENTITY_COMPARE } from '@/utils/featureFlags';
 import { useEntityPalette } from '@/utils/useEntityPalette';
 import { serviceBaseName, isBlankServiceName, BLANK_SERVICE_NAME } from '@/utils/serviceName';
 import {
@@ -140,20 +139,13 @@ const rangeRef = computed(() => {
 // the active window + step — the buckets are uniform, so spacing N points
 // across [start, end] matches OAP's bucketing. Formatted browser-local
 // (the app displays browser-local; ECharts handles ms→local elsewhere).
-function fmtBucket(step: TimeStep, ms: number): string {
-  const d = new Date(ms);
-  const z = (n: number) => String(n).padStart(2, '0');
-  if (step === 'DAY') return `${z(d.getMonth() + 1)}-${z(d.getDate())}`;
-  if (step === 'HOUR') return `${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:00`;
-  return `${z(d.getHours())}:${z(d.getMinutes())}`;
-}
 function xLabelsForLen(len: number): string[] {
   if (len <= 0) return [];
   const { startMs, endMs } = timeRange.range;
   const step = timeRange.step;
-  if (len === 1) return [fmtBucket(step, endMs)];
+  if (len === 1) return [bucketTimeLabel(step, endMs)];
   return Array.from({ length: len }, (_, i) =>
-    fmtBucket(step, startMs + ((endMs - startMs) * i) / (len - 1)),
+    bucketTimeLabel(step, startMs + ((endMs - startMs) * i) / (len - 1)),
   );
 }
 const landing = useLayerLanding(safeLayer, safeCfg, rangeRef);
@@ -430,7 +422,6 @@ const compareScope = computed<CompareScope | null>(() => {
   return null;
 });
 const activeSet = computed<string[]>(() => {
-  if (!FF_ENTITY_COMPARE) return [];
   if (compareScope.value === 'service') return lockedServiceIds.value;
   if (compareScope.value === 'instance') return lockedInstanceNames.value;
   if (compareScope.value === 'endpoint') return lockedEndpointNames.value;
@@ -475,7 +466,7 @@ const {
   scopePrimaryKey,
 );
 
-const compareMode = computed(() => FF_ENTITY_COMPARE && compareActive.value);
+const compareMode = computed(() => compareActive.value);
 // In compare mode the tiles render from the per-entity fan-out, not the
 // primary `q` — so widget "no data" fallbacks must consult cohort progress
 // (entities arrived/total), not `isFetching` (the primary query only).
@@ -689,8 +680,7 @@ function hasMultiTopData(wid: string): boolean {
   return compareEntities.value.some((e) => topItemsFor(wid, e).length > 0);
 }
 // Instance/endpoint row lock pins (service-scope locking lives in the
-// shell). Shown behind the flag; cap-guarded per scope.
-const compareLockable = computed(() => FF_ENTITY_COMPARE);
+// shell). Cap-guarded per scope.
 const instAtCap = computed(() => lockedInstanceNames.value.length >= MAX_LOCKED);
 const epAtCap = computed(() => lockedEndpointNames.value.length >= MAX_LOCKED);
 
@@ -888,11 +878,10 @@ function isHidden(id: string): boolean {
         <li
           v-for="i in instanceList"
           :key="i.id"
-          class="ib-row"
-          :class="{ on: selectedInstance === i.name, 'has-lock': compareLockable }"
+          class="ib-row has-lock"
+          :class="{ on: selectedInstance === i.name }"
         >
           <button
-            v-if="compareLockable"
             type="button"
             class="ib-lock"
             :class="{ locked: isInstanceLocked(i.name) }"
@@ -1000,11 +989,10 @@ function isHidden(id: string): boolean {
           <li
             v-for="e in endpointList"
             :key="e.id"
-            class="ib-row"
-            :class="{ on: selectedEndpoint === e.name, 'has-lock': compareLockable }"
+            class="ib-row has-lock"
+            :class="{ on: selectedEndpoint === e.name }"
           >
             <button
-              v-if="compareLockable"
               type="button"
               class="ib-lock"
               :class="{ locked: isEndpointLocked(e.name) }"

@@ -40,8 +40,8 @@ Horizon ships four bundled tiers:
 | Tier | What lives here | Examples |
 |---|---|---|
 | **Apps** (top) | The application surfaces and their direct dependencies as the app sees them | General (agent) services, Browser/RUM, iOS, mini-programs, and the Virtual* targets (database / cache / MQ / gateway / GenAI) |
-| **Service Mesh** | The mesh that fronts the apps | Istio managed services, Istio data plane (Envoy sidecars), Istio control plane, Cilium, Envoy AI Gateway |
 | **Middleware** | The data and messaging services, gateways, and self-observability | MySQL, PostgreSQL, Redis, MongoDB, Elasticsearch, Kafka, RocketMQ, RabbitMQ, Pulsar, APISIX, Nginx, Kong, Flink, the SkyWalking SO11Y components, and cloud-managed data services |
+| **Service Mesh** | The mesh that fronts the apps | Istio managed services, Istio data plane (Envoy sidecars), Istio control plane, Cilium, Envoy AI Gateway |
 | **Infra** (bottom) | The platform the rest runs on | Kubernetes cluster + service, Linux/Windows hosts, virtual machines, EKS |
 
 Every layer OAP reports is placed onto exactly one tier. A layer that
@@ -184,6 +184,17 @@ sharing, or moving it to another OAP. **Import** reads a configuration JSON
 file and loads it as a local draft; preview it, then **Check diff & push**
 to publish. Import never writes OAP directly, and a file that isn't a valid
 3D-map configuration is rejected with a message.
+
+### Tuning the metric fan-out
+
+The map's loading stages run in batches, several requests at once. How aggressively they do this is governed by the `performance.bulk.infra3d` block in [`horizon.yaml`](../setup/horizon-yaml.md#performance-tuning) — an operator setting, not part of the map configuration, so it is **not** in the structured editor and does **not** travel with an exported / imported map. Edit `horizon.yaml`; the change is hot-reloaded and takes effect the next time the map is opened:
+
+- `metricConcurrency` — how many metric batches load at the same time. Default `4`, range `1`–`8`. Raise it to fill the cubes faster on a large deployment when OAP has headroom; lower it (toward `1`) if a busy OAP rejects or slows the burst of metric requests during the Metrics step.
+- `metricBulkSize` — how many services share one metric request. Default `6`, range `1`–`12`. Larger means fewer requests, but OAP rejects an oversized request, so this is capped — leave it at the default unless you have a reason to change it.
+- `topologyConcurrency` — how many layer call-graphs load at once during the Topologies step. Default `4`, range `1`–`16`.
+- `templateConcurrency` — how many layer templates load at once during the Templates step. Default `8`, range `1`–`32`.
+
+The defaults are tuned for a typical deployment; only revisit these if the loading timeline stalls on the Metrics, Topologies, or Templates step, or if OAP returns errors under the load.
 
 Viewing the map needs read access (`infra-3d:read`, held by the built-in
 viewer role and above); editing and publishing the configuration needs

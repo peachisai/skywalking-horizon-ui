@@ -14,7 +14,7 @@ There is **one template per layer**. Horizon ships bundled templates for the com
   "visibility": "public",
   "color": "var(--sw-accent)",
   "documentLink": "https://skywalking.apache.org/docs/main/next/en/concepts-and-designs/scopes/",
-  "slots": { ... },
+  "aliases": { ... },
   "components": { ... },
   "header": { ... },
   "dashboards": {
@@ -50,8 +50,8 @@ Every field is optional except `key`. Defaults are baked in for the rest.
 | `visibility` | `public` \| `operate` | `public` | Section placement. `operate` puts the layer under the Operate group. |
 | `color` | string | `var(--sw-accent)` | Hex or CSS variable for the layer's accent. |
 | `documentLink` | string (URL) | — | External docs URL; renders as a small chip on the layer page. |
-| `slots` | object | OAP defaults | Per-layer entity term overrides (see below). |
-| `components` | object | all-`true` | Which sub-tabs are enabled (see below). |
+| `aliases` | object | OAP defaults | Per-layer entity term overrides (see below). `slots` is an accepted legacy alias for this key. |
+| `components` | object | — | Which sub-tabs are enabled (see below). Every tab except the service dashboard is off unless explicitly set `true`. |
 | `header` | object | — | Service-list picker columns + default sort. |
 | `dashboards` | object | — | Per-scope widget arrays (the bulk of the template). |
 | `topology` | object | — | Topology MQE override for the service-map view. |
@@ -60,12 +60,12 @@ Every field is optional except `key`. Defaults are baked in for the rest.
 | `log` | object | — | Logs tab scope (service / instance / endpoint). |
 | `naming` | object | — | Service-name parsing rule (extracts cluster or other tokens from the OAP-reported name). |
 
-## `slots`
+## `aliases`
 
-Layer-specific term overrides used in UI labels.
+Layer-specific term overrides used in UI labels. (`slots` is an accepted legacy alias for this key; every bundled template uses `aliases`.)
 
 ```json
-"slots": {
+"aliases": {
   "services":         "services",
   "instances":        "instances",
   "endpoints":        "endpoints",
@@ -98,7 +98,7 @@ Per-tab feature toggles. A `false` value hides the tab.
 }
 ```
 
-The keys are the per-layer sub-tabs. `networkProfiling` and `podLogs` are also available; any key omitted defaults to enabled. The landing tab when a layer is clicked is the **first enabled** in the priority order `service → instances → endpoints → endpointDependency → topology → traces → logs → traceProfiling`.
+The keys are the per-layer sub-tabs. `networkProfiling` and `podLogs` are also available. Only the **service** dashboard is on when its key is omitted; every other tab is **off unless explicitly set `true`** — the bundled templates enable each tab they want (`general.json` sets every flag `true` for exactly this reason). The landing tab when a layer is clicked is the **first enabled** in the priority order `service → instances → endpoints → endpointDependency → topology → traces → logs → traceProfiling`.
 
 `deployment` is the exception: it is **off by default** and only appears when the layer also carries a [`deployment`](#deployment) config block — see [Deployment](#deployment) below.
 
@@ -212,7 +212,7 @@ A layer without an explicit `instance` widget set will reuse `service` widgets o
 | `format` | Numeric formatting: `int`, `decimal`, `compact` (K / M suffixes). |
 | `span` | Column span in the 12-col grid. Default 4 = three widgets per row. |
 | `rowSpan` | Vertical span. Default 1 (one 120 px row). |
-| `visibleWhen` | Predicate. Two supported shapes: `#entity.<key>` (truthy if the named entity key is set; e.g. `#entity.serviceInstance` to show only when an instance is selected) and `<metric> has value` (only show if the metric returns data). |
+| `visibleWhen` | Structured visibility predicate (object form). An MQE gate `{ "kind": "mqe", "expression": "<mqe>", "op": "exists" \| "gt" \| "lt", "value"?: <n> }` shows the widget only when the expression returns data (`exists`) or crosses a threshold; an entity gate `{ "kind": "entity", "attribute": "<attr>", "op": "exists" \| "eq", "value"?: "<v>" }` shows it only when the selected entity has that attribute — entity gates are Instance-scope only. |
 | `layerScope` | If true, MQE evaluates against the whole layer rather than the selected service. Used for layer-level summaries on the service page. |
 
 ### Choosing `type`
@@ -278,7 +278,11 @@ It is **opt-in**: off for every layer until you enable the `deployment` componen
 
 A second rule can **bundle a pod**: instances sharing a value (e.g. the same `pod_name`) render as one pod — a **main** hexagon with its sidecar containers attached as smaller hexes. A third rule picks each container's **role**, which sets the main container and lets each role carry its own metrics.
 
-**Configure it in the admin.** Open the layer in **Dashboard setup → Layer dashboards**, enable **Deployment** under **Components**, then open the **Deployment** scope. It has its own node / server-edge / client-edge metric editors (evaluated at instance scope — `service_instance_*` for nodes, instance-relation metrics for edges) plus the **Node clustering** picker (off / by attribute / by attributes / by name regex). The block is self-contained on the layer template, independent of the service-map topology config, so it travels with template export/import.
+**Per role-pair edge metrics (`roleToRole`).** Once roles are defined, a deployment can give each *kind* of edge its own metrics with `roleToRole[]` — one entry per source-role → dest-role pair (e.g. `liaison → data`). The pair's metrics layer on top of the flat `linkServerMetrics` / `linkClientMetrics` fallback, so a `liaison → data` call can surface a different metric set — and a different headline number on the edge — than a `data → data` call, without forcing one flat list onto every relation. An edge resolves its pair from the two nodes' roles; the **most specific** entry wins (an exact `from` / `to` beats a `*` wildcard), and an edge matching no entry uses the flat link metrics. Each `roleToRole` entry's `primary` names the metric id(s) printed inline on the edge in the map (up to three, stacked; omit for panel-only).
+
+When at least one role-pair is configured, the Deployment map gains a **Flows** sub-tab beside the topology graph: a single grid listing every edge, grouped by role-pair — one aligned sub-table per pair (a `liaison → data` group, a `data → data` group, …) showing that pair's metrics across every matching edge in the window. Clicking a row selects that edge on the map. The Flows tab appears only when `roleToRole` is non-empty.
+
+**Configure it in the admin.** Open the layer in **Dashboard setup → Layer dashboards**, enable **Deployment** under **Components**, then open the **Deployment** scope. It has its own node / server-edge / client-edge metric editors (evaluated at instance scope — `service_instance_*` for nodes, instance-relation metrics for edges) plus the **Node clustering** picker (off / by attribute / by attributes / by name regex) and, once roles are defined, a **role-pair** editor where you add one `from → to` pair at a time (role keys or `*`) with its own metrics. The block is self-contained on the layer template, independent of the service-map topology config, so it travels with template export/import.
 
 ### Stored format (reference)
 
@@ -289,6 +293,16 @@ A second rule can **bundle a pod**: instances sharing a value (e.g. the same `po
   "roleBy":    { "kind": "attribute", "attribute": "container_name", "alias": "container" },
   "roles": [
     { "key": "data", "label": "Data", "main": true, "nodeMetrics": [ { "id": "write", "label": "Write/s", "mqe": "service_instance_cpm", "unit": "w/s", "role": "center", "aggregation": "avg" } ] }
+  ],
+  "roleToRole": [
+    {
+      "from": "liaison", "to": "data", "primary": ["write", "query"],
+      "metrics": [
+        { "id": "write", "label": "Write/s", "unit": "msg/s", "aggregation": "avg", "mqe": "meter_banyandb_instance_relation_publish_throughput{operation='batch-write'}", "role": "lineClient" },
+        { "id": "write", "label": "Write/s", "unit": "msg/s", "aggregation": "avg", "mqe": "meter_banyandb_instance_relation_queue_sub_throughput{operation='batch-write'}", "role": "lineServer" }
+      ]
+    },
+    { "from": "*", "to": "*", "primary": "msg", "metrics": [ ... ] }
   ],
   "linkServerMetrics": [ ... ],
   "linkClientMetrics": [ ... ]
@@ -302,7 +316,8 @@ A second rule can **bundle a pod**: instances sharing a value (e.g. the same `po
 | `roleBy` | Resolves each instance's role (e.g. by `container_name`); the role decides the main container and which `roles[]` metrics apply. |
 | `roles[]` | Per-role display: `key` (matches the `roleBy` value), `label`, `main` (true for the pod's primary hex), and `nodeMetrics[]` (same metric-def shape as the topology node metrics). |
 | `nodeMetrics[]` | Fallback per-instance metrics for instances with no matching role. Optional when `roles[]` cover every instance. |
-| `linkServerMetrics[]` / `linkClientMetrics[]` | Per-call metrics on the server and client side of each intra-service edge. |
+| `linkServerMetrics[]` / `linkClientMetrics[]` | Fallback per-call metrics on the server and client side of each intra-service edge — used by any edge whose role-pair matches no `roleToRole` entry. |
+| `roleToRole[]` | Per source-role → dest-role edge metrics, layered on the flat link fallback. Each entry: `from` / `to` (a role key or `*` for any, matched case-insensitively; most-specific entry wins), `metrics[]` (same metric-def shape, each `role: lineServer` or `lineClient` picking the relation side), and `primary` (metric id or ordered id array printed inline on the edge — up to three). Drives the **Flows** sub-tab. |
 
 ## `endpointDependency`
 
@@ -369,7 +384,7 @@ When set, the layer's service list groups by `cluster`. Without it, services are
 
 ## Admin Editor
 
-Layer templates are editable at runtime via **Dashboard setup → Layer dashboards** (`/admin/layer-dashboards`, verb `dashboard:write`). The picker lists **every layer your OAP reports**, not just the ones with a shipped template — a layer with no template yet opens on a blank default you can configure and publish on first save. Pick a layer from the filterable dropdown (alias + key + sync status), then edit its service / instance / endpoint / topology / trace / log / profiling views. A live menu preview sits beside the Alias / Components / Menu-labels editor; clicking a menu item jumps to that component's config.
+Layer templates are editable at runtime via **Dashboard setup → Layer dashboards** (`/admin/layer-dashboards`, opened with `dashboard:read`; publishing a layer requires `dashboard:write`). The picker lists **every layer your OAP reports**, not just the ones with a shipped template — a layer with no template yet opens on a blank default you can configure and publish on first save. Pick a layer from the filterable dropdown (alias + key + sync status), then edit its service / instance / endpoint / topology / trace / log / profiling views. A live menu preview sits beside the Alias / Components / Menu-labels editor; clicking a menu item jumps to that component's config.
 
 ### How edits flow: draft → preview → publish
 
@@ -418,8 +433,13 @@ A disabled layer still appears in this admin page (struck-through, status **disa
 |---|---|---|
 | `general.json` | `GENERAL` | Reference shape — `service`/`instance`/`endpoint` dashboards, `top_apis`, header columns. |
 | `mesh.json` | `MESH` | Istio data-plane. Uses `mesh_` metric family. |
-| `k8s.json` | `K8S` | Kubernetes cluster. Slots use `pod` instead of `instance`. |
+| `k8s.json` | `K8S` | Kubernetes cluster. Aliases instances to **Nodes**, services to **Clusters**. |
 | `mesh_cp.json` | `MESH_CP` | Istio control-plane (Pilot). |
+| `so11y_oap.json` | `SO11Y_OAP` | OAP server self-observability. Grouped under **Self-Observability**. |
+| `so11y_satellite.json` | `SO11Y_SATELLITE` | Satellite collector self-observability. |
+| `so11y_java_agent.json` | `SO11Y_JAVA_AGENT` | Java agent self-observability. |
+| `so11y_go_agent.json` | `SO11Y_GO_AGENT` | Go agent self-observability. |
+| `banyandb.json` | `BANYANDB` | BanyanDB storage self-observability. Uses the `deployment` tab with `roleToRole` role-pair edges (liaison → data, …). |
 | ... | various | One per OAP layer. |
 
 Read the bundled JSON for the closest layer to yours before authoring a new template — most of the work is renaming MQE expressions to match your layer's metric prefix.

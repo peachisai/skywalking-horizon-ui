@@ -15,7 +15,7 @@ Registry: **GitHub Container Registry (GHCR)** at `ghcr.io/apache/skywalking-hor
 | `main` | Head of `main`. Moves on every merge. | Smoke-test the development branch. |
 
 ```sh
-docker pull ghcr.io/apache/skywalking-horizon-ui:0.6.0
+docker pull ghcr.io/apache/skywalking-horizon-ui:0.7.0
 docker pull ghcr.io/apache/skywalking-horizon-ui:<sha>
 ```
 
@@ -54,6 +54,21 @@ The four `HORIZON_*_FILE` env vars seed the **defaults** the config schema uses 
 
 `server.host` and `server.port` come from the YAML when present. If they are omitted, the image supplies defaults via `HORIZON_SERVER_HOST=0.0.0.0` and `HORIZON_SERVER_PORT=8081`. The image sets `EXPOSE 8081`; if you change `server.port`, also publish the new port.
 
+## Memory & sizing
+
+The BFF holds its **source-map cache in the Node heap** — uploaded Browser-Logs maps live in process memory, not in OAP — so the container's memory limit and Node's heap limit must be sized together with the source-map budget.
+
+- Set **`NODE_OPTIONS=--max-old-space-size=<MB>`** to match the container memory limit (leave headroom for the rest of the process — a value somewhat below the container limit, e.g. `1536` for a 2 GiB container). `--max-old-space-size` is a **process flag read by V8 before any config loads**, so it is **not** a `horizon.yaml` field — pass it via `NODE_OPTIONS` (env), not in the YAML.
+- Size **`sourceMaps.maxTotalBytes`** to fit comfortably inside that heap. A few recently-resolved maps are also kept *parsed* (larger than the raw file), so budget roughly 2× headroom above `maxTotalBytes`. Mounted (static) maps are disk-backed and don't count against the heap. See [Browser Logs & Source Maps](../operate/browser-source-maps.md).
+
+```sh
+docker run -d --name horizon \
+  -p 8081:8081 \
+  -e NODE_OPTIONS=--max-old-space-size=1536 \
+  -v "$PWD/horizon.yaml:/app/horizon.yaml:ro" \
+  ghcr.io/apache/skywalking-horizon-ui:0.7.0
+```
+
 ## How to load `horizon.yaml` into the container
 
 Three common approaches.
@@ -67,7 +82,7 @@ docker run -d \
   --name horizon \
   -p 8081:8081 \
   -v "$PWD/horizon.yaml:/app/horizon.yaml:ro" \
-  ghcr.io/apache/skywalking-horizon-ui:0.6.0
+  ghcr.io/apache/skywalking-horizon-ui:0.7.0
 ```
 
 Notes:
@@ -80,7 +95,7 @@ Notes:
 For immutable single-tenant deployments, build a child image that includes your config:
 
 ```dockerfile
-FROM ghcr.io/apache/skywalking-horizon-ui:0.6.0
+FROM ghcr.io/apache/skywalking-horizon-ui:0.7.0
 COPY horizon.yaml /app/horizon.yaml
 ```
 
@@ -148,7 +163,7 @@ spec:
         fsGroup: 101
       containers:
         - name: horizon
-          image: ghcr.io/apache/skywalking-horizon-ui:0.6.0
+          image: ghcr.io/apache/skywalking-horizon-ui:0.7.0
           ports:
             - containerPort: 8081
           envFrom:
@@ -161,7 +176,7 @@ spec:
             - name: state
               mountPath: /data
           readinessProbe:
-            httpGet: { path: /api/oap/info, port: 8081 }
+            httpGet: { path: /api/health, port: 8081 }
             periodSeconds: 10
       volumes:
         - name: config
@@ -190,7 +205,7 @@ docker run -d --name horizon \
   -p 8081:8081 \
   -v "$PWD/horizon.yaml:/app/horizon.yaml:ro" \
   -v horizon-state:/data \
-  ghcr.io/apache/skywalking-horizon-ui:0.6.0
+  ghcr.io/apache/skywalking-horizon-ui:0.7.0
 ```
 
 Without a mounted volume the writes still land in the container's writable layer at `/data/` (ephemeral, but at least non-failing). Mounting a volume is what makes them durable.
@@ -327,11 +342,13 @@ Wire your platform's readiness probe to one of:
 
 | Endpoint | What it verifies |
 |---|---|
-| `GET /api/oap/info` | BFF is up **and** OAP query port is reachable. Strict — readiness gates on OAP. |
-| `GET /api/auth/health` | BFF is up + auth backend is healthy. Useful if you want readiness independent of OAP. |
-| TCP probe on 8081 | BFF process is listening. Loosest — does not verify OAP wiring. |
+| `GET /api/health` | **Recommended.** Public, unauthenticated, no OAP dependency — returns `{ status: "ok", version }` as soon as the BFF process is serving. Use this for both readiness and liveness. |
+| `GET /api/auth/health` | BFF is up + auth backend is healthy. Public. Useful if you want readiness to fold in auth-backend health. |
+| TCP probe on 8081 | BFF process is listening. Loosest — does not verify HTTP serving. |
 
-Liveness probes should be TCP-only (the BFF process is up). Wiring OAP into liveness creates a cascade failure when OAP blips.
+Do **not** point a probe at `GET /api/oap/info`: it is authenticated, so an unauthenticated probe gets HTTP 401 and the pod never becomes Ready. It is an in-app, authenticated OAP-reachability indicator, not a probe target.
+
+Liveness probes should use the public `GET /api/health` (or TCP-only on 8081). Wiring OAP reachability into liveness creates a cascade failure when OAP blips.
 
 ## Common mistakes
 

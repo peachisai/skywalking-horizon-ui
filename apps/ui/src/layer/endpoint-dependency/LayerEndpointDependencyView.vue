@@ -43,6 +43,7 @@ import type {
 } from '@/api/client';
 import { bffClient } from '@/api/client';
 import { useLayerEndpointDependency } from '@/layer/endpoint-dependency/useLayerEndpointDependency';
+import { useTimeRangeStore } from '@/controls/timeRange';
 import { useLayerEndpoints } from '@/layer/useLayerEndpoints';
 import { useLayerLanding } from '@/layer/useLayerLanding';
 import { useLayers } from '@/shell/useLayers';
@@ -58,6 +59,7 @@ import Sparkline from '@/components/charts/Sparkline.vue';
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n({ useScope: 'global' });
+const timeRange = useTimeRangeStore();
 const layerKey = computed(() => String(route.params.layerKey ?? ''));
 
 const { selectedId, setSelected: setSelectedService } = useSelectedService();
@@ -141,6 +143,7 @@ const { nodes: baseNodes, calls: baseCalls, isLoading, isFetching, data } = useL
 );
 const reachable = computed(() => data.value?.reachable !== false);
 const errorText = computed(() => data.value?.error ?? null);
+const metricsPartial = computed(() => data.value?.metricsPartial ?? null);
 
 // ── Interactive expansion ─────────────────────────────────────────
 // `getEndpointDependencies` returns a node's WHOLE neighbourhood (both
@@ -187,6 +190,7 @@ async function expandNode(node: EndpointDependencyNode): Promise<void> {
       layerKey.value,
       node.serviceName,
       node.name,
+      { step: timeRange.step, startMs: timeRange.range.startMs, endMs: timeRange.range.endMs },
     );
     const next = new Map(expansions.value);
     next.set(key, resp);
@@ -926,6 +930,9 @@ function edgeRowCrosshair(rowId: string): number | null {
       <strong>{{ t('OAP unreachable.') }}</strong>
       {{ errorText ?? t('API dependency feed failed — check the BFF and OAP.') }}
     </div>
+    <div v-if="metricsPartial" class="banner warn">
+      {{ t('Some metrics could not be loaded ({failed} of {total} batches failed) — some endpoints or links may be missing.', { failed: metricsPartial.failedChunks, total: metricsPartial.totalChunks }) }}
+    </div>
 
     <section v-if="selectedEndpoint" class="ep-graph-card sw-card" :class="{ 'has-detail': selectedNode || selectedCall }" :style="{ height: cardHeightPx + 'px' }">
       <!-- Two-column layout: graph on the left, selection detail
@@ -1256,7 +1263,7 @@ function edgeRowCrosshair(rowId: string): number | null {
 
           <div v-else-if="isLoading" class="loader">{{ t('loading…') }}</div>
           <div v-else class="loader">
-            {{ t('No dependency graph available for this endpoint in the last 15 minutes.') }}
+            {{ t('No dependency graph available for this endpoint in the selected time range.') }}
           </div>
         </div>
 
@@ -1550,6 +1557,14 @@ function edgeRowCrosshair(rowId: string): number | null {
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 6px;
   color: #f87171;
+  font-size: 11.5px;
+}
+.banner.warn {
+  padding: 8px 12px;
+  background: var(--sw-warn-soft);
+  border: 1px solid var(--sw-warn);
+  border-radius: 6px;
+  color: var(--sw-warn);
   font-size: 11.5px;
 }
 .ep-graph-card {
