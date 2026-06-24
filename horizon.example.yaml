@@ -77,10 +77,10 @@ auth:
   backend: local
 
   local:
-    users: []
-    # - username: admin
-    #   passwordHash: "$argon2id$v=19$..."
-    #   roles: [admin]
+    users:
+     - username: admin
+       passwordHash: "$argon2id$v=19$..."
+       roles: [admin]
 
   # ── LDAP ──────────────────────────────────────────────────────────
   # Required when `backend: ldap`. Passwords are never stored or read

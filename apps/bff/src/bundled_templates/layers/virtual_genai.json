@@ -245,6 +245,19 @@
         ],
         "span": 12,
         "rowSpan": 2
+      },
+      {
+        "expressionLabels": [
+          "avg"
+        ],
+        "expressions": [
+          "gen_ai_evaluation_score_ppm"
+        ],
+        "id": "evaluation score",
+        "rowSpan": 2,
+        "span": 12,
+        "title": "Evaluation Score",
+        "type": "line"
       }
     ]
   }
