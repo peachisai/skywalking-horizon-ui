@@ -165,16 +165,17 @@ const rbacSchema = z
     roles: z
       .record(z.string(), z.array(z.string().min(1)))
       .default({
-        // Data catalog only — public dashboards, alarms, traces, logs,
-        // topology, profiling results. Deliberately NOT `*:read` so a
-        // viewer can't accidentally see rule definitions, live-debug
-        // sessions, setup screens, or platform internals.
+        // Data catalog + the read-only inspect tools (metric / trace / log
+        // inspect, all `inspect:read`). Deliberately NOT `*:read` so a viewer
+        // can't see rule definitions, live-debug sessions, setup screens, or
+        // cluster / TTL / config internals.
         viewer: [
           'metrics:read',
           'alarms:read',
           'traces:read',
           'logs:read',
           'browser-errors:read',
+          'inspect:read',
           'topology:read',
           'profile:read',
           'overview:read',

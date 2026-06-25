@@ -268,6 +268,7 @@ export {
   InspectApiError,
   INSPECT_STEPS,
   INSPECT_ENTITY_LIMIT_MAX,
+  INSPECT_FOREIGN_VALUE_TYPES,
   formatInspectDate,
   isInspectDate,
   type InspectClientOptions,
@@ -275,6 +276,7 @@ export {
   type InspectMetricType,
   type InspectScope,
   type InspectStep,
+  type InspectForeignValueType,
   type ListMetricsArgs,
   type ListEntitiesArgs,
   type MetricRow,
@@ -292,7 +294,19 @@ export {
   type MqeKeyValue,
   type MqeOwner,
   type InspectExecRequest,
+  type InspectValuesRequest,
+  type ForeignMetricInput,
 } from './inspect.js';
+export type {
+  ExploreKind,
+  ExploreTraceSource,
+  ExploreLogSource,
+  ExploreEntity,
+  ExploreWindow,
+  ExploreRequest,
+  ExploreResolved,
+  ExploreResponse,
+} from './explore.js';
 export {
   DslDebuggingClient,
   DEBUG_CATALOGS,

@@ -4,6 +4,12 @@ Notable changes to Apache SkyWalking Horizon UI, written from the operator's poi
 
 The version line is shared by every package in the monorepo (apps + shared packages) plus the BFF's `HORIZON_VERSION` default.
 
+## 1.1.0
+
+### General Service — PHP runtime (PHM)
+
+- **Six instance dashboard line widgets for PHP Health Metrics** — process CPU utilization, memory used/peak, virtual memory, thread count, and open file descriptors (`meter_instance_php_*`). Each line widget uses `visibleWhen` so widgets render only when the PHP agent reports PHM data (Linux `/proc` sampling of the parent PHP process via `getppid()`).
+
 ## 1.0.0
 
 ### Performance & behavior tuning
@@ -19,9 +25,25 @@ The version line is shared by every package in the monorepo (apps + shared packa
 - **Shareable trace links are unified.** Native and Zipkin traces both open from a single `?traceId=` link under the layer's trace tab; the viewer auto-selects native vs Zipkin by the trace-ID shape, so `/layer/<layer>/trace?traceId=…` always opens the right one.
 - **Trace filters are searchable, on-theme dropdowns.** The native Service / Instance / Endpoint pickers and the Zipkin Service / Remote service / Span name pickers use a dark type-to-filter dropdown that reopens correctly after a pick.
 
+### Logs
+
+- **Log inspect uses the full width.** The cross-layer Log inspect form (Target + Tags / Trace ID / Time / Limit conditions) now spans the whole page instead of sharing a two-column strip with empty space.
+- **Clicking a log row opens a centered popout.** Both the cross-layer Log inspect and the per-layer Logs tab now open the same full-payload popout on row click — format-aware pretty-print (JSON pretty-printed by content type), the tags table, service / instance / endpoint / time meta, a copy button, and the trace link. Escape or the close button dismisses it.
+- **Log inspect can now query Browser errors across the page.** A new **Browser** source on Log inspect (beside Raw) queries the BROWSER layer's JS error logs from anywhere — pick a browser service or type a service name (or leave it blank for all services), then narrow by category (AJAX / RESOURCE / VUE / PROMISE / JS / UNKNOWN), version, page, and time window, and read the error list (message, category, page path, app version, time, minified `line:col`). Upload and manage source maps inline, then click a row to open a popout with the error meta, the raw stack, and the source-map de-obfuscation control — resolve the minified stack back to the original frames + source snippet.
+- **Tag fields autocomplete on theme.** The Tags filter on Trace inspect, Log inspect, and the per-layer Traces / Logs tabs now suggests tag keys (before `=`) and per-key values (after) in a dark, dense dropdown anchored under the field, replacing the browser's native `<datalist>` popup. On Trace / Log inspect, pressing Enter commits the current tag and starts the next, mirroring the per-layer chip tabs.
+- **Log inspect can now read Kubernetes Pod logs across the page.** A new **Kubernetes Pod logs** source on Log inspect (beside Raw and Browser) tails a specific pod's container logs on demand from the K8s API through OAP — pick a Kubernetes layer, then **pick or type** a service, choose a pod and container, set a trailing window (30s … 30m) and optional keyword filters, and read the dense, read-only log lines (timestamp + content). The Layer field lists only Kubernetes-deployed layers (the ones that actually carry pods) and auto-selects the single one when there's exactly one; the pod and container auto-select when there's only one to choose, so the common single-replica case is one click. These logs are streamed live and never persisted, so there is no cold-stage. When on-demand pod-log tailing is disabled on OAP, or the pod can't be resolved, the page surfaces OAP's reason as a hint instead of an empty pane.
+
+### Metrics Inspect
+
+- **Inspect can now chart a "foreign" metric — one the connected OAP doesn't define.** When a metric is written into shared storage by another OAP (an older version, or a different distribution, that the OAP behind Horizon doesn't carry the analysis rule for), it never shows up in the catalog drawer. The + add metric drawer now has a **Foreign metric** tab (beside the catalog browse): type the metric name, pick its scope (Service / ServiceInstance / Endpoint / the three relations), and give its storage **value column** (default `value`) and **value type** (`LONG` / `INT` / `DOUBLE` / `LABELED`) — those last two come from the catalog of the OAP that *does* define the metric. Stage several with **+ add to list** and add them in one go — the drawer's shared footer counts the pending selection and respects the board cap, exactly like the catalog tab. Each resulting widget behaves like any other: it enumerates the entities holding data for the metric, defaults to the top one, and **plots the value series** — stepping or multi-selecting entities, switching chart type, and refetching all work. The connected OAP can't evaluate a foreign metric through normal MQE, so the values are read through its admin surface with the column + type you supplied. Marked with a `FOREIGN` pill and the value type; persists on the board across refreshes like any other widget.
+
 ### Bundled layer dashboards
 
 - **Single-value metrics now render as cards, not flat lines, on several layer dashboards.** Widgets whose expression collapses the window to one number (a `latest(...)` total) had been mis-ported as line charts — drawn as a lone dot that misreads as a time series and shares one axis with an unrelated average trend. Each is now split into a proper single-value **card** (the total) plus a trend **line** (the average), matching the metric's shape, the way booster-ui rendered them. Affects the **Virtual GenAI** (Input / Output Tokens, Estimated Cost — provider and model scopes), **Elasticsearch** (deleted documents), **ClickHouse** (Zookeeper sessions / watches), **RabbitMQ** (connection / publisher / consumer / channel / queue totals, allocated memory), **RocketMQ** (max CommitLog disk ratio, max producer / consumer message size), and **APISIX** (etcd reachability) dashboards; every changed dashboard row still tiles to full width.
+
+### Layer dashboard editor
+
+- **The widget editor pins in place beside the canvas and always opens complete.** On the Layer dashboards admin, clicking a widget — anywhere on the board, including the bottom rows — now opens the per-widget editor pinned next to the canvas and fully visible, without scrolling the page (a sticky panel used to get clipped past the bottom of a tall board, hiding the editor's top or its `Up` / `Down` / `Delete` row). The move / delete controls sit in a pinned footer, and the editor tucks away when you scroll up to the scope config above. Adding a widget scrolls the new widget into view, next to the editor that opens for it.
 
 ## 0.7.0
 

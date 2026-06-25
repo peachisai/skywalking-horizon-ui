@@ -600,9 +600,64 @@ watch(
 // without resizing the nav, so refresh on those too.
 watch([visibleScopes, activeScope], () => void nextTick(updateScopeScroll));
 function onWinResizeScope(): void { updateScopeScroll(); }
-onMounted(() => window.addEventListener('resize', onWinResizeScope));
+
+// ── Editor drawer position. The drawer edits the selected widget. A sticky
+// drawer gets clipped once you scroll past the bottom of the tall widget canvas
+// (its containing block), so a bottom-row widget opens with the editor's top
+// off-screen. Pin it to the viewport with `position: fixed` instead, overlaying
+// the grid column the layout already reserves for it — so it's always fully
+// visible IN PLACE wherever you click in the canvas, without scrolling the page.
+// JS owns top/left/width/height because the column's x-position tracks the
+// canvas width (re-measured on layout change), while the y-extent is the
+// viewport below the topbar.
+const drawerEl = ref<HTMLElement | null>(null);
+const editorCardEl = ref<HTMLElement | null>(null);
+const DRAWER_COL = 360;
+function positionDrawer(): void {
+  const el = drawerEl.value;
+  const card = editorCardEl.value;
+  const split = el?.closest('.editor-split') as HTMLElement | null;
+  const main = document.querySelector('.sw-main');
+  if (!el || !card || !split || !main) return;
+  // Hide the fixed drawer when the editor card is scrolled out of view, so it
+  // doesn't float over the scope-config cards above it.
+  const cr = card.getBoundingClientRect();
+  if (cr.bottom < 80 || cr.top > window.innerHeight) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'flex';
+  const top = Math.max(0, Math.round(main.getBoundingClientRect().top));
+  el.style.top = `${top}px`;
+  el.style.right = 'auto';
+  el.style.left = `${Math.round(split.getBoundingClientRect().right - DRAWER_COL)}px`;
+  el.style.width = `${DRAWER_COL}px`;
+  el.style.height = `${window.innerHeight - top}px`;
+}
+// Re-place the drawer when the editor card resizes (window resize, sidebar
+// collapse, scope switch) — its right column moves with the canvas width.
+let drawerLayoutObs: ResizeObserver | null = null;
+watch(editorCardEl, (el) => {
+  drawerLayoutObs?.disconnect();
+  drawerLayoutObs = null;
+  if (el && typeof ResizeObserver !== 'undefined') {
+    drawerLayoutObs = new ResizeObserver(() => positionDrawer());
+    drawerLayoutObs.observe(el);
+  }
+});
+onMounted(() => {
+  window.addEventListener('resize', onWinResizeScope);
+  window.addEventListener('resize', positionDrawer, { passive: true });
+  // Scroll only toggles the drawer's visibility (its x/width are fixed); capture
+  // so the inner content pane's scroll fires it too.
+  window.addEventListener('scroll', positionDrawer, { capture: true, passive: true });
+});
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onWinResizeScope);
+  window.removeEventListener('resize', positionDrawer);
+  window.removeEventListener('scroll', positionDrawer, { capture: true });
+  drawerLayoutObs?.disconnect();
+  drawerLayoutObs = null;
   scopeResizeObs?.disconnect();
   scopeResizeObs = null;
 });
@@ -688,6 +743,9 @@ function moveWidget(i: number, dir: -1 | 1): void {
  * ------------------------------------------------------------------- */
 
 const selectedIdx = ref<number | null>(null);
+/* Re-fit the drawer to the viewport when it opens / the target widget changes
+ * (content height differs); the scroll + resize listeners keep it fitted after. */
+watch(selectedIdx, () => void nextTick(positionDrawer));
 
 /** When the user switches scope or layer we drop the selection so the
  *  drawer doesn't refer to a widget that no longer exists. */
@@ -910,6 +968,14 @@ async function addAndSelectWidget(): Promise<void> {
   addWidget();
   await nextTick();
   selectedIdx.value = currentWidgets.value.length - 1;
+  await nextTick();
+  /* The new widget is appended at the canvas bottom — on a tall board it lands
+   * below the fold. Scroll it into view so the operator sees the widget next to
+   * the editor that just opened, instead of an empty drawer over off-screen
+   * canvas. block:'center' keeps the editor header + footer in frame too. */
+  canvasEl.value
+    ?.querySelector('.canvas-widget.selected')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /* ------------------------------------------------------------------- *
@@ -3644,7 +3710,7 @@ const namingTest = computed<NamingTestResult>(() => {
           </div>
         </section>
 
-        <section v-else class="sw-card editor-card">
+        <section v-else ref="editorCardEl" class="sw-card editor-card">
           <div class="card-head">
             <h4>{{ scopeLabel(activeScope) }} widgets</h4>
             <span class="sub">
@@ -3761,7 +3827,7 @@ const namingTest = computed<NamingTestResult>(() => {
               </div>
             </div>
 
-            <aside v-if="selectedWidget" class="drawer">
+            <aside v-if="selectedWidget" ref="drawerEl" class="drawer">
               <div class="drawer-head">
                 <h4>Edit widget</h4>
                 <span class="sub">{{ scopeLabel(activeScope) }} · #{{ (selectedIdx ?? 0) + 1 }}</span>
@@ -3947,6 +4013,10 @@ const namingTest = computed<NamingTestResult>(() => {
                     <span>Layer-scoped (run MQE across the whole layer, ignore selected service)</span>
                   </label>
                 </div>
+              </div>
+              <!-- Pinned footer: move/delete stay visible no matter how long
+                   the form scrolls (the body above owns the overflow). -->
+              <div class="drawer-foot">
                 <div class="d-actions">
                   <button
                     class="sw-btn"
@@ -5495,16 +5565,18 @@ const namingTest = computed<NamingTestResult>(() => {
   flex-direction: column;
   background: var(--sw-bg-1);
   border-left: 1px solid var(--sw-line);
-  /* Sticky within the scrolling main pane (topbar is fixed above it, so
-   * top: 0 pins just below it) and full-height, so the editor uses the
-   * whole viewport and follows the canvas scroll instead of being a short
-   * box stranded at the top of a tall grid cell. `align-self: start`
-   * stops the grid from stretching it (which would defeat sticky). */
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: calc(100vh - 52px);
-  max-height: calc(100vh - 52px);
+  /* Pinned to the viewport (positionDrawer sets top/left/width/height) so the
+   * editor is always fully visible IN PLACE wherever you click in the canvas,
+   * overlaying the reserved grid column — a sticky drawer clips past the bottom
+   * of the tall canvas. The values below are a pre-JS fallback, refined on the
+   * next tick. */
+  position: fixed;
+  z-index: 5;
+  top: 44px;
+  right: 28px;
+  width: 360px;
+  height: calc(100vh - 44px);
+  box-shadow: -8px 0 24px -12px rgba(0, 0, 0, 0.5);
 }
 .drawer-head {
   display: flex;
@@ -5696,12 +5768,15 @@ const namingTest = computed<NamingTestResult>(() => {
   margin-top: 2px;
   accent-color: var(--sw-accent);
 }
+.drawer-foot {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--sw-line);
+  background: var(--sw-bg-1);
+}
 .d-actions {
   display: flex;
   gap: 6px;
-  padding-top: 4px;
-  border-top: 1px dashed var(--sw-line);
-  margin-top: 4px;
 }
 .d-actions .sw-btn { font-size: 11px; }
 .d-actions .sw-btn.danger { margin-left: auto; }

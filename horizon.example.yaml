@@ -138,13 +138,14 @@ rbac:
   roles:
     # Data catalog + read-only overview dashboards. Deliberately NOT
     # `*:read` so a viewer can't accidentally see rule definitions,
-    # live-debug sessions, setup screens, or platform internals.
+    # live-debug sessions, setup screens, or cluster / TTL / config internals.
     viewer:
       - metrics:read
       - alarms:read
       - traces:read
       - logs:read
       - browser-errors:read
+      - inspect:read
       - topology:read
       - profile:read
       - overview:read

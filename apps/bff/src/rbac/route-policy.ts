@@ -96,6 +96,8 @@ export const ROUTE_POLICY: Record<string, RoutePolicy> = {
   'GET /api/browser-errors/source-maps':           'browser-errors:read',
   'POST /api/browser-errors/resolve':              'browser-errors:read',
 
+  'POST /api/explore/query':                       'inspect:read',
+
   'GET /api/layer/:key/topology':                  'topology:read',
   'GET /api/layer/:key/instance-topology':         'topology:read',
   'GET /api/layer/:key/deployment':                'topology:read',
@@ -140,10 +142,10 @@ export const ROUTE_POLICY: Record<string, RoutePolicy> = {
   'GET /api/cluster/state':                        'cluster:read',
   'GET /api/inspect/metrics':                      'inspect:read',
   'GET /api/inspect/catalog':                      'inspect:read',
-  'GET /api/inspect/mqe-target':                   'inspect:read',
   'GET /api/inspect/server-time':                  'inspect:read',
   'POST /api/inspect/exec':                        'inspect:read',
   'GET /api/inspect/entities':                     'inspect:read',
+  'POST /api/inspect/values':                      'inspect:read',
   'GET /api/oap/ttl':                              'ttl:read',
   'GET /api/oap/config':                           'config:read',
 

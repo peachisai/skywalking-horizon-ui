@@ -88,6 +88,7 @@ import { PprofApi } from './scopes/pprof';
 import { DslApi } from './scopes/dsl';
 import { LiveDebugApi } from './scopes/live-debug';
 import { InspectApi } from './scopes/inspect';
+import { ExploreApi } from './scopes/explore';
 import { OapOpsApi } from './scopes/oap-ops';
 import { AlarmsApi } from './scopes/alarms';
 import { Infra3dApi } from './scopes/infra-3d';
@@ -245,6 +246,14 @@ export type {
   PprofProgressResponse,
   PprofAnalyzeResponse,
   PprofTaskCreationResponse,
+  ExploreKind,
+  ExploreTraceSource,
+  ExploreLogSource,
+  ExploreEntity,
+  ExploreWindow,
+  ExploreRequest,
+  ExploreResolved,
+  ExploreResponse,
 } from '@skywalking-horizon-ui/api-client';
 
 /** Query shape for `/api/zipkin/traces`. Mirrors the Zipkin v2 REST
@@ -366,6 +375,18 @@ export function describeApiError(err: unknown): string {
       if (typeof o.applyStatus === 'string') {
         return `${e.status} (${o.applyStatus})`;
       }
+      // OAP's inspect/admin envelope is `{ error: "<human text>" }` (no
+      // `message`), and BFF validation envelopes carry a code in `error` plus
+      // the human reason in `detail` (`{ error: 'invalid_foreign_metric',
+      // detail: 'valueColumn is invalid …' }`). Surface both rather than
+      // collapsing to a bare "HTTP <status>" or a lone code — for a foreign
+      // metric this is where OAP's / the BFF's "valueColumn is invalid …",
+      // "metric is defined locally …" reasons reach the operator.
+      if (typeof o.error === 'string' && o.error.length > 0) {
+        return typeof o.detail === 'string' && o.detail.length > 0
+          ? `${e.status} (${o.error}): ${o.detail}`
+          : `${e.status}: ${o.error}`;
+      }
     }
     if (typeof e.body === 'string' && e.body.length > 0) {
       return `${e.status}: ${e.body}`;
@@ -432,13 +453,6 @@ export interface InspectCatalogResponse {
   metrics: InspectCatalogEntry[];
   summary: Record<string, number>;
   attributionFingerprint: string;
-}
-
-/** Discovered (or operator-overridden) MQE base URL. */
-export interface InspectMqeTargetResponse {
-  baseUrl: string;
-  via: string;
-  configured: { host?: string; port?: number };
 }
 
 // ── Alarms wire types (BFF-only) ──────────────────────────────────────
@@ -902,6 +916,7 @@ export class BffClient {
   readonly dsl = new DslApi(this);
   readonly liveDebug = new LiveDebugApi(this);
   readonly inspect = new InspectApi(this);
+  readonly explore = new ExploreApi(this);
   readonly oapOps = new OapOpsApi(this);
   readonly alarms = new AlarmsApi(this);
   readonly infra3d = new Infra3dApi(this);
