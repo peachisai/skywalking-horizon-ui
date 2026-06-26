@@ -1533,5 +1533,21 @@
   "No widgets visible in this tab.": "No widgets visible in this tab.",
   "This tab has no widgets.": "This tab has no widgets.",
   "Clear all": "Clear all",
-  "Clear all and exit comparison": "Clear all and exit comparison"
+  "Clear all and exit comparison": "Clear all and exit comparison",
+  "Dashboard templates": "Dashboard templates",
+  "read-only · bundled": "read-only · bundled",
+  "live · OAP ui_template": "live · OAP ui_template",
+  "Rendering from the local bundle; the ui_template API is not used and editing is disabled.": "Rendering from the local bundle; the ui_template API is not used and editing is disabled.",
+  "ui_template store reachable — editing enabled.": "ui_template store reachable — editing enabled.",
+  "ui_template store unreachable — editing disabled.": "ui_template store unreachable — editing disabled.",
+  "Feature": "Feature",
+  "Probe path": "Probe path",
+  "readonly · bundled": "readonly · bundled",
+  "selector detected": "selector detected",
+  "selector not detected": "selector not detected",
+  "all reachable": "all reachable",
+  "{n} unreachable": "{n} unreachable",
+  "Reachability of each admin feature — the BFF GETs the relative REST path the feature actually calls and reports whether it responds. Health is the live probe, not config-presence: a path that 404s (selector off, renamed, or absent in a fork) reads as unreachable. 'selector detected' below is only an upstream-release hint, not the verdict.": "Reachability of each admin feature — the BFF GETs the relative REST path the feature actually calls and reports whether it responds. Health is the live probe, not config-presence: a path that 404s (selector off, renamed, or absent in a fork) reads as unreachable. 'selector detected' below is only an upstream-release hint, not the verdict.",
+  "Enable on OAP:": "Enable on OAP:",
+  "{n}/{total} reachable": "{n}/{total} reachable"
 }

@@ -17,6 +17,7 @@
 
 import { existsSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
+import { ZodError } from 'zod';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
@@ -66,7 +67,7 @@ import { registerOverviewRoutes } from './http/config/overview.js';
 import { registerConfigBundleRoute } from './http/config/bundle.js';
 import { registerTemplateSyncAdminRoutes } from './http/admin/template-sync.js';
 import { buildOapClients } from './client/index.js';
-import { bootSeed, waitForOapAdminReady } from './logic/templates/sync.js';
+import { bootSeed, waitForOapAdminReady, setTemplateReadOnly } from './logic/templates/sync.js';
 import { iterateBundledTemplates, iterateBundledOverlays } from './logic/templates/aggregator.js';
 // Admin (operational tools)
 import { registerDslCatalogRoutes } from './http/admin/dsl/catalog.js';
@@ -104,19 +105,49 @@ try {
     logger.fatal({ err: err.message, configPath }, 'BFF refusing to start: bootstrap validation failed');
     process.exit(1);
   }
+  if (err instanceof ZodError) {
+    // A bad value (often a HORIZON_* env override): surface the field path +
+    // reason instead of a raw zod dump. Booleans accept only true/false,
+    // numbers must be numeric, and JSON env vars must be valid JSON.
+    const issues = err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ');
+    logger.fatal(
+      { issues, configPath },
+      'BFF refusing to start: config validation failed — check the value (and any HORIZON_* env override) at each path. Booleans must be true/false; numbers must be numeric; JSON env vars must be valid JSON',
+    );
+    process.exit(1);
+  }
   throw err;
 }
 logger.info(
-  { configPath: source.path, backend: source.current.auth.backend },
+  {
+    configPath: source.path,
+    backend: source.current.auth.backend,
+    templatesMode: source.current.templates.mode,
+  },
   'config loaded',
 );
+// Template source mode is fixed at BOOT — it selects the boot-seed/source
+// path (live seeds + reads OAP; readonly skips the seed + renders bundled).
+// A hot-reload flip can't safely take effect (readonly→live would need the
+// boot seed that already ran/was-skipped), so we capture it once and only
+// warn if the file later changes it.
+const bootTemplatesMode = source.current.templates.mode;
+setTemplateReadOnly(bootTemplatesMode === 'readonly');
 if (source.current.auth.backend === 'ldap' && source.current.auth.local.users.length > 0) {
   logger.warn(
     { users: source.current.auth.local.users.length },
     'auth.local.users is populated but auth.backend is "ldap"; local users are ignored',
   );
 }
-source.onChange((cfg) => logger.info({ backend: cfg.auth.backend }, 'config reloaded'));
+source.onChange((cfg) => {
+  logger.info({ backend: cfg.auth.backend, templatesMode: cfg.templates.mode }, 'config reloaded');
+  if (cfg.templates.mode !== bootTemplatesMode) {
+    logger.warn(
+      { from: bootTemplatesMode, to: cfg.templates.mode },
+      'templates.mode change needs a BFF restart to take effect (boot-time seed + source selection); keeping the boot mode',
+    );
+  }
+});
 
 const app = Fastify({ logger: loggerOptions });
 
@@ -356,6 +387,14 @@ app.listen({ host, port }).then(
     // admin action triggers a fresh sync. The seed itself is
     // absent-only (`seedMissing` skips templates already present), so
     // a successful previous boot leaves nothing to re-push.
+    // readonly mode renders from the disk bundle and never touches the
+    // ui_template store — skip the readiness wait + seed entirely (otherwise
+    // the backoff loop warn-spams forever against an absent/disabled admin
+    // surface). The OAP *query* reachability check is independent and stays.
+    if (source.current.templates.mode === 'readonly') {
+      logger.info('templates.mode=readonly — rendering bundled templates, ui_template store not used');
+      return;
+    }
     void (async (): Promise<void> => {
       const deps = {
         client: buildOapClients(source.current).uiTemplate(),
