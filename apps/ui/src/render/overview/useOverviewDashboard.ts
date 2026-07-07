@@ -45,6 +45,11 @@ interface MqeRequest {
   mqe: string;
   aggregation: 'sum' | 'avg';
   unit?: string;
+  /** When true, the `mqe` self-aggregates the layer server-side and the
+   *  BFF fires it once (no per-service fan-out). Derived from the widget's
+   *  `aggregateOnPage`: self-aggregating unless the widget opts into
+   *  page-side aggregation. */
+  selfAggregate: boolean;
   /** When set, the widget+kpi expects the layer's service count (from
    *  the landing aggregate's `serviceCount`) instead of an MQE
    *  result. The `mqe` field is filled with a placeholder so the
@@ -53,29 +58,65 @@ interface MqeRequest {
   isServiceCount?: boolean;
 }
 
+/** One landing call's worth of requests. */
+interface LayerGroup {
+  layer: string;
+  /** Page-side top-N window (the `topN` sent to the landing route). Self-
+   *  aggregating groups ignore it (their columns fire once). */
+  limit: number;
+  reqs: MqeRequest[];
+  /** Page-side ranking basis. `column` = sort by an existing column index;
+   *  `mqe` = a standalone ranking metric (probed per service, sorted on,
+   *  NOT displayed). Absent → rank by the first column. */
+  rank?: { column?: number; mqe?: string };
+}
+
+/** Resolve a page-side widget's `rankBy` to a landing-column reference. An
+ *  `mqe` passes straight through; a KPI index is mapped to its position
+ *  among the widget's MQE (non-service-count) KPIs — a `service-count` KPI
+ *  can't be ranked by, so that falls back to the first column. */
+function resolveRank(w: OverviewWidget): LayerGroup['rank'] {
+  const rb = w.rankBy;
+  if (!rb) return undefined;
+  if (rb.mqe) return { mqe: rb.mqe };
+  if (rb.kpi != null && w.kpis) {
+    const target = w.kpis[rb.kpi];
+    if (target && (target.source ?? 'mqe') === 'mqe') {
+      const column = w.kpis.slice(0, rb.kpi).filter((k) => (k.source ?? 'mqe') === 'mqe').length;
+      return { column };
+    }
+  }
+  return undefined;
+}
+
 /**
- * Group every data-bound widget by its `layer`. Section-breaks, alarms,
- * and topology widgets are skipped (no aggregate to evaluate).
+ * Group data-bound widgets into landing calls. Self-aggregating columns
+ * batch by layer (they fire once and ignore topN/ranking). Each page-side
+ * (`aggregateOnPage`) widget gets its OWN call — it carries its own `limit`
+ * AND ranking, which a shared per-layer call couldn't honour. Section-
+ * breaks, alarms, and topology widgets are skipped (no aggregate).
  */
-function groupByLayer(widgets: OverviewWidget[]): Map<string, MqeRequest[]> {
-  const out = new Map<string, MqeRequest[]>();
+function groupRequests(widgets: OverviewWidget[]): LayerGroup[] {
+  const selfByLayer = new Map<string, LayerGroup>();
+  const pageGroups: LayerGroup[] = [];
   for (const w of widgets) {
     const layer = w.layer;
     if (!layer) continue;
     if (w.type === 'section-break' || w.type === 'alarms' || w.type === 'topology') continue;
+    // Self-aggregating unless the widget opts into page-side (fan-out)
+    // aggregation. Service-count rows never fire an MQE, so the flag is
+    // moot for them.
+    const selfAggregate = !(w.aggregateOnPage ?? false);
+    const reqs: MqeRequest[] = [];
     if (w.type === 'metric' && w.mqe) {
-      const reqs = out.get(layer) ?? [];
       reqs.push({
         widgetId: w.id,
         mqe: w.mqe,
         aggregation: w.aggregation ?? 'avg',
         unit: w.unit,
+        selfAggregate,
       });
-      out.set(layer, reqs);
-      continue;
-    }
-    if ((w.type === 'kpi-tile' || w.type === 'metric-composite') && w.kpis) {
-      const reqs = out.get(layer) ?? [];
+    } else if ((w.type === 'kpi-tile' || w.type === 'metric-composite') && w.kpis) {
       for (const k of w.kpis) {
         const isCount = k.source === 'service-count';
         reqs.push({
@@ -85,12 +126,20 @@ function groupByLayer(widgets: OverviewWidget[]): Map<string, MqeRequest[]> {
           aggregation: k.aggregation ?? 'avg',
           unit: k.unit,
           isServiceCount: isCount,
+          selfAggregate: selfAggregate && !isCount,
         });
       }
-      out.set(layer, reqs);
+    }
+    if (reqs.length === 0) continue;
+    if (w.aggregateOnPage) {
+      pageGroups.push({ layer, limit: Math.min(8, Math.max(1, w.limit ?? 1)), reqs, rank: resolveRank(w) });
+    } else {
+      const g = selfByLayer.get(layer) ?? { layer, limit: 1, reqs: [] };
+      g.reqs.push(...reqs);
+      selfByLayer.set(layer, g);
     }
   }
-  return out;
+  return [...selfByLayer.values(), ...pageGroups];
 }
 
 /**
@@ -121,7 +170,7 @@ export function useOverviewDashboard(idRef: Ref<string>) {
   );
 
   const widgets = computed<OverviewWidget[]>(() => dashboard.value?.widgets ?? []);
-  const layerRequests = computed(() => groupByLayer(widgets.value));
+  const layerGroups = computed(() => groupRequests(widgets.value));
 
   // The topbar time picker is part of every overview query so flipping
   // the time / cold pills refires the per-layer landing calls instead
@@ -135,43 +184,49 @@ export function useOverviewDashboard(idRef: Ref<string>) {
     endMs: timeRange.range.endMs,
   }));
 
-  // One landing call per referenced layer. Bundling all that layer's
-  // MQEs in one request keeps the round-trip count to N, where N is the
-  // distinct layer count in the dashboard — usually 1–3.
+  // One landing call per (layer, page-limit) group — usually 1–3 total.
   const layerQueries = useQueries({
     queries: computed(() => {
-      const entries = Array.from(layerRequests.value.entries());
       const range = rangeKey.value;
-      return entries.map(([layer, reqs]) => ({
-        // Include the MQE column set (`reqs`), not just the overview id:
-        // a remote sync or preview edit that keeps the id but changes a
-        // widget's MQE must refire, or the cache serves stale data.
-        queryKey: ['overview-dashboard-data', idRef.value, layer, range, JSON.stringify(reqs)],
+      return layerGroups.value.map((g) => ({
+        // Key on the MQE column set (`reqs`) + the group's limit, not just
+        // the overview id: a remote sync or preview edit that keeps the id
+        // but changes a widget's MQE / limit must refire.
+        queryKey: ['overview-dashboard-data', idRef.value, g.layer, g.limit, JSON.stringify(g.rank ?? null), range, JSON.stringify(g.reqs)],
         queryFn: () => {
           /* Service-count KPIs read from `aggregates.serviceCount`
            * — strip them from the MQE column list to avoid sending
            * a synthetic MQE upstream. They still ride in `reqs` so
            * the value-pickup pass below can inject the count. */
-          const mqeReqs = reqs.filter((r) => !r.isServiceCount);
-          // priority + style are required by the LandingConfig type
-          // but ignored by the BFF route — the client only forwards
-          // topN/orderBy/columns. Stubbed to satisfy the type.
-          const cfg: LandingConfig = {
-            priority: 0,
-            style: 'table',
-            topN: 1,
-            orderBy: mqeReqs[0]?.mqe ?? 'service_cpm',
-            columns: mqeReqs.map((r, i) => ({
-              metric: `w_${i}`,
-              label: r.kpiLabel ?? r.widgetId,
-              mqe: r.mqe,
-              aggregation: r.aggregation,
-              unit: r.unit,
-            })),
-          };
-          return bffClient.layer.landing(layer, cfg, range).then((res) => ({
-            layer,
-            reqs,
+          const mqeReqs = g.reqs.filter((r) => !r.isServiceCount);
+          // Columns are keyed by COLUMN id (`w_<idx>`), not the raw MQE — the
+          // BFF stores per-row metrics under the column key.
+          const columns: LandingConfig['columns'] = mqeReqs.map((r, i) => ({
+            metric: `w_${i}`,
+            label: r.kpiLabel ?? r.widgetId,
+            mqe: r.mqe,
+            aggregation: r.aggregation,
+            unit: r.unit,
+            selfAggregate: r.selfAggregate,
+          }));
+          // Ranking basis for the page-side top-N slice (default: first
+          // column). `rank.column` sorts by an existing KPI column; `rank.mqe`
+          // appends a ranking-ONLY column — fan-out probed + sorted on, but
+          // never read back (the value pickup only maps w_0..w_{n-1}).
+          let orderBy = 'w_0';
+          if (g.rank?.mqe) {
+            const rankKey = `w_${mqeReqs.length}`;
+            columns.push({ metric: rankKey, label: '__rank', mqe: g.rank.mqe, aggregation: 'sum', selfAggregate: false });
+            orderBy = rankKey;
+          } else if (g.rank?.column != null) {
+            orderBy = `w_${g.rank.column}`;
+          }
+          // priority is required by the LandingConfig type but ignored by
+          // the BFF route (it forwards only topN/orderBy/columns).
+          const cfg: LandingConfig = { priority: 0, topN: g.limit, orderBy, columns };
+          return bffClient.layer.landing(g.layer, cfg, range).then((res) => ({
+            layer: g.layer,
+            reqs: g.reqs,
             mqeReqs,
             aggregates: res.aggregates,
           }));

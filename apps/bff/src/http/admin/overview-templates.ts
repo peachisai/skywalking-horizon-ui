@@ -93,7 +93,11 @@ const widgetSchema = z.object({
   cols: z.number().int().optional(),
   kpis: z.array(kpiSchema).optional(),
   showCount: z.boolean().optional(),
+  aggregateOnPage: z.boolean().optional(),
   limit: z.number().int().min(1).max(100).optional(),
+  rankBy: z
+    .object({ kpi: z.number().int().min(0).optional(), mqe: z.string().optional() })
+    .optional(),
   span: z.number().int().min(1).max(12).optional(),
   rowSpan: z.number().int().min(1).max(12).optional(),
 });
