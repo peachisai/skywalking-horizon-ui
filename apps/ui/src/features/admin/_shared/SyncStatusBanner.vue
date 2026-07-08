@@ -79,6 +79,8 @@ function chipLabel(s: SyncBanner['severity']): string {
   switch (s) {
     case 'unreachable':
       return 'READ-ONLY';
+    case 'readonly':
+      return 'READ-ONLY';
     case 'conflict':
       return 'CONFLICT';
     case 'diverged':
@@ -122,6 +124,14 @@ export default { chipLabel };
   border-color: var(--sw-muted, #4a525c);
   background: var(--sw-bg-elev, #161a20);
 }
+/* Deliberate read-only (templates.mode=readonly) — not an error (no red), but
+ * warning-yellow so it's unmistakable that the whole surface is uneditable; a
+ * muted gray strip was too easy to miss next to the green per-row chips. */
+.sbb--readonly {
+  border-color: var(--sw-warn, #b88500);
+  background: rgba(184, 133, 0, 0.10);
+}
+.sbb--readonly .sbb__chip { background: var(--sw-warn, #b88500); color: #1a1a1a; }
 .sbb__row {
   display: flex;
   gap: 12px;

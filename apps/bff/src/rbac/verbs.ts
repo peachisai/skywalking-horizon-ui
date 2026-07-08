@@ -29,11 +29,11 @@ export const VERBS = {
   tracesRead: 'traces:read',
   logsRead: 'logs:read',
   browserErrorsRead: 'browser-errors:read',
+  eventsRead: 'events:read',
   topologyRead: 'topology:read',
   profileRead: 'profile:read',
   infra3dRead: 'infra-3d:read',
 
-  // Operate writes
   ruleRead: 'rule:read',
   ruleWrite: 'rule:write',
   ruleWriteStructural: 'rule:write:structural',
@@ -64,7 +64,6 @@ export const VERBS = {
   ttlRead: 'ttl:read',
   configRead: 'config:read',
 
-  // Admin surface
   userRead: 'user:read',
   userWrite: 'user:write',
   roleRead: 'role:read',

@@ -172,6 +172,7 @@ const rbacSchema = z
         viewer: [
           'metrics:read',
           'alarms:read',
+          'events:read',
           'traces:read',
           'logs:read',
           'browser-errors:read',
@@ -187,6 +188,7 @@ const rbacSchema = z
         maintainer: [
           'metrics:read',
           'alarms:read',
+          'events:read',
           'traces:read',
           'logs:read',
           'browser-errors:read',
@@ -205,6 +207,7 @@ const rbacSchema = z
         operator: [
           'metrics:read',
           'alarms:read',
+          'events:read',
           'traces:read',
           'logs:read',
           'browser-errors:read',
@@ -239,8 +242,7 @@ const rbacSchema = z
       }),
     /** Landing route per role; the UI uses this to send users to the
      *  page that fits their job after login. Cluster status lives at
-     *  `/operate/cluster` (operator tooling against OAP) — the prior
-     *  `/admin/cluster` defaults 404'd because no such route exists. */
+     *  `/operate/cluster` (operator tooling against OAP). */
     landingByRole: z
       .record(z.string(), z.string())
       .default({
@@ -362,11 +364,10 @@ const sourceMapsSchema = z
   .default({});
 
 // Layers hidden from the sidebar / menu even when OAP reports them in
-// `listLayers`. Config-driven (replaces a former hard-coded hide list): an
-// operator can clear `excluded` to surface every reported layer, or add keys
-// for internal-only layers they don't want on the menu. The `reason` is
-// documentation for whoever reads this file — it isn't shown in the UI (an
-// excluded layer simply doesn't appear).
+// `listLayers`. An operator can clear `excluded` to surface every reported
+// layer, or add keys for internal-only layers they don't want on the menu.
+// The `reason` is documentation for whoever reads this file — it isn't shown
+// in the UI (an excluded layer simply doesn't appear).
 const excludedLayerSchema = z
   .object({
     /** OAP layer key (UPPER_SNAKE), matched case-insensitively. */
@@ -408,8 +409,7 @@ const performanceSchema = z
           })
           .strict()
           .default({}),
-        // 3D infrastructure-map metric fan-out (relocated from the 3D
-        // template's former `pipeline` block).
+        // 3D infrastructure-map metric fan-out.
         infra3d: z
           .object({
             metricBulkSize: z.number().int().min(1).max(12).default(6),
@@ -451,6 +451,9 @@ const performanceSchema = z
             traces: z.number().int().min(1).max(500).default(100),
             logs: z.number().int().min(1).max(500).default(100),
             browserLogs: z.number().int().min(1).max(500).default(100),
+            // Events are grouped client-side (one deploy = many per-instance
+            // rows), so we fetch a deeper raw page than the other feeds.
+            events: z.number().int().min(1).max(500).default(200),
           })
           .strict()
           .default({}),
@@ -461,10 +464,26 @@ const performanceSchema = z
   .strict()
   .default({});
 
+// Template source mode. `live` (default) seeds bundled templates into OAP's
+// ui_template store at boot and reads/writes them via the ui_template API.
+// `readonly` renders templates from the local disk bundle only — the
+// ui_template API is never called and the config surface is read-only; OAP's
+// query API (metrics/traces/logs) is still used + boot-checked. Env-overridable
+// (`HORIZON_TEMPLATES_MODE`) so a file-less container can pick the mode.
+const templatesModeDefault: 'live' | 'readonly' =
+  process.env.HORIZON_TEMPLATES_MODE === 'readonly' ? 'readonly' : 'live';
+const templatesSchema = z
+  .object({
+    mode: z.enum(['live', 'readonly']).default(templatesModeDefault),
+  })
+  .strict()
+  .default({ mode: templatesModeDefault });
+
 export const configSchema = z
   .object({
     server: serverSchema.default({}),
     layers: layersSchema,
+    templates: templatesSchema,
     oap: oapSchema.default({}),
     auth: authSchema,
     rbac: rbacSchema,
@@ -485,6 +504,7 @@ export const configSchema = z
   .strict();
 
 export type HorizonConfig = z.infer<typeof configSchema>;
+export type TemplatesConfig = z.infer<typeof templatesSchema>;
 export type SourceMapsConfig = z.infer<typeof sourceMapsSchema>;
 export type LdapConfig = z.infer<typeof ldapSchema>;
 export type LocalUser = z.infer<typeof localUserSchema>;

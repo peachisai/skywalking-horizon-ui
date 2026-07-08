@@ -38,4 +38,11 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'off',
     },
   },
+  {
+    // File-size guardrail. No file may exceed 2000 lines of code (comments
+    // and blank lines excluded) — split it instead.
+    files: ['src/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: { 'max-lines': ['error', { max: 2000, skipComments: true, skipBlankLines: true }] },
+  },
 );

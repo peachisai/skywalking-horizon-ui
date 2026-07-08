@@ -4,13 +4,71 @@ Notable changes to Apache SkyWalking Horizon UI, written from the operator's poi
 
 The version line is shared by every package in the monorepo (apps + shared packages) plus the BFF's `HORIZON_VERSION` default.
 
-## 1.1.0
+## 1.0.0
+
+### Deployment & configuration
+
+- **Run on the bundled templates, read-only — no OAP ui_template API needed.** A new `templates.mode` setting (`HORIZON_TEMPLATES_MODE`) adds a `readonly` mode: Horizon renders every dashboard / overview / alert-page / 3D-map / translation from the **local bundle** and never calls OAP's ui_template admin API. The whole config surface goes **read-only** — the admin pages still open and show the bundled config, but editing and publishing are disabled (and the BFF rejects a write even if it's fired directly). OAP's **query** API is still used and health-checked, so metrics / traces / logs / topology work exactly as before; only the config-template store is local. Default stays `live` (seed-to-OAP, editable). The Cluster Status page shows the active mode and ui_template availability.
+- **The container image runs with environment variables only — no mounted config file.** There is now **one committed, env-driven `horizon.yaml`** (the former `horizon.example.yaml` / local-copy split is gone): every field is a `${HORIZON_…:default}` token, and the image bakes that same file. So `docker run -e HORIZON_OAP_QUERY_URL=… -e HORIZON_AUTH_LOCAL_USERS='[…]' …` is enough — no `-v` mount, no repackaging. Previously `oap.*`, `auth.*`, users, LDAP, RBAC, and performance tuning were YAML-only. Lists and secrets (users, LDAP, OAP auth) are set as **single-line** JSON-string env vars; precedence is env > file > built-in default. The config file itself is the complete, self-documenting env-var reference, mirrored in the [container-image docs](docs/setup/container-image.md). Mounting your own `horizon.yaml` still works and overrides the baked one.
+- **Cluster Status now reports admin-feature reachability, not just config-presence.** The admin-host pane fires a safe GET at the real REST path each feature calls on OAP — dashboard templates → `/ui-management/templates`, DSL management → `/runtime/rule/list`, live debugger → `/dsl-debugging/status`, Inspect → `/inspect/metrics` — and colors each row by whether that path actually responds. A feature whose module is loaded but whose endpoint 404s (a renamed or forked module, a selector that's on-but-broken) now reads **unreachable** instead of a misleading green; the config-dump selector check is kept only as an informational "selector detected" footnote. Dashboard templates (ui_template) join the same table as a feature — shown as "readonly · bundled" when running in `readonly` mode — each row shows how long ago it was last checked, and the page can force a fresh re-check on demand.
 
 ### General Service — PHP runtime (PHM)
 
 - **Six instance dashboard line widgets for PHP Health Metrics** — process CPU utilization, memory used/peak, virtual memory, thread count, and open file descriptors (`meter_instance_php_*`). Each line widget uses `visibleWhen` so widgets render only when the PHP agent reports PHM data (Linux `/proc` sampling of the parent PHP process via `getppid()`).
 
-## 1.0.0
+### General Service — Node.js runtime
+
+- **Six instance dashboard line widgets for Node.js runtime metrics** — process CPU, V8 heap used/total/limit, RSS, and external memory (`meter_instance_nodejs_*`). Each line widget uses `visibleWhen` so widgets render only when the Node.js agent reports runtime data.
+
+### Profiling
+
+- **Profiling task creation is consistent and tells you upfront what it needs.** Across all five task types (Trace / eBPF / Network / pprof / Async) the **New Task** button enables as soon as the basic entity is chosen and always carries a tooltip, and inside the create box a missing target — no profilable processes, or no instances on the service — is shown as a clear message next to a disabled **Create** rather than a silently greyed-out button.
+
+- **Network profiling picks its target instance in the create box and checks it has processes before you submit.** The create modal selects the instance inline and lists that instance's rover-monitored processes; if it has none, **Create** is blocked with a clear reason (OAP rejects a network task on a process-less instance) instead of failing after submit.
+
+- **pprof and async-profiling tasks open a detail modal with their captured logs.**
+
+- **K8S_SERVICE gains a Network Profiling tab.** Kubernetes services, already observed by SkyWalking Rover's eBPF probes, now expose Network Profiling — pick a pod and capture the process-to-process network conversations as a topology, the same capability the Mesh layer offers.
+
+- **Profiling create dialogs are clearer and harder to misuse.** After a create the hint counts down to its single list refresh (`refreshing in Ns`), Escape closes the Async and pprof create dialogs, and Analyze stays disabled until at least one instance is selected.
+
+- **The Async result's event-type picker shows only what the task captured.** It lists just the JFR trees the selected task's events produce (EXECUTION_SAMPLE, LOCK, OBJECT_ALLOCATION_*), dropping options like PROFILER_LIVE_OBJECT that no Horizon-created task can produce — so you can't pick a type that renders an empty graph.
+
+### Alarms
+
+- **The alarm timeline reads more clearly** — a clearer selection band and legend, and the detail sidebar reflows cleanly on narrow windows. Hovering the timeline now hints both affordances — click a minute to filter, or drag across the timeline to select a range — so range-selection is no longer hidden.
+
+### Events
+
+- **A per-service events popout on the service banner.** Every layer drill-down's service banner gains an Events button that opens a modal for that one service's lifecycle events — agent restarts, Kubernetes events, and other point-in-time records from OAP `queryEvents` — without leaving the page you're on. The service is fixed, so the view is a swimlane of **instance × time**: one row per service instance in its own color, each event a bar on a time axis (an event with no end time is an instant marker), Error events ringed red. Overlapping events on one instance stack into sub-lanes; the time axis marks the date at day boundaries; the popout owns its own window (6h / 1d / 2d plus a custom range up to 7 days) and queries at second precision.
+
+- **Built for scale and honest about limits.** A rolling restart of a large service is one bar per instance stacked at the same moment — the granularity is the point, and a search box filters the instance rows by name for services that run hundreds of them. Scrolling is fully internal (sticky time-axis header + sticky instance column, horizontal scroll for long ranges, opened scrolled to the newest events). The newest events are fetched up to a configurable cap (200 by default); the popout shows "newest N · all in range shown" or, when the window holds more, "more available — narrow the range". Clicking a bar opens a detail panel with the instance, Started / Ended / Duration, message, and reported parameters. The button is permission-gated; viewer / maintainer / operator roles gain `events:read`. Events are lifecycle facts, not alerts — for threshold breaches, the Alarms page is unchanged.
+
+### User experience
+
+- **Escape closes any dismissible panel** — modals, row popouts, and the topology focus / node-filter dropdowns all dismiss on Esc.
+
+- **Switching service clears the dependent filters** (log level / tags, browser-error category) back to a clean state, so a stale filter never silently hides the new service's data.
+
+- **Denser Kubernetes dashboard tables** — the K8s layer's table widgets show more rows without scrolling.
+
+- **Live debugger reads cleanly on tall and wide results.** The LAL pipeline matrix's frozen first column now stays pinned when you scroll the grid sideways (it used to drift off with the rest of the matrix), clicking a source line flashes the whole matching step row — not just its label — and the MAL / LAL / OAL debugger pages now scroll as one page for tall captures instead of trapping the result in a fixed-height inner box.
+
+- **The LAL pipeline matrix renders Envoy access-log (ALS) and any non-generic log format.** Each cell now shows whatever fields OAP serialized for the record rather than a fixed `LogData` subset — so an `EnvoyAccessLogBuilder` snapshot displays its service / endpoint / response data where it used to render blank, a record whose raw proto input OAP couldn't serialize surfaces the reason (`jsonformat-failed …`) instead of an empty cell, and each cell names its payload class. The free-text search and the cell popout follow the same format-agnostic rendering.
+
+- **The LAL matrix gains per-row filtering and is correct across cluster nodes.** A filter on each step row — shown only when that row has gaps — narrows the grid to the records that actually produced data for that step (e.g. just the records that emitted output), and the row counts now reflect the whole capture rather than the visible page. Each OAP node's matrix filters and column-pins independently, so acting on one node's grid no longer changes another's. Oversized cells are height-capped so one huge record can't blow out the grid, and statement-mode step labels read `function @7` rather than a raw template.
+
+- **Inspect a LAL cell's full data and diff pipeline stages.** Every cell carries a persistent button — `VIEW` on the input row, `DIFF` on the builder rows — that opens the complete payload in a syntax-highlighted JSON viewer with the nested log `content` inlined as real JSON. For the builder snapshots a compare picker renders the captured DSL itself, with per-statement steps marked on their line and the `extractor` / `sink` block snapshots drawn as selectable ranges; picking one shows a side-by-side diff, so you can see exactly what a statement or stage changed in the built log.
+
+### Dashboards
+
+- **Cards can render values as colored status chips.** A card widget with `format: enum` now takes an optional chip color per value-map entry — `ok` (green), `warn` (amber), `err` (red), `info` (blue), `neutral` (grey) — and renders each matched value, or metric label, as a colored chip instead of a bare number. Set it in the layer-dashboard admin's value-map editor, next to the existing value → label mapping.
+
+- **The Kubernetes Node Status card now reads as a status, not a number.** Instead of a raw `1`, it shows the node's active conditions as colored chips — `Ready` in green, the `*Pressure` / `NetworkUnavailable` conditions in amber/red — so node health is legible at a glance.
+
+- **The Kubernetes Node dashboard gains a Pod Total card.** A compact card now sits directly under Node Status showing the current count of pods scheduled on the selected node (all phases) — the latest value of the same metric the "Pods on Node" trend already charts — so the space beside the status card is no longer blank.
+
+- **Satellite event and queue widgets break out per pipeline.** The SO11Y_SATELLITE Receive Events, Fetch Events, Queue Input / Output, and Queue Used widgets now label each series by its Satellite pipeline (`tracingpipe`, `jvmpipe`, `logpipe`, …) instead of collapsing every line onto a single `all`, so you can see which collection pipeline drives the rate.
 
 ### Performance & behavior tuning
 
@@ -27,6 +85,7 @@ The version line is shared by every package in the monorepo (apps + shared packa
 
 ### Logs
 
+- **Log and browser-error lists query on demand, not on every edit.** The per-layer Logs tab, cross-layer Log inspect, and the Browser Errors tab now stage condition changes and fetch only when you press **Run query** — a fresh tab shows a "Pick your conditions, then click Run query" prompt, and switching service resets to that prompt (clearing the level / tag / category filters), so the previous service's data never lingers under the new one.
 - **Log inspect uses the full width.** The cross-layer Log inspect form (Target + Tags / Trace ID / Time / Limit conditions) now spans the whole page instead of sharing a two-column strip with empty space.
 - **Clicking a log row opens a centered popout.** Both the cross-layer Log inspect and the per-layer Logs tab now open the same full-payload popout on row click — format-aware pretty-print (JSON pretty-printed by content type), the tags table, service / instance / endpoint / time meta, a copy button, and the trace link. Escape or the close button dismisses it.
 - **Log inspect can now query Browser errors across the page.** A new **Browser** source on Log inspect (beside Raw) queries the BROWSER layer's JS error logs from anywhere — pick a browser service or type a service name (or leave it blank for all services), then narrow by category (AJAX / RESOURCE / VUE / PROMISE / JS / UNKNOWN), version, page, and time window, and read the error list (message, category, page path, app version, time, minified `line:col`). Upload and manage source maps inline, then click a row to open a popout with the error meta, the raw stack, and the source-map de-obfuscation control — resolve the minified stack back to the original frames + source snippet.

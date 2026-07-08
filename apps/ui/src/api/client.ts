@@ -81,6 +81,7 @@ import { ZipkinApi } from './scopes/zipkin';
 import { LogApi } from './scopes/log';
 import { EvaluationRecordApi } from './scopes/evaluation-record';
 import { BrowserErrorsApi } from './scopes/browser-errors';
+import { EventsApi } from './scopes/events';
 import { ProfileApi } from './scopes/profile';
 import { EbpfApi } from './scopes/ebpf';
 import { NetworkProfileApi } from './scopes/network-profile';
@@ -186,6 +187,12 @@ export type {
   ResolveRequest,
   ResolvedFrame,
   ResolveResponse,
+  EventType,
+  EventOrder,
+  EventSource,
+  EventRow,
+  EventsQueryRequest,
+  EventsResponse,
   ProfileTask,
   ProfileTaskLog,
   ProfileTaskListResponse,
@@ -225,6 +232,8 @@ export type {
   ProcessRelationEndpointRef,
   ProcessRelationMetric,
   ProcessRelationMetricsResponse,
+  NetworkProcess,
+  NetworkProcessesResponse,
   NetworkProfilingSampling,
   NetworkProfilingCreateRequest,
   NetworkProfilingCreateResponse,
@@ -916,6 +925,7 @@ export class BffClient {
   readonly log = new LogApi(this);
   readonly evaluationRecord = new EvaluationRecordApi(this);
   readonly browserErrors = new BrowserErrorsApi(this);
+  readonly events = new EventsApi(this);
   readonly profile = new ProfileApi(this);
   readonly ebpf = new EbpfApi(this);
   readonly networkProfile = new NetworkProfileApi(this);

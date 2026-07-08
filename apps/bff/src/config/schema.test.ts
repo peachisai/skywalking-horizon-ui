@@ -21,7 +21,7 @@ import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import YAML from 'yaml';
 import { configSchema } from './schema.js';
-import { interpolateEnv } from './loader.js';
+import { interpolateEnv, stripNullish } from './loader.js';
 
 describe('configSchema defaults', () => {
   it('parses an empty object — every non-optional field has a default', () => {
@@ -29,42 +29,84 @@ describe('configSchema defaults', () => {
   });
 });
 
-// Guard against horizon.example.yaml drifting from the schema defaults. The
-// example is "reference, not override" — every value it shows is meant to
-// equal what the BFF runs with when the block is omitted. If a default
-// changes (or someone edits the example to a non-default), this fails so the
-// two are reconciled before merge.
-describe('horizon.example.yaml matches schema defaults', () => {
+// horizon.yaml is the SHIPPED default + the env-var reference: every
+// field is a `${HORIZON_…:default}` token. Two contracts guarded here:
+//   1. With NO env set, the tokens' defaults parse to EXACTLY the schema
+//      defaults — so the file is a faithful "this is what you get" reference.
+//   2. Every top-level config section appears in the example, so a new
+//      section can't be added to the schema without an env-overridable token.
+describe('horizon.yaml — tokenized default + parity', () => {
   const here = dirname(fileURLToPath(import.meta.url));
-  const examplePath = resolve(here, '../../../../horizon.example.yaml');
-  const example = YAML.parse(interpolateEnv(readFileSync(examplePath, 'utf8'))) ?? {};
-  const defaults = configSchema.parse({}) as Record<string, unknown>;
+  const examplePath = resolve(here, '../../../../horizon.yaml');
+  const raw = readFileSync(examplePath, 'utf8');
 
-  // YAML omits a value as null; the schema models the same absence as the
-  // empty string (interpolated `${VAR:}`). Treat the two as equal so an
-  // unset path doesn't read as drift.
-  const norm = (v: unknown): unknown => (v === null || v === undefined ? '' : v);
+  it('parses to exactly the schema defaults (token defaults match the schema)', () => {
+    // configSchema.parse({}) reads a FIXED set of HORIZON_* env vars inline for
+    // its defaults (server host/port, the *_FILE paths, sourcemaps dir,
+    // templates mode). Interpolate the example with ONLY those — so the two
+    // sides agree on the env-derived defaults, while every OTHER stray HORIZON_*
+    // in a dev/CI env is ignored (it would otherwise read as drift, since the
+    // schema default for e.g. oap.queryUrl is a literal, not env-read).
+    const SCHEMA_ENV = [
+      'HORIZON_SERVER_HOST', 'HORIZON_SERVER_PORT', 'HORIZON_AUDIT_FILE', 'HORIZON_SETUP_FILE',
+      'HORIZON_ALARMS_FILE', 'HORIZON_WIRE_LOG_FILE', 'HORIZON_SOURCEMAPS_DIR', 'HORIZON_TEMPLATES_MODE',
+    ];
+    const env: NodeJS.ProcessEnv = {};
+    for (const k of SCHEMA_ENV) if (process.env[k] !== undefined) env[k] = process.env[k];
+    const parsed = stripNullish(YAML.parse(interpolateEnv(raw, env)) ?? {});
+    expect(configSchema.parse(parsed)).toEqual(configSchema.parse({}));
+  });
 
-  // Walk only what the example actually declares; the example is allowed to
-  // omit fields (those fall back to defaults at runtime). Every scalar /
-  // array it DOES carry must match the parsed default at the same path.
-  const walk = (exVal: unknown, defVal: unknown, path: string): void => {
-    if (Array.isArray(exVal) || (exVal !== null && typeof exVal === 'object')) {
-      if (Array.isArray(exVal)) {
-        expect(defVal, `${path} should be an array in defaults`).toEqual(exVal);
+  it('every top-level config section has a token in the example', () => {
+    const sections = Object.keys(configSchema.parse({}) as Record<string, unknown>);
+    const exampleKeys = Object.keys((YAML.parse(raw) ?? {}) as Record<string, unknown>);
+    for (const s of sections) {
+      // `infra3d` is the deprecated/ignored passthrough — never tokenized.
+      if (s === 'infra3d') continue;
+      expect(exampleKeys, `config section "${s}" is missing from horizon.yaml`).toContain(s);
+    }
+  });
+
+  it('key fields are env tokens (not literals), so they are overridable', () => {
+    expect(raw).toContain('${HORIZON_OAP_QUERY_URL');
+    expect(raw).toContain('${HORIZON_AUTH_LOCAL_USERS');
+    expect(raw).toContain('${HORIZON_TEMPLATES_MODE');
+    expect(raw).toContain('${HORIZON_OAP_ADMIN_URL');
+  });
+
+  // The real contract: EVERY schema-default field is env-overridable. Walk the
+  // fully-defaulted config and assert each node is covered in the example by a
+  // `${HORIZON_…}` token — either a scalar token at that path, or a JSON-env
+  // token standing in for a whole subtree (performance, rbac.roles, …). Catches
+  // a new nested field shipped without env coverage, which the top-level-section
+  // check above would miss.
+  it('every schema-default field is env-tokenized in the example (recursive)', () => {
+    const defaults = configSchema.parse({}) as Record<string, unknown>;
+    const example = (YAML.parse(raw) ?? {}) as Record<string, unknown>;
+    const TOKEN = /\$\{HORIZON_[A-Z0-9_]+(:[\s\S]*)?\}/;
+    const uncovered: string[] = [];
+    const walk = (schemaNode: unknown, exampleNode: unknown, path: string): void => {
+      // A token string covers this node (scalar token, or a JSON-env token
+      // collapsing a whole subtree to one var).
+      if (typeof exampleNode === 'string' && TOKEN.test(exampleNode)) return;
+      if (schemaNode !== null && typeof schemaNode === 'object' && !Array.isArray(schemaNode)) {
+        if (exampleNode === null || typeof exampleNode !== 'object' || Array.isArray(exampleNode)) {
+          uncovered.push(`${path} (section absent from example)`);
+          return;
+        }
+        for (const key of Object.keys(schemaNode)) {
+          if (path === '' && key === 'infra3d') continue; // deprecated passthrough, never tokenized
+          walk(
+            (schemaNode as Record<string, unknown>)[key],
+            (exampleNode as Record<string, unknown>)[key],
+            path ? `${path}.${key}` : key,
+          );
+        }
         return;
       }
-      const exObj = exVal as Record<string, unknown>;
-      const defObj = (defVal ?? {}) as Record<string, unknown>;
-      for (const key of Object.keys(exObj)) {
-        walk(exObj[key], defObj[key], path ? `${path}.${key}` : key);
-      }
-      return;
-    }
-    expect(norm(exVal), `${path} drifted from schema default`).toEqual(norm(defVal));
-  };
-
-  it('every value present in the example equals the schema default', () => {
-    walk(example, defaults, '');
+      uncovered.push(`${path} (leaf not tokenized)`);
+    };
+    walk(defaults, example, '');
+    expect(uncovered, `fields lacking an env token in horizon.yaml:\n  ${uncovered.join('\n  ')}`).toEqual([]);
   });
 });

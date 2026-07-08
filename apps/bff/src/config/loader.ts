@@ -50,6 +50,27 @@ export function interpolateEnv(
   });
 }
 
+/**
+ * Recursively drop keys whose value is `null`. A `${VAR:null}` token (used for
+ * optional blocks + structured defaults like `oap.auth`, `auth.ldap`,
+ * `rbac.roles`, `performance`) resolves to `null` when the env var is unset,
+ * meaning "not provided — use the schema default", NOT an explicit null. No
+ * config field legitimately accepts null, so stripping them lets the strict
+ * schema fall through to its default instead of rejecting `key: null`.
+ */
+export function stripNullish(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripNullish);
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === null) continue;
+      out[k] = stripNullish(v);
+    }
+    return out;
+  }
+  return value;
+}
+
 /** Raised when the loaded config is structurally valid but operationally
  *  unusable in a way that cannot be deferred to runtime (reserved — no
  *  current callers; the auth-unconfigured cases boot and surface the
@@ -83,17 +104,13 @@ export function isAuthConfigured(cfg: HorizonConfig): boolean {
 
 /**
  * Inspect the loaded config and emit a startup warning if auth isn't
- * wired yet. Kept as a separate function (rather than inlined into
- * `loadConfig`) so callers can choose to skip it (tests) or run it on
- * config hot-reload too.
+ * wired yet. Separate from `loadConfig` so callers can skip it (tests)
+ * or run it on config hot-reload too.
  *
- * The historical contract was fail-loud — a misconfigured deployment
- * crashed on boot. That was inconvenient for first-touch operators:
- * a clean `docker run` produced a CrashLoopBackOff instead of a UI
- * with a "set up auth" hint. We now boot, log a warning, and surface
- * the same information to the login page so the first interaction is
- * "open browser → see the next step" rather than "watch container
- * logs → guess what's wrong".
+ * A misconfigured deployment boots and logs a warning rather than
+ * crashing, surfacing the same information to the login page so the
+ * first interaction is "open browser → see the next step" rather than
+ * "watch container logs → guess what's wrong".
  *
  * Returns the input on success so callers can chain.
  */
@@ -138,7 +155,7 @@ function parseFile(absPath: string): HorizonConfig {
   }
   const interpolated = interpolateEnv(raw);
   const parsed = YAML.parse(interpolated) ?? {};
-  return configSchema.parse(parsed);
+  return configSchema.parse(stripNullish(parsed));
 }
 
 export function loadConfig(configPath: string): ConfigSource {

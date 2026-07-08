@@ -115,7 +115,7 @@ function roleBlurb(role: string): string {
   if (role === 'admin') return t('Full access including user & access management.');
   if (role === 'operator') return t('Configures alerts, dashboards, rules, and runs diagnostics.');
   if (role === 'maintainer') return t('Watches the SkyWalking platform itself (cluster, internals).');
-  if (role === 'viewer') return t('Reads dashboards, traces, logs, and alarms.');
+  if (role === 'viewer') return t('Reads dashboards, traces, logs, alarms, and events.');
   return '';
 }
 
@@ -124,6 +124,7 @@ function roleBlurb(role: string): string {
 const VERB_LABELS = computed<Record<string, { label: string; hint?: string }>>(() => ({
   'metrics:read':           { label: t('See metric dashboards') },
   'alarms:read':            { label: t('See alarms') },
+  'events:read':            { label: t('See service events') },
   'traces:read':            { label: t('See traces') },
   'logs:read':              { label: t('See logs') },
   'topology:read':          { label: t('See service & endpoint topology') },
@@ -186,8 +187,9 @@ const VERB_GROUPS = computed<VerbGroup[]>(() => [
       { label: t('Profiling results'), icon: '▦' },
       { label: t('3D infrastructure map'), icon: '⬡' },
       { label: t('Alarms'), icon: '!' },
+      { label: t('Service events'), icon: '◔' },
     ],
-    verbs: ['metrics:read', 'alarms:read', 'traces:read', 'logs:read', 'topology:read', 'profile:read', 'infra-3d:read'],
+    verbs: ['metrics:read', 'alarms:read', 'events:read', 'traces:read', 'logs:read', 'topology:read', 'profile:read', 'infra-3d:read'],
   },
   {
     title: t('Platform monitoring'),
@@ -322,7 +324,6 @@ function grantsOf(role: string): string[] {
     <div v-if="loading" class="loading">{{ t('Loading roles…') }}</div>
     <div v-else-if="error" class="error">{{ t('Failed to load:') }} {{ error }}</div>
     <template v-else-if="status">
-      <!-- Intro -->
       <section class="sw-card intro">
         <h2 class="intro-title">{{ t('What each role can do') }}</h2>
         <i18n-t
@@ -375,14 +376,12 @@ function grantsOf(role: string): string[] {
         </div>
       </section>
 
-      <!-- Per-group cards: Menu scope (left) + Actions (right) -->
       <section v-for="g in groupedVerbs" :key="g.title" class="sw-card group-card">
         <header class="card-head">
           <h3>{{ g.title }}</h3>
           <span class="muted">{{ g.blurb }}</span>
         </header>
         <div class="group-body">
-          <!-- Left: mock menu bar showing what this area covers -->
           <aside class="scope" :aria-label="t('Menu scope')">
             <div class="col-head">
               <span class="col-num">1</span>
@@ -398,10 +397,8 @@ function grantsOf(role: string): string[] {
             </ul>
           </aside>
 
-          <!-- Connector arrow makes the relationship visible -->
           <div class="connector" aria-hidden="true">→</div>
 
-          <!-- Right: per-role permission grid for the actions in this area -->
           <div class="grid-wrap">
             <div class="col-head">
               <span class="col-num">2</span>
@@ -475,7 +472,6 @@ function grantsOf(role: string): string[] {
   color: var(--sw-fg-0);
 }
 
-/* ── Intro ───────────────────────────────────────────────────────── */
 .intro { padding: 14px 18px; }
 .intro-title { margin: 0; font-size: var(--sw-fs-lg); color: var(--sw-fg-0); font-weight: var(--sw-fw-semibold); }
 .intro-body {
@@ -503,7 +499,6 @@ function grantsOf(role: string): string[] {
   line-height: var(--sw-lh-normal);
 }
 
-/* ── Group card ──────────────────────────────────────────────────── */
 .muted { color: var(--sw-fg-3); font-size: var(--sw-fs-sm); font-weight: var(--sw-fw-regular); }
 .card-head h3 + .muted { margin-left: 6px; }
 
@@ -651,7 +646,6 @@ function grantsOf(role: string): string[] {
   font-size: var(--sw-fs-lg);
 }
 
-/* ── Pills ───────────────────────────────────────────────────────── */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -668,7 +662,6 @@ function grantsOf(role: string): string[] {
 .pill-info  { color: var(--sw-info);  background: rgba(56,189,248,0.16); border-color: rgba(56,189,248,0.33); }
 .pill-cyan  { color: var(--sw-cyan, #22d3ee); background: rgba(34,211,238,0.14); border-color: rgba(34,211,238,0.33); }
 
-/* ── Rules card ──────────────────────────────────────────────────── */
 .rules-card { padding: 0; }
 .rules-grid {
   display: grid;
