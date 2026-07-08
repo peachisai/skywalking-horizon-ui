@@ -39,7 +39,16 @@ import Modal from '@/features/operate/_shared/Modal.vue';
 
 const { t } = useI18n();
 
-const props = defineProps<{ row: LogRow | null }>();
+const props = withDefaults(defineProps<{
+  row: LogRow | null;
+  modalTitle?: string;
+  endpointLabel?: string;
+  badgeTagKey?: string;
+}>(), {
+  modalTitle: 'Log entry',
+  endpointLabel: 'Endpoint',
+  badgeTagKey: '',
+});
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'jump-trace', payload: { traceId: string; ts: number }): void;
@@ -80,6 +89,14 @@ function fmtDate(ts: number): string {
 }
 
 const fmt = computed<LogFormat | null>(() => (props.row ? detectFormat(props.row) : null));
+const badgeText = computed(() => {
+  if (!props.row) return '';
+  if (props.badgeTagKey) {
+    const tag = props.row.tags.find((item) => item.key.toLowerCase() === props.badgeTagKey.toLowerCase());
+    if (tag?.value) return tag.value;
+  }
+  return fmt.value?.toUpperCase() ?? '';
+});
 
 async function copyContent(): Promise<void> {
   if (!props.row) return;
@@ -95,12 +112,12 @@ function onJumpTrace(): void {
 </script>
 
 <template>
-  <Modal :open="row != null" :title="t('Log entry')" width="min(1100px, 92vw)" fit-body @close="emit('close')">
+  <Modal :open="row != null" :title="t(props.modalTitle)" width="min(1100px, 92vw)" fit-body @close="emit('close')">
     <div v-if="row" class="ld">
       <div class="ld-head">
         <div class="ld-head-l">
           <span class="ld-time mono">{{ fmtTime(row.timestamp) }} · {{ fmtDate(row.timestamp) }}</span>
-          <span class="ld-fmt">{{ fmt!.toUpperCase() }}</span>
+          <span class="ld-fmt">{{ badgeText }}</span>
         </div>
         <div class="ld-ctrls">
           <button class="sw-btn small" type="button" @click="copyContent">{{ t('Copy') }}</button>
@@ -110,7 +127,7 @@ function onJumpTrace(): void {
       <div class="ld-meta">
         <span v-if="row.serviceName" class="ld-meta-item">{{ t('Service') }} <code>{{ row.serviceName }}</code></span>
         <span v-if="row.serviceInstanceName" class="ld-meta-item">{{ t('Instance') }} <code>{{ row.serviceInstanceName }}</code></span>
-        <span v-if="row.endpointName" class="ld-meta-item">{{ t('Endpoint') }} <code>{{ row.endpointName }}</code></span>
+        <span v-if="row.endpointName" class="ld-meta-item">{{ t(props.endpointLabel) }} <code>{{ row.endpointName }}</code></span>
         <span v-if="row.traceId" class="ld-meta-item">{{ t('Trace ID') }} <code class="mono">{{ row.traceId }}</code></span>
       </div>
       <div class="ld-split">

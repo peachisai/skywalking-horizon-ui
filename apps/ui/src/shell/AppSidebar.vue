@@ -598,6 +598,14 @@ watch(
                   <Icon name="log" /><span>Pod Logs</span>
                 </RouterLink>
                 <RouterLink
+                  v-if="L.key.toUpperCase() === 'VIRTUAL_GENAI'"
+                  :to="`/layer/${L.key}/evaluation-record`"
+                  class="sw-nav-item"
+                  :class="{ 'is-active': isActive(`/layer/${L.key}/evaluation-record`) }"
+                >
+                  <Icon name="log" /><span>Evaluation Record</span>
+                </RouterLink>
+                <RouterLink
                   v-if="L.caps.traceProfiling"
                   :to="`/layer/${L.key}/trace-profiling`"
                   class="sw-nav-item"

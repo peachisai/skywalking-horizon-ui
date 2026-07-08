@@ -79,6 +79,7 @@ import { LayerApi } from './scopes/layer';
 import { TraceApi } from './scopes/trace';
 import { ZipkinApi } from './scopes/zipkin';
 import { LogApi } from './scopes/log';
+import { EvaluationRecordApi } from './scopes/evaluation-record';
 import { BrowserErrorsApi } from './scopes/browser-errors';
 import { ProfileApi } from './scopes/profile';
 import { EbpfApi } from './scopes/ebpf';
@@ -171,6 +172,9 @@ export type {
   LogQueryRequest,
   LogsResponse,
   LogFacetsResponse,
+  EvaluationRecordFacetsResponse,
+  EvaluationRecordRow,
+  EvaluationRecordsResponse,
   BrowserErrorCategory,
   BrowserErrorRow,
   BrowserErrorsQueryRequest,
@@ -910,6 +914,7 @@ export class BffClient {
   readonly trace = new TraceApi(this);
   readonly zipkin = new ZipkinApi(this);
   readonly log = new LogApi(this);
+  readonly evaluationRecord = new EvaluationRecordApi(this);
   readonly browserErrors = new BrowserErrorsApi(this);
   readonly profile = new ProfileApi(this);
   readonly ebpf = new EbpfApi(this);
