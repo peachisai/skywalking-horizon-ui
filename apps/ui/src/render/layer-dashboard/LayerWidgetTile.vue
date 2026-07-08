@@ -27,6 +27,7 @@
 import { useI18n } from 'vue-i18n';
 import type { DashboardWidget, DashboardWidgetResult } from '@skywalking-horizon-ui/api-client';
 import TimeChart from '@/components/charts/TimeChart.vue';
+import Icon from '@/components/icons/Icon.vue';
 import TopList from '@/components/charts/TopList.vue';
 import RecordList from '@/render/widgets/RecordList.vue';
 import WidgetTip from '@/components/primitives/WidgetTip.vue';
@@ -71,6 +72,12 @@ const props = defineProps<{
   hasTopData: (w: { id: string; type: string }) => boolean;
   popOutTopList: (id: string) => void;
   setTopListRef: (id: string, el: unknown) => void;
+  traceDrillMode: (w: DashboardWidget) => 'latency' | 'error' | null;
+  onDrillPoint: (
+    w: DashboardWidget,
+    p: { seriesIndex: number; dataIndex: number; value: number; seriesName: string; x: number; y: number },
+  ) => void;
+  drillOpenId: string | null;
   // Compare-mode helpers (null-safe: only read when compareMode is true).
   compareHue: (key: string) => string;
   entityLabel: (key: string) => string;
@@ -132,6 +139,17 @@ function chipRows(w: DashboardWidget, res: DashboardWidgetResult | undefined): C
         <WidgetTip :tip="widget.tip" />
       </div>
       <div class="w-head-right">
+        <span
+          v-if="!compareMode && traceDrillMode(widget)"
+          class="drill-flag"
+          :class="`df-${traceDrillMode(widget)}`"
+          :title="traceDrillMode(widget) === 'latency'
+            ? t('Click a point to view the slowest traces at that time')
+            : t('Click a point to view error traces at that time')"
+        >
+          <Icon name="trace" :size="11" />
+          <span>{{ t('traces') }}</span>
+        </span>
         <!-- Card widgets render the unit beneath the big value;
              surfacing it here too is a duplicate. Other types
              (line / top / record) need the unit hint here because
@@ -190,6 +208,9 @@ function chipRows(w: DashboardWidget, res: DashboardWidgetResult | undefined): C
           :accent="widgetColor(widget)"
           :format="widget.format"
           :x-labels="xLabelsForLen(compareMode ? lineLen(widget.id) : (result(widget.id)!.series![0]?.data.length ?? 0))"
+          :clickable="!compareMode && !!traceDrillMode(widget)"
+          :tip-suppressed="drillOpenId === widget.id"
+          @point-click="onDrillPoint(widget, $event)"
         />
         <span v-else class="muted">{{ (compareMode ? compareLoading : (isFetching && !results.has(widget.id))) ? t('loading…') : t('no data') }}</span>
       </template>
@@ -357,6 +378,29 @@ function chipRows(w: DashboardWidget, res: DashboardWidgetResult | undefined): C
 .w-popout:hover {
   color: var(--sw-fg-0);
   border-color: var(--sw-line-2);
+}
+.drill-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px 1px 4px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.drill-flag.df-latency {
+  color: var(--sw-warn);
+  background: var(--sw-warn-soft);
+  border-color: color-mix(in srgb, var(--sw-warn) 30%, transparent);
+}
+.drill-flag.df-error {
+  color: var(--sw-err);
+  background: var(--sw-err-soft);
+  border-color: color-mix(in srgb, var(--sw-err) 30%, transparent);
 }
 .w-body {
   /* Column-flex so charts / lists / records can flex: 1 and claim the

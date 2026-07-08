@@ -27,9 +27,13 @@
   description) instead of a real one.
 -->
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { OverviewDashboard, OverviewKpi, OverviewWidget } from '@skywalking-horizon-ui/api-client';
 import MqeExpressionInput from '@/features/admin/_shared/MqeExpressionInput.vue';
+import WidgetTip from '@/components/primitives/WidgetTip.vue';
+import { vAutosize } from '@/utils/autosize';
 import { useEscapeToClose } from '@/components/primitives/useEscapeToClose';
+import { useOapInfo } from '@/shell/useOapInfo';
 import { META_SEL } from './constants';
 
 defineProps<{
@@ -48,6 +52,58 @@ const emit = defineEmits<{
 }>();
 
 useEscapeToClose(() => true, () => emit('close'));
+
+// `{{topn}}` is the only MQE variable — the layer-wide top-N window the BFF
+// substitutes at query time. Surface its live value so authors know what the
+// raw placeholder means (and that it IS intentional, not a typo).
+const { overviewTopN } = useOapInfo();
+const topnHint = computed(
+  () =>
+    `{{topn}} → the layer-wide top-N window, replaced at query time with ` +
+    `HORIZON_QUERY_OVERVIEW_TOPN (currently ${overviewTopN.value}). ` +
+    `Use in a self-aggregating MQE, e.g. sum(top_n(service_cpm,{{topn}},DES,attr0='GENERAL')).`,
+);
+const aggOnPageHint =
+  'On: Horizon queries the metric per service and sums/averages the top-N of them here — for ' +
+  "metrics a server-side top_n() can't wrap (cluster / meter series, latest(...), ratios). " +
+  "Off (default): the KPI's own MQE self-aggregates the whole layer server-side (one top_n(...) expression).";
+const topNServicesHint =
+  'How many of the layer’s services feed the page-side aggregate, highest-ranked first (see “Rank by”). ' +
+  'A single-entity layer (one cluster / one control plane) is unaffected; raise it for a multi-instance layer.';
+const rankByHint =
+  'Which metric ranks the top-N services (the BFF sorts the per-service rows, highest first). ' +
+  'Pick a KPI — the first one is the default; use a REGULAR_VALUE metric, a LABELED_VALUE ranks poorly — ' +
+  'or “a separate metric” for a ranking expression not shown as a KPI. Only matters when the layer has >1 service.';
+
+function setAggMode(w: OverviewWidget, pageSide: boolean): void {
+  w.aggregateOnPage = pageSide;
+  if (!pageSide) w.rankBy = undefined; // ranking only applies to the page-side path
+}
+function firstMqeKpi(w: OverviewWidget): number {
+  const i = (w.kpis ?? []).findIndex((k) => (k.source ?? 'mqe') === 'mqe');
+  return i < 0 ? 0 : i;
+}
+/** Current "Rank by" selection: a KPI index (string) or the `__mqe` escape. */
+function rankSel(w: OverviewWidget): string {
+  if (w.rankBy?.mqe != null) return '__mqe';
+  return String(w.rankBy?.kpi ?? firstMqeKpi(w));
+}
+function setRankSel(w: OverviewWidget, v: string): void {
+  if (v === '__mqe') {
+    w.rankBy = { mqe: '' };
+    return;
+  }
+  const idx = Number(v);
+  // Absent rankBy === rank by the first KPI, so only store an explicit index
+  // when it isn't the default — keeps the template clean.
+  w.rankBy = idx === firstMqeKpi(w) ? undefined : { kpi: idx };
+}
+function rankMqe(w: OverviewWidget): string {
+  return w.rankBy?.mqe ?? '';
+}
+function setRankMqe(w: OverviewWidget, v: string): void {
+  w.rankBy = { mqe: v };
+}
 
 function widgetKindLabel(type: OverviewWidget['type']): string {
   switch (type) {
@@ -110,6 +166,7 @@ function onKpiStyleChange(k: OverviewKpi): void {
       <label class="ot__field ot__field--wide">
         <span>Description</span>
         <textarea
+          v-autosize="draft.description"
           :value="draft.description"
           class="ot__in ot__in--ta"
           rows="3"
@@ -197,7 +254,7 @@ function onKpiStyleChange(k: OverviewKpi): void {
 
       <div v-if="w.type === 'metric'" class="ot__row">
         <label class="ot__field ot__field--wide">
-          <span>MQE</span>
+          <span>MQE <WidgetTip :tip="topnHint" /></span>
           <MqeExpressionInput v-model="w.mqe" placeholder="service_cpm" title="Widget MQE" />
         </label>
         <label class="ot__field">
@@ -223,10 +280,49 @@ function onKpiStyleChange(k: OverviewKpi): void {
 
       <template v-if="w.type === 'kpi-tile' || w.type === 'metric-composite'">
         <div v-if="w.type === 'kpi-tile'" class="ot__row">
-          <label class="ot__field">
-            <span>Show service count</span>
+          <label class="ot__field ot__field--check">
             <input type="checkbox" v-model="w.showCount" />
+            <span>Show service count</span>
           </label>
+        </div>
+
+        <!-- Aggregation method. Server-side (default): each KPI's MQE
+             self-aggregates the layer via top_n(). Page-side: fan out per
+             service + roll up the top-N (for series top_n can't wrap —
+             cluster/meter metrics, latest(...), ratios). -->
+        <div class="ot__agg">
+          <div class="ot__agg-head">Aggregation <WidgetTip :tip="aggOnPageHint" /></div>
+          <label class="ot__agg-opt">
+            <input type="radio" :name="`agg-${w.id}`" :checked="!w.aggregateOnPage" @change="setAggMode(w, false)" />
+            <span><strong>Server-side</strong> — each KPI's MQE rolls up the layer itself (<code>top_n</code>)</span>
+          </label>
+          <label class="ot__agg-opt">
+            <input type="radio" :name="`agg-${w.id}`" :checked="!!w.aggregateOnPage" @change="setAggMode(w, true)" />
+            <span><strong>Page-side</strong> — rank the layer's services here, aggregate the top-N</span>
+          </label>
+          <div v-if="w.aggregateOnPage" class="ot__agg-params">
+            <label class="ot__field">
+              <span>Top-N services <WidgetTip :tip="topNServicesHint" /></span>
+              <input v-model.number="w.limit" type="number" min="1" max="8" class="ot__in ot__in--num" />
+            </label>
+            <label class="ot__field ot__field--wide">
+              <span>Rank by <WidgetTip :tip="rankByHint" /></span>
+              <select
+                :value="rankSel(w)"
+                class="ot__in"
+                @change="setRankSel(w, ($event.target as HTMLSelectElement).value)"
+              >
+                <template v-for="(k, i) in (w.kpis ?? [])" :key="i">
+                  <option v-if="(k.source ?? 'mqe') === 'mqe'" :value="String(i)">{{ i }} · {{ k.label }}</option>
+                </template>
+                <option value="__mqe">A separate metric…</option>
+              </select>
+            </label>
+            <label v-if="w.rankBy?.mqe != null" class="ot__field ot__field--wide">
+              <span>Rank MQE</span>
+              <MqeExpressionInput :model-value="rankMqe(w)" title="Ranking MQE" @update:model-value="setRankMqe(w, $event)" />
+            </label>
+          </div>
         </div>
         <div class="ot__kpis">
           <div class="ot__kpis-head">
@@ -267,14 +363,17 @@ function onKpiStyleChange(k: OverviewKpi): void {
               </label>
               <label class="ot__field ot__field--full">
                 <span>Source</span>
-                <select v-model="k.source" class="ot__in">
-                  <option :value="undefined">mqe</option>
+                <select
+                  :value="k.source ?? 'mqe'"
+                  class="ot__in"
+                  @change="k.source = ($event.target as HTMLSelectElement).value as OverviewKpi['source']"
+                >
                   <option value="mqe">mqe</option>
                   <option value="service-count">service-count</option>
                 </select>
               </label>
               <label v-if="(k.source ?? 'mqe') === 'mqe'" class="ot__field ot__field--full">
-                <span>MQE</span>
+                <span>MQE <WidgetTip :tip="topnHint" /></span>
                 <MqeExpressionInput v-model="k.mqe" title="KPI MQE" />
               </label>
               <p v-else class="ot__none">Value comes from the service count (listServices) — no MQE.</p>
@@ -392,6 +491,16 @@ function onKpiStyleChange(k: OverviewKpi): void {
   font-size: 12px;
 }
 .ot__field input[type='checkbox'] { width: 14px; height: 14px; margin: 4px 0 0; cursor: pointer; }
+/* Checkbox + label on one line (checkbox first, then the words). */
+.ot__field--check { flex-direction: row; align-items: center; gap: 7px; min-width: 0; cursor: pointer; }
+.ot__field--check input[type='checkbox'] { margin: 0; }
+/* Aggregation method block: mode radios + nested page-side params. */
+.ot__agg { margin-top: 8px; padding: 8px 10px; border: 1px solid var(--sw-line); border-radius: 6px; }
+.ot__agg-head { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--sw-fg-3); font-weight: 600; margin-bottom: 6px; }
+.ot__agg-opt { display: flex; align-items: flex-start; gap: 7px; padding: 3px 0; font-size: 11.5px; color: var(--sw-fg-1); cursor: pointer; }
+.ot__agg-opt input[type='radio'] { margin: 2px 0 0; cursor: pointer; flex: 0 0 auto; }
+.ot__agg-opt code { font-family: var(--sw-mono); font-size: 10.5px; color: var(--sw-fg-2); }
+.ot__agg-params { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--sw-line); }
 .ot__none { color: var(--sw-fg-3); font-size: 11px; }
 
 .ot__meta {

@@ -89,6 +89,14 @@ export type VisibleWhen =
   | { kind: 'entity'; attribute: string; op: 'eq'; value: string };
 
 /**
+ * Opt a `line` widget into metric→trace drill-down (only on a native-trace
+ * layer). `latency` opens slowest-first traces with `minTraceDuration` = the
+ * clicked ms value; `error` opens `traceState: ERROR`; `off` suppresses it.
+ * Absent ⇒ no drill.
+ */
+export type TraceDrill = { mode: 'off' | 'latency' | 'error' };
+
+/**
  * Per-entity dashboard scope. Each layer carries an independent widget
  * set per scope; the SPA picks the right set based on the active
  * sub-route under `/layer/:key/`.
@@ -221,13 +229,6 @@ export interface DashboardWidget {
    * BFF-side; hidden widgets come back flagged `hidden: true`.
    */
   visibleWhen?: VisibleWhen;
-  /**
-   * When true, the BFF runs this widget's MQE against the whole layer
-   * rather than scoping it to the currently-selected service. Used for
-   * cross-service rollups (e.g. "Top 20 endpoints by traffic across the
-   * layer"). MQE entity flips to `{ scope: All }`.
-   */
-  layerScope?: boolean;
   /** Cap on label rows kept per entity in a labeled table widget under
    *  multi-entity compare; the remainder fold into one `(others)` row.
    *  Defaults to 8. */
@@ -238,6 +239,8 @@ export interface DashboardWidget {
    *  own order — `asc` (worst/lowest first, e.g. success-rate) vs `des`.
    *  Absent for non-`top_n` widgets; the UI then falls back to `des`. */
   topNOrder?: 'asc' | 'des';
+  /** Optional metric→trace drill on a `line` widget — see {@link TraceDrill}. */
+  traceDrill?: TraceDrill;
   /** Legacy 24-col grid coordinates — kept for back-compat during the
    *  span-based flow-layout migration. New widgets should leave these
    *  unset and use `span` / `rowSpan` instead. */

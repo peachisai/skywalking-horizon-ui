@@ -64,12 +64,25 @@ const props = withDefaults(
      *  these replace the default relative `-Nm` markers — e.g. a caller
      *  with a known window can pass `mm:ss` elapsed labels. */
     xLabels?: string[];
+    clickable?: boolean;
+    tipSuppressed?: boolean;
   }>(),
   {
     height: 180,
     accent: 'var(--sw-accent)',
   },
 );
+
+const emit = defineEmits<{
+  pointClick: [
+    { seriesIndex: number; dataIndex: number; value: number; seriesName: string; x: number; y: number },
+  ];
+}>();
+
+const lastPointer = ref<{ x: number; y: number }>({ x: 0, y: 0 });
+function onPointerDown(e: MouseEvent): void {
+  lastPointer.value = { x: e.clientX, y: e.clientY };
+}
 
 // Compact magnitude with an SI suffix (k / M / G / T), ~3 significant
 // figures, trailing zeros trimmed — `45.1k`, not the scientific `4.51e4`
@@ -296,7 +309,10 @@ function buildOption(): echarts.EChartsCoreOption {
       type: 'category',
       data: xLabels,
       axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: '#64748b', fontSize: 9, interval: Math.floor(length / 6) },
+      // hideOverlap drops any label that would collide — wide HOUR labels
+      // ("07-02 05:00") otherwise overlap once the ~length/6 interval isn't
+      // enough. interval stays as the density target; hideOverlap is the guard.
+      axisLabel: { color: '#64748b', fontSize: 9, interval: Math.floor(length / 6), hideOverlap: true },
       splitLine: { show: false },
     },
     /* Dual y-axis when any series asks for axis 1. Right axis label
@@ -365,6 +381,7 @@ function buildOption(): echarts.EChartsCoreOption {
         symbol: 'circle',
         symbolSize: 4,
         showSymbol: true,
+        ...(props.clickable ? { triggerLineEvent: true, cursor: 'pointer' } : {}),
         yAxisIndex: s.yAxisIndex ?? 0,
         lineStyle: { width: 1.5 },
         data: s.data.map((v) => (v === null ? '-' : v)),
@@ -405,6 +422,31 @@ onMounted(() => {
   chart = echarts.init(container.value, null, { renderer: 'canvas' });
   chart.setOption(buildOption());
   prevFingerprint = seriesFingerprint(props.series);
+  // A line-body click may lack dataIndex/value — recover from the click pixel
+  // and read the value from series data.
+  chart.on('click', (p) => {
+    if (!props.clickable || p.componentType !== 'series' || !chart) return;
+    const si = p.seriesIndex ?? 0;
+    let di = typeof p.dataIndex === 'number' ? p.dataIndex : -1;
+    if (di < 0 && container.value) {
+      const r = container.value.getBoundingClientRect();
+      const at = chart.convertFromPixel({ gridIndex: 0 }, [
+        lastPointer.value.x - r.left,
+        lastPointer.value.y - r.top,
+      ]);
+      if (Array.isArray(at) && typeof at[0] === 'number') di = Math.round(at[0]);
+    }
+    const val = props.series[si]?.data[di];
+    if (di < 0 || typeof val !== 'number') return;
+    emit('pointClick', {
+      seriesIndex: si,
+      dataIndex: di,
+      value: val,
+      seriesName: typeof p.seriesName === 'string' ? p.seriesName : '',
+      x: lastPointer.value.x,
+      y: lastPointer.value.y,
+    });
+  });
   const ro = new ResizeObserver(() => chart?.resize());
   ro.observe(container.value);
   onBeforeUnmount(() => {
@@ -451,10 +493,22 @@ watch(
     prevFingerprint = seriesFingerprint(props.series);
   },
 );
+watch(
+  () => props.clickable,
+  () => chart?.setOption(buildOption(), { replaceMerge: ['series'] }),
+);
+watch(
+  () => props.tipSuppressed,
+  (suppressed) => {
+    if (!chart) return;
+    if (suppressed) chart.dispatchAction({ type: 'hideTip' });
+    chart.setOption({ tooltip: { show: !suppressed } });
+  },
+);
 </script>
 
 <template>
-  <div ref="container" class="time-chart" :style="{ height: `${height}px` }" />
+  <div ref="container" class="time-chart" :style="{ height: `${height}px` }" @mousedown="onPointerDown" />
 </template>
 
 <style scoped>

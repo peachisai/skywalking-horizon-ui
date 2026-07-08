@@ -7,6 +7,7 @@ dist-ssr
 # Claude Code per-user settings — user-specific allow-list, not for git.
 .claude/settings.local.json
 .claude/settings.json
+.claude/skills/local-boot/*.key
 
 # Editor
 .idea
@@ -43,8 +44,6 @@ Thumbs.db
 # BFF runtime files (horizon.yaml itself is committed — the env-driven config)
 horizon-audit.jsonl
 horizon-wire.jsonl
-horizon-setup.json
-horizon-alarms.json
 
 # Release
 scripts/.release-work

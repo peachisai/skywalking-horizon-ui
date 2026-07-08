@@ -1,6 +1,6 @@
 ---
 name: local-boot
-description: Boot the Horizon UI dev env (BFF + UI) against a local OAP or the public Apache demo OAP. Uses the repo's committed, env-driven horizon.yaml — the same config the image ships — and injects the OAP target + dev users purely via HORIZON_* environment variables. Handles the apps/bff cwd / HORIZON_CONFIG gotcha and the demo OAP password (kept out of git via the cached oap-password.local).
+description: Boot the Horizon UI dev env (BFF + UI) against a local OAP or the public Apache demo OAP. Uses the repo's committed, env-driven horizon.yaml — the same config the image ships — and injects the OAP target + dev users purely via HORIZON_* environment variables. Handles the apps/bff cwd / HORIZON_CONFIG gotcha and the demo OAP password (kept out of git via the cached oap-demo-env-auth.key). Also covers booting with the AI assistant enabled (Amazon Bedrock / DeepSeek), keyed from the git-ignored bedrocks-api.key.
 user-invocable: true
 ---
 
@@ -47,7 +47,7 @@ config loader's `${VAR:default}` interpolation; Vite reads `BFF_PORT` +
 | `HORIZON_OAP_ADMIN_URL`     | `http://127.0.0.1:17128`   | BFF     | OAP admin REST endpoint. Often a different port from GraphQL (the demo splits on `:17128`) — if the BFF logs `UITemplate 404`, this is wrong. |
 | `HORIZON_OAP_ZIPKIN_URL`    | `http://127.0.0.1:9412/zipkin` | BFF | Zipkin query endpoint (Zipkin trace layer). |
 | `HORIZON_OAP_TIMEOUT_MS`    | `15000`                    | BFF     | OAP request timeout. Lower it (`4000`) when previewing the "OAP unreachable" landing block so errors surface fast. |
-| `HORIZON_OAP_AUTH`          | _(none)_                   | BFF     | OAP basic-auth as JSON, e.g. `{"username":"admin","password":"…"}`. The demo needs it (password from `oap-password.local`). |
+| `HORIZON_OAP_AUTH`          | _(none)_                   | BFF     | OAP basic-auth as JSON, e.g. `{"username":"admin","password":"…"}`. The demo needs it (password from `oap-demo-env-auth.key`). |
 | `HORIZON_AUTH_LOCAL_USERS`  | `[]`                       | BFF     | Local login users (JSON array, single-line). Use `$(cat dev-users.json)`. |
 | `HORIZON_AUTH_BACKEND`      | `local`                    | BFF     | `local` or `ldap`. |
 | `HORIZON_AUTH_LDAP`         | _(none)_                   | BFF     | LDAP config (JSON, single-line) when backend=ldap. Use `$(cat dev-ldap.json)`. |
@@ -95,13 +95,13 @@ The browser uses its OWN proxy settings (not the shell's), so the developer must
 ## Boot against the public demo OAP
 
 The demo OAP needs basic-auth (network username `admin`). The password is NOT
-committed — it lives in `oap-password.local` next to this file (git-ignored via
-the repo-wide `*.local` rule). Source it; if missing, ask the developer and
+committed — it lives in `oap-demo-env-auth.key` next to this file (git-ignored via
+the `.claude/skills/local-boot/*.key` rule). Source it; if missing, ask the developer and
 recreate it (one line, the password only).
 
 ```bash
 REPO="$(git rev-parse --show-toplevel)"
-SECRET="$REPO/.claude/skills/local-boot/oap-password.local"
+SECRET="$REPO/.claude/skills/local-boot/oap-demo-env-auth.key"
 if [ -s "$SECRET" ]; then
   OAP_PASSWORD="$(cat "$SECRET")"; export OAP_PASSWORD
 else
@@ -133,6 +133,65 @@ HORIZON_AUTH_LOCAL_USERS="$(cat "$SK/dev-users.json")" \
 
 Then open **`http://127.0.0.1:9091`** and log in as `admin` / `admin`. To boot in
 read-only template mode, add `HORIZON_TEMPLATES_MODE=readonly` to the BFF line.
+
+## Boot with the AI assistant enabled (Bedrock / DeepSeek)
+
+The AI assistant (the `ai:` block in `horizon.yaml`) is **off by default** — the
+launcher stays hidden until the feature is enabled AND a usable provider is
+configured. To exercise it in dev, add the `HORIZON_AI_*` env vars below to any
+boot above — usually the **demo** boot, so there is live data to investigate.
+
+The dev provider is **Amazon Bedrock** running **DeepSeek** (`deepseek.v3.2`,
+region `us-west-2`). The Bedrock key is a secret kept next to this file:
+
+- `bedrocks-api.key` — a Bedrock **`ABSK…` bearer token**, one line, git-ignored
+  via the `.claude/skills/local-boot/*.key` rule (same rule as the OAP password).
+  If missing, mint one in the AWS console (Bedrock → API keys) and drop it here.
+
+Our config field is **`HORIZON_AI_API_KEY`** — the BFF passes it to the SDK
+explicitly as `bedrockBearerToken`. Do **NOT** set `AWS_BEARER_TOKEN_BEDROCK`:
+that is the AWS SDK's own env var, which our code deliberately bypasses so
+concurrent requests stay isolated. The **only bedrock-specific
+extra is `HORIZON_AI_REGION`** (it falls back to `AWS_REGION` when blank). Our
+bedrock path REQUIRES the bearer key and does **not** use the AWS SSO / IAM
+credential chain — a missing key is a clean 503, not an SSO prompt.
+
+| Variable                    | Value (dev)               | Purpose |
+|---|---|---|
+| `HORIZON_AI_ENABLED`        | `true`                    | Master switch (default `false`). |
+| `HORIZON_AI_PROVIDER`       | `bedrock`                 | Transport — `openai-compatible` (default) or `bedrock`. |
+| `HORIZON_AI_MODEL`          | `deepseek.v3.2`           | Bedrock model / inference-profile id. |
+| `HORIZON_AI_REGION`         | `us-west-2`               | Bedrock-only extra; falls back to `AWS_REGION`. |
+| `HORIZON_AI_API_KEY`        | `$(cat bedrocks-api.key)` | **Secret** `ABSK` bearer. Redacted from logs, excluded from the audit trail. |
+
+Add these lines to the demo boot's BFF invocation (keep the SECRET / pkill /
+port-free steps from the demo section):
+
+```bash
+SK="$REPO/.claude/skills/local-boot"
+HORIZON_CONFIG="$REPO/horizon.yaml" \
+HORIZON_OAP_QUERY_URL=https://demo.skywalking.apache.org:12800 \
+HORIZON_OAP_ADMIN_URL=https://demo.skywalking.apache.org:17128 \
+HORIZON_OAP_ZIPKIN_URL=https://demo.skywalking.apache.org:9412/zipkin \
+HORIZON_OAP_AUTH="{\"username\":\"admin\",\"password\":\"$OAP_PASSWORD\"}" \
+HORIZON_AUTH_LOCAL_USERS="$(cat "$SK/dev-users.json")" \
+HORIZON_AI_ENABLED=true \
+HORIZON_AI_PROVIDER=bedrock \
+HORIZON_AI_MODEL=deepseek.v3.2 \
+HORIZON_AI_REGION=us-west-2 \
+HORIZON_AI_API_KEY="$(cat "$SK/bedrocks-api.key")" \
+  pnpm --filter @skywalking-horizon-ui/bff run dev &
+```
+
+Verify readiness after login — expect `ready:true`:
+```bash
+curl -s --noproxy '*' -b /tmp/sw.cookies "http://127.0.0.1:8081/api/ai/config"
+```
+Then the floating **AI Assistant** launcher appears on the right edge; the chat
+streams an answer with inline figures (open `/ai` for the full page). **On-demand
+pod logs** work when the OAP itself runs in Kubernetes (the public demo does) and
+its `enableOnDemandPodLog` is on — the assistant's `fetch_pod_logs` tool and the
+per-layer Pod Logs tab both read them live.
 
 ## Boot against a local / remote no-auth OAP
 
@@ -231,7 +290,8 @@ curl -s --noproxy '*' -c /tmp/sw.cookies -H 'Content-Type: application/json' -X 
 
 `horizon.yaml` (repo root) is the committed, env-driven config — leave it as-is
 and override via `HORIZON_*` env vars. The dev users / LDAP config live in
-`dev-users.json` / `dev-ldap.json` here (throwaway, single-line JSON). Real OAP
-or LDAP passwords stay out of git: the demo OAP password in `oap-password.local`
-(git-ignored), real bind passwords supplied at boot. To mint a new local-user
-hash: `pnpm --filter @skywalking-horizon-ui/bff cli:hash`.
+`dev-users.json` / `dev-ldap.json` here (throwaway, single-line JSON). Real
+secrets stay out of git via the `.claude/skills/local-boot/*.key` rule: the demo
+OAP password in `oap-demo-env-auth.key` and the Bedrock bearer in
+`bedrocks-api.key` are both git-ignored; real LDAP bind passwords are supplied at
+boot. To mint a new local-user hash: `pnpm --filter @skywalking-horizon-ui/bff cli:hash`.

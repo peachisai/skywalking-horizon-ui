@@ -108,6 +108,17 @@ function parseKpis(raw: unknown): OverviewKpi[] | undefined {
   return out.length > 0 ? out : undefined;
 }
 
+/** Page-side ranking override — `{ kpi?: number, mqe?: string }`. Dropped
+ *  when neither is present so absent stays absent. */
+function parseRankBy(raw: unknown): { kpi?: number; mqe?: string } | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const kpi = typeof r.kpi === 'number' && Number.isInteger(r.kpi) && r.kpi >= 0 ? r.kpi : undefined;
+  const mqe = isString(r.mqe) ? r.mqe : undefined;
+  if (kpi === undefined && mqe === undefined) return undefined;
+  return { ...(kpi !== undefined ? { kpi } : {}), ...(mqe ? { mqe } : {}) };
+}
+
 function validate(raw: unknown, file: string): OverviewDashboard | null {
   if (!raw || typeof raw !== 'object') {
     console.warn(`overview/${file}: not an object, skipped`);
@@ -153,7 +164,9 @@ function validate(raw: unknown, file: string): OverviewDashboard | null {
       cols: typeof w.cols === 'number' ? w.cols : undefined,
       kpis: parseKpis(w.kpis),
       showCount: w.showCount === true ? true : undefined,
+      aggregateOnPage: w.aggregateOnPage === true ? true : undefined,
       limit: typeof w.limit === 'number' ? w.limit : undefined,
+      rankBy: parseRankBy(w.rankBy),
       span: typeof w.span === 'number' ? w.span : undefined,
       rowSpan: typeof w.rowSpan === 'number' ? w.rowSpan : undefined,
     })),
@@ -230,42 +243,3 @@ export function findOverviewFile(id: string): string | null {
   return null;
 }
 
-/** Persist a dashboard's full config back to disk and invalidate the
- *  cache. Atomic via `.tmp` rename so a partial write never leaves
- *  half-JSON on disk. */
-export function writeOverviewDashboard(id: string, dash: OverviewDashboard): void {
-  const file = findOverviewFile(id);
-  if (!file) {
-    throw new Error(`overview/${id}: no source file to write back to`);
-  }
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(dash, null, 2), 'utf8');
-  fs.renameSync(tmp, file);
-  invalidateOverviewCache();
-}
-
-/** Create a new dashboard JSON in the bundled dir. Fails when an
- *  existing file already declares the same id (the admin should
- *  surface this as "id already in use" rather than overwriting). */
-export function createOverviewDashboard(dash: OverviewDashboard): void {
-  if (findOverviewFile(dash.id)) {
-    throw new Error(`overview/${dash.id}: dashboard already exists`);
-  }
-  if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  /* Filename = `<id>.json` so the on-disk layout matches the id
-   * exactly. Sanitise to guard against accidental path traversal —
-   * loader id-equality is what really binds the file to the
-   * dashboard, but the operator's also editing on disk later. */
-  const safe = dash.id.replace(/[^A-Za-z0-9_-]/g, '_');
-  const file = path.join(CONFIG_DIR, `${safe}.json`);
-  fs.writeFileSync(file, JSON.stringify(dash, null, 2), 'utf8');
-  invalidateOverviewCache();
-}
-
-/** Remove the JSON file backing `id`. No-op when there's no file. */
-export function deleteOverviewDashboard(id: string): void {
-  const file = findOverviewFile(id);
-  if (!file) return;
-  fs.unlinkSync(file);
-  invalidateOverviewCache();
-}

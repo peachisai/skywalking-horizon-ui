@@ -16,12 +16,11 @@
  */
 
 /**
- * Wire shape for the per-layer customization persisted by the BFF.
- *
- * Eventually these configs will live in OAP via `addTemplate` mutations
- * (under the `horizon-` ID prefix) — see PLAN.md "Locked decisions" #2.
- * Until then, the BFF stores them in a JSON file on disk. The UI and
- * server agree on this shape so the swap is a one-place change.
+ * The resolved per-layer config shape. The UI derives a `LayerConfig` for each
+ * layer from that layer's template (slots / caps / metrics / overview) — see the
+ * setup resolver in `apps/ui/src/state/setup.ts`. Layer config is authored in the
+ * layer template (OAP-synced via the Layer dashboards admin); this is the shape
+ * the renderer reads, not a separately-persisted override.
  */
 
 import type { LayerCaps, LayerSlots } from './menu.js';
@@ -40,10 +39,6 @@ export interface LandingColumn {
   metric: string;
   /** Short header label (e.g. `cpm`). */
   label: string;
-  /** Hover tip (string only, no markdown). Used by the Overview tile
-   *  metric cells; the SPA surfaces it via the cell label's `title`
-   *  attribute. */
-  tip?: string;
   /** Suffix unit (`%`, `ms`, etc.). */
   unit?: string;
   /**
@@ -57,8 +52,20 @@ export interface LandingColumn {
    * Aggregation when collapsing the top-N service values to the
    * per-layer KPI tile. Defaults to `avg` on the UI when unset — the
    * landing card itself (per-service rows) doesn't consult this field.
+   * Consulted only for page-side (fan-out) columns; a `selfAggregate`
+   * column carries its aggregation inside the MQE.
    */
   aggregation?: AggregationKind;
+  /**
+   * When true, the `mqe` already folds the whole layer to one scalar
+   * server-side (`sum|avg(top_n(<metric>,{{topn}},DES[,attr0='<layer>']))`),
+   * so the BFF fires it ONCE globally instead of fanning out per service
+   * and aggregating page-side. `{{topn}}` is substituted with the BFF's
+   * `query.overviewTopN` before firing. Default false (fan-out) — every
+   * legacy caller (the per-layer landing header) stays on the fan-out
+   * path untouched. The Overview KPI tiles set this; composites don't.
+   */
+  selfAggregate?: boolean;
   /**
    * Multiplier applied BFF-side after MQE returns. Use for unit
    * normalization — e.g. SkyWalking's `service_sla` is integer
@@ -82,26 +89,6 @@ export interface LandingConfig {
   /** Metric key used to rank the top-N. */
   orderBy: string;
   columns: LandingColumn[];
-  /** @deprecated kept for back-compat; new code reads `overviewGroups`. */
-  overviewMetrics?: string[];
-  /** Explicit per-layer page header columns — distinct from `columns`
-   *  which mixes header + overview-promoted entries (the BFF batches
-   *  every MQE in one query). The LayerShell KPI strip iterates ONLY
-   *  this list so overview-only metrics don't leak into the header.
-   *  Absent on legacy configs → LayerShell falls back to `columns`. */
-  headerColumns?: LandingColumn[];
-  /** Resolved Overview tile groups. Each group becomes one tile on
-   *  the Overview strip with the group's `title` in the header.
-   *  Metrics are referenced by id — those ids show up as synthetic
-   *  entries in `columns[]` so the BFF batches their MQE in the
-   *  same landing query. */
-  overviewGroups?: Array<{
-    title: string;
-    size: 'auto' | 'square';
-    /** Column-key references into `columns[]`. */
-    metricIds: string[];
-  }>;
-  style: 'table' | 'bar' | 'mini-topology';
   /**
    * Per-user threshold overrides for topology + endpoint-dependency
    * metrics. Keyed by `<scope>.<metricId>` where scope is
@@ -128,13 +115,3 @@ export interface LayerConfig {
   landing: LandingConfig;
 }
 
-export interface SetupResponse {
-  generatedAt: number;
-  /** Layer key → operator-overridden config. Layers without an override
-   *  fall through to horizon-side defaults at render time. */
-  layers: Record<string, LayerConfig>;
-}
-
-export interface SetupSavePayload {
-  layers: Record<string, LayerConfig>;
-}

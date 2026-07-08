@@ -15,17 +15,12 @@
  * limitations under the License.
  */
 
-import type { SetupResponse, SetupSavePayload } from '@skywalking-horizon-ui/api-client';
-import type { BffClient } from '../client';
-
-/** `bff.setup` — per-layer enabled-scope toggles (first-run setup). */
-export class SetupApi {
-  constructor(private readonly bff: BffClient) {}
-
-  load(): Promise<SetupResponse> {
-    return this.bff.request<SetupResponse>('GET', '/api/setup');
-  }
-  save(payload: SetupSavePayload): Promise<SetupResponse> {
-    return this.bff.request<SetupResponse>('POST', '/api/setup', payload);
-  }
-}
+export {
+  buildChatModel,
+  resolveCredentials,
+  centralCredentialsComplete,
+  aiEffectivelyReady,
+  AiConfigError,
+  type AiProvider,
+  type AiCredentials,
+} from './model.js';
