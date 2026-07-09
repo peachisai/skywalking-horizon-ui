@@ -11,6 +11,7 @@
   "components": {
     "service": true,
     "instances": true,
+    "evaluationRecord": true,
     "endpoints": false,
     "topology": false,
     "traces": false,

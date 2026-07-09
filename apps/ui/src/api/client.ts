@@ -317,6 +317,7 @@ export interface AdminLayerTemplate {
     deployment?: boolean;
     traces?: boolean;
     logs?: boolean;
+    evaluationRecord?: boolean;
     browserErrors?: boolean;
     podLogs?: boolean;
     profiling?: boolean;
