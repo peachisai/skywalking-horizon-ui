@@ -14,23 +14,6 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<!--
-  Shared full-payload log popout. Centred modal showing one log row's
-  whole payload at max size: format-aware pretty-print of `content` by
-  `contentType` (JSON re-serialised; YAML / text verbatim), a key/value
-  tags table, the service / instance / endpoint / time meta strip, a
-  copy button, and the trace-id link.
-
-  Built on `_shared/Modal.vue` (backdrop + Escape + close). Used by BOTH
-  the per-layer Logs tab and the cross-layer Log inspect view. The host
-  owns the trace jump — the popout just emits `jump-trace`.
-
-  Props:
-    row  — the LogRow to show; `null` keeps the popout closed.
-  Emits:
-    close      — dismiss (× button, Escape, backdrop).
-    jump-trace — { traceId, ts } when the operator clicks the trace link.
--->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -39,7 +22,16 @@ import Modal from '@/features/operate/_shared/Modal.vue';
 
 const { t } = useI18n();
 
-const props = defineProps<{ row: LogRow | null }>();
+const props = withDefaults(defineProps<{
+  row: LogRow | null;
+  modalTitle?: string;
+  endpointLabel?: string;
+  badgeTagKey?: string;
+}>(), {
+  modalTitle: 'Evaluation Record Entry',
+  endpointLabel: 'Task Name',
+  badgeTagKey: 'value_type',
+});
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'jump-trace', payload: { traceId: string; ts: number }): void;
@@ -80,6 +72,14 @@ function fmtDate(ts: number): string {
 }
 
 const fmt = computed<LogFormat | null>(() => (props.row ? detectFormat(props.row) : null));
+const badgeText = computed(() => {
+  if (!props.row) return '';
+  if (props.badgeTagKey) {
+    const tag = props.row.tags.find((item) => item.key.toLowerCase() === props.badgeTagKey.toLowerCase());
+    if (tag?.value) return tag.value;
+  }
+  return fmt.value?.toUpperCase() ?? '';
+});
 
 const copied = ref(false);
 let copyTimer: ReturnType<typeof setTimeout> | null = null;
@@ -105,12 +105,12 @@ function onJumpTrace(): void {
 </script>
 
 <template>
-  <Modal :open="row != null" :title="t('Log entry')" width="min(1100px, 92vw)" fit-body @close="emit('close')">
+  <Modal :open="row != null" :title="t(props.modalTitle)" width="min(1100px, 92vw)" fit-body @close="emit('close')">
     <div v-if="row" class="ld">
       <div class="ld-head">
         <div class="ld-head-l">
           <span class="ld-time mono">{{ fmtTime(row.timestamp) }} · {{ fmtDate(row.timestamp) }}</span>
-          <span class="ld-fmt">{{ fmt!.toUpperCase() }}</span>
+          <span class="ld-fmt">{{ badgeText }}</span>
         </div>
         <div class="ld-ctrls">
           <button class="sw-btn small" :class="{ 'is-copied': copied }" type="button" @click="copyContent">{{ copied ? t('Copied') : t('Copy') }}</button>
@@ -120,7 +120,7 @@ function onJumpTrace(): void {
       <div class="ld-meta">
         <span v-if="row.serviceName" class="ld-meta-item">{{ t('Service') }} <code>{{ row.serviceName }}</code></span>
         <span v-if="row.serviceInstanceName" class="ld-meta-item">{{ t('Instance') }} <code>{{ row.serviceInstanceName }}</code></span>
-        <span v-if="row.endpointName" class="ld-meta-item">{{ t('Endpoint') }} <code>{{ row.endpointName }}</code></span>
+        <span v-if="row.endpointName" class="ld-meta-item">{{ t(props.endpointLabel) }} <code>{{ row.endpointName }}</code></span>
         <span v-if="row.traceId" class="ld-meta-item">{{ t('Trace ID') }} <code class="mono">{{ row.traceId }}</code></span>
       </div>
       <div class="ld-split">

@@ -42,7 +42,7 @@ import { useLayerServiceName } from '@/layer/useLayerServiceName';
 import { useSetupStore } from '@/state/setup';
 import { useTracePopout } from '@/layer/traces/useTracePopout';
 import EvaluationRecordStreamPanel from '@/render/widgets/EvaluationRecordStreamPanel.vue';
-import LogDetailPopout from '@/render/widgets/LogDetailPopout.vue';
+import EvaluationRecordDetailPopout from '@/render/widgets/EvaluationRecordDetailPopout.vue';
 import TagInput from '@/components/primitives/TagInput.vue';
 
 const route = useRoute();
@@ -346,9 +346,9 @@ const filteredGenAIEvaluationRecordRows = computed<GenAIEvaluationRecordStreamRo
   () => genAIEvaluationRecordStreamRows.value,
 );
 
-// ── Log payload popout ??a row click opens the shared LogDetailPopout
-// (format-aware pretty-print + copy + key/value tag table + trace link).
-// The popout owns its own Escape / close + format detection.
+// ── Evaluation-record payload popout ??a row click opens the dedicated
+// detail modal (format-aware pretty-print + copy + key/value tag table +
+// trace link). The popout owns its own Escape / close + format detection.
 const popoutRow = ref<GenAIEvaluationRecordStreamRow | null>(null);
 function onRowClick(r: GenAIEvaluationRecordStreamRow): void {
   popoutRow.value = r;
@@ -590,13 +590,10 @@ function jumpToTrace(traceId: string, ts?: number): void {
       </div>
     </section>
 
-    <!-- Full-payload popout. Format-aware pretty-print + copy button +
-         tag table + trace link. Escape or backdrop click closes. -->
-    <LogDetailPopout
+    <!-- Full-payload popout. Evaluation-record-specific presentation lives
+         in the dedicated modal so shared log pages stay unchanged. -->
+    <EvaluationRecordDetailPopout
         :row="popoutRow"
-        modal-title="Evaluation Record Entry"
-        endpoint-label="Task Name"
-        badge-tag-key="value_type"
         @close="popoutRow = null"
         @jump-trace="jumpToTrace($event.traceId, $event.ts)"
     />
